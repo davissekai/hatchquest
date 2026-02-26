@@ -22,9 +22,9 @@ The game maintains a single object that tracks all progress. The frontend must m
 
   "resources": {
     "v_capital": 10000.00,			// the resources a player has at the start of game
-    "momentumMultiplier": 1.0  		//a coefficient  that either ++ or - - a player’s score
-    “reputation”: 50
-    “network”: 10	
+    "momentumMultiplier": 1.0,  		//a coefficient  that either ++ or - - a player's score
+    "reputation": 50,
+    "network": 10	
   },
 
   "dimensions": {
