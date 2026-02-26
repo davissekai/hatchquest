@@ -43,7 +43,7 @@ All table definitions live in `drizzle/schema.ts`. Never define DB structure els
 ---
 
 ## Branch Strategy
-- `main` — protected, production-ready only
+- `master` — protected, production-ready only
 - `develop` — staging, all PRs merge here first
 - `feature/<name>` — individual task branches
 
