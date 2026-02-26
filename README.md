@@ -99,7 +99,7 @@ npm run test:coverage  # coverage report
 ## Documentation
 
 - `AGENT_MANIFEST.md` — architecture rules and golden principles
-- `docs/API_CONTRACT.md` — locked API handshake (frontend builds against this)
+- `docs/API_CONTRACT.md` — locked API handshake, lives on `feat/frontend` branch
 
 ---
 

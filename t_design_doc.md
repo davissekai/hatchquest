@@ -20,11 +20,11 @@ The game maintains a single object that tracks all progress. The frontend must m
     "isStoryComplete": false
   },
 
-  "resources": {
-    "v_capital": 10000.00,			// the resources a player has at the start of game
-    "momentumMultiplier": 1.0  		//a coefficient  that either ++ or - - a player’s score
-    “reputation”: 50
-    “network”: 10	
+  “resources”: {
+    “v_capital”: 10000.00,          // the resources a player has at the start of game
+    “momentumMultiplier”: 1.0,      // a coefficient that either amplifies or reduces a player’s capital impact
+    “reputation”: 50,
+    “network”: 10
   },
 
   "dimensions": {
@@ -39,7 +39,8 @@ The game maintains a single object that tracks all progress. The frontend must m
     "hasDebt": false,		// Boolean values used to track milestones or permanent states
     "hiredTeam": false
   },
-  "history": []
+  "history": []  // append-only log of every choice made — shape: { narrativeId, choiceId, capitalBefore, capitalAfter, timestamp }
+                 // used by the engine to prevent duplicate submissions and power compounding consequence logic
 }
 
 The Input (User action)
@@ -51,6 +52,8 @@ The Transition Logic
 The engine processes the choice using the flow:
 
 Calculate Impact: NewCapital = CurrentCapital + (ChoiceImpact * MomentumMultiplier)
+// ChoiceImpact is a numeric delta (positive or negative) sourced from the private impact schema — a backend-only
+// mapping of choiceId → capital delta. It is never exposed to the frontend or included in API responses.
 
 Update Dimensions: Adjust the hidden Entrepreneurial Orientation scores.
 
@@ -61,9 +64,11 @@ Return State: Send the updated Global State back to the frontend to trigger a UI
 
 3. The API Contract (Data structure)
 
-To allow parallel development, the frontend unit will build against this exact schema using dummy data while the backend unit finalizes the narrative copy.
+To allow parallel development, the frontend team will build against this exact schema using dummy data while the backend team finalizes the narrative copy.
 
-The Narrative Schema:
+The Narrative Schema (Public — safe for frontend consumption):
+// Note: choice impact data (capital delta, EO dimension changes, flag mutations) lives in a separate
+// private impact schema on the backend only. It is never included in API responses to the client.
 (JSON)
 {
   "id": "N_005",
@@ -89,7 +94,7 @@ Edge Cases to Cover:
 Capital cannot drop below 0 (handle bankruptcy logic).
 Fast-clicking/double-submissions must not trigger duplicate state updates.
 The momentumMultiplier must accurately scale choice impacts without breaking data types.
-CI/CD Guardrail: No pull request will be merged into the main branch if it fails the core logic test suite.
+CI/CD Guardrail: No pull request will be merged into the master branch if it fails the core logic test suite.
 
 Technical Stack & Infrastructure
 To ensure a foolproof, scalable, and rapidly deployable prototype by March 31st, we will use a unified TypeScript ecosystem.
@@ -101,7 +106,7 @@ Database & Persistence
 Platform: Supabase.
 Database: PostgreSQL for storing narrative content and user progress.
 Authentication: Supabase Auth for student login/session management.
-ORM: Prisma or Drizzle. To handle database migrations and provide type-safe database queries.
+ORM: Drizzle. Lightweight, type-safe, and idiomatic for Edge/Serverless environments. Handles migrations and type-safe database queries.
 Testing & Quality Assurance
 Testing Framework: Vitest. A modern, blazing-fast unit testing framework compatible with Vite/Next.js.
 Library: React Testing Library. For testing the user-facing story components.
@@ -109,6 +114,6 @@ Workflow: Strict TDD Protocol. Logic functions must have a passing test suite be
 Deployment & DevOps
 Hosting: Vercel. Native integration with Next.js for CI/CD.
 Version Control: GitHub.
-Branch Strategy: main (protected), develop (staging), and feature/name for individual tasks.
+Branch Strategy: master (protected), develop (staging), and feat/name for individual department tasks.
 Gatekeeper: All code requires an approved PR from lead.
 
