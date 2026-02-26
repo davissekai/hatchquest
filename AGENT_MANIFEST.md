@@ -47,12 +47,12 @@ All table definitions live in `drizzle/schema.ts`. Never define DB structure els
 - `develop` — staging, all PRs merge here first
 - `feature/<name>` — individual task branches
 
-**No PR is merged to `main` if `src/engine/__tests__/` fails.**
+**No PR is merged to `master` if `src/engine/__tests__/` fails.**
 
 ---
 
 ## Starting Capital
-GHS 100,000.00 (`v_capital` initial value)
+GHS 10,000.00 (`v_capital` initial value)
 
 ---
 
