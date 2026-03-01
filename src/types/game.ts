@@ -1,9 +1,18 @@
 /**
  * Project HatchQuest: Global Type Definitions
- * These interfaces define the "Contract" for the State Machine and UI.
+ * Single source of truth for all game state shapes.
+ * Used by engine, narrative, analytics, and frontend.
+ *
+ * PRIVATE: ChoiceImpact lives in the backend only (choice_impacts table).
+ * NEVER expose impact deltas in API responses to the client.
  */
 
+// ─── Primitives ───────────────────────────────────────────────────────────────
+
 export type NarrativeId = string;
+export type ChoiceId = string;
+
+// ─── EO Dimensions ────────────────────────────────────────────────────────────
 
 export interface Dimensions {
   autonomy: number;
@@ -13,38 +22,47 @@ export interface Dimensions {
   competitiveAggressiveness: number;
 }
 
+// ─── Resources ────────────────────────────────────────────────────────────────
+
 export interface Resources {
-  v_capital: number;     // Baseline: GHS 100,000.00
-  reputation: number;    // Scale: 0-100
-  network: number;       // Scale: 0-100
-  momentumMultiplier: number;
+  capital: number;           // Starting: GHS 10,000
+  reputation: number;        // Scale: 0–100
+  network: number;           // Scale: 0–100
+  momentumMultiplier: number; // Compounds resource changes
 }
+
+// ─── History ──────────────────────────────────────────────────────────────────
+
+export interface HistoryEntry {
+  narrativeId: NarrativeId;
+  choiceId: ChoiceId;
+}
+
+// ─── Game State ───────────────────────────────────────────────────────────────
 
 export interface GameState {
   session: {
+    playerId: string;
     currentNarrativeId: NarrativeId;
     isStoryComplete: boolean;
-    history: string[];   // Array of Choice IDs made by the player
+    history: HistoryEntry[];  // Full path: every beat visited + choice made
   };
   resources: Resources;
   dimensions: Dimensions;
   flags: {
     hasDebt: boolean;
     hiredTeam: boolean;
-    [key: string]: boolean; // Allows for dynamic story flags
+    [key: string]: boolean;   // Dynamic story flags
   };
 }
 
+// ─── Narrative (Public) ───────────────────────────────────────────────────────
+
 export interface Choice {
-  choiceId: string;
+  choiceId: ChoiceId;
   label: string;
   immediateFeedback: string;
-  impact: {
-    resources?: Partial<Resources>;
-    dimensions?: Partial<Dimensions>;
-    flags?: Record<string, boolean>;
-  };
-  nextNarrativeId?: NarrativeId; // Overrides default progression if present
+  nextNarrativeId?: NarrativeId; // Overrides default progression if set
 }
 
 export interface NarrativeBeat {
@@ -52,4 +70,31 @@ export interface NarrativeBeat {
   title: string;
   storyText: string;
   choices: Choice[];
+}
+
+// ─── Private (Backend Only — never sent to client) ────────────────────────────
+
+export interface ChoiceImpact {
+  choiceId: ChoiceId;
+  resourceDeltas: Partial<Resources>;    // e.g. { capital: -2000, reputation: 1 }
+  dimensionDeltas: Partial<Dimensions>;  // e.g. { innovativeness: 0.2 }
+  flagUpdates: Record<string, boolean>;  // e.g. { hired_first_employee: true }
+}
+
+// ─── API Response Shapes (what the client actually receives) ──────────────────
+
+export interface SessionResponse {
+  beat: NarrativeBeat;
+  state: Omit<GameState, 'dimensions'>; // EO scores hidden during gameplay
+}
+
+export interface ChoiceResponse {
+  nextBeat: NarrativeBeat;
+  updatedState: Omit<GameState, 'dimensions'>;
+  feedback: string;
+}
+
+export interface ResultsResponse {
+  finalState: GameState; // dimensions revealed only on results page
+  summary: string;
 }
