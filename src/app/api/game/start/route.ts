@@ -47,7 +47,8 @@ export async function POST(req: NextRequest) {
       state: stateWithoutDimensions,
     });
   } catch (error) {
-    console.error("[POST /api/game/start]", error);
-    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+    const message = error instanceof Error ? error.message : String(error);
+    console.error("[POST /api/game/start]", message);
+    return NextResponse.json({ error: message }, { status: 500 });
   }
 }
