@@ -380,7 +380,7 @@ const choices = [
 
 // ─── Choice Impacts ───────────────────────────────────────────────────────────
 
-const impacts = [
+const impacts: (typeof choiceImpacts.$inferInsert)[] = [
   // beat_01 — path selection sets venture flags, no capital cost
   { choiceId: "beat_01_a", capitalDelta: 0, reputationDelta: 0, networkDelta: 0, momentumDelta: 0, autonomyDelta: 0.1, innovativenessDelta: 0.1, proactivenessDelta: 0.1, riskTakingDelta: 0.1, competitiveAggressivenessDelta: 0.3, flagUpdates: { venture_threads: true } },
   { choiceId: "beat_01_b", capitalDelta: 0, reputationDelta: 0, networkDelta: 0, momentumDelta: 0, autonomyDelta: 0.1, innovativenessDelta: 0.1, proactivenessDelta: 0.2, riskTakingDelta: 0.3, competitiveAggressivenessDelta: 0.1, flagUpdates: { venture_kitchen: true } },
