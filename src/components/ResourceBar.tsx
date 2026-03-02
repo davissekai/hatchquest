@@ -12,7 +12,7 @@ interface ResourceBarProps {
 export function ResourceBar({ resources }: ResourceBarProps) {
     return (
         <div>
-            <span>Capital: GHS {resources.v_capital.toLocaleString()}</span>
+            <span>Capital: GHS {resources.capital.toLocaleString()}</span>
             <span>Reputation: {resources.reputation}</span>
             <span>Network: {resources.network}</span>
             <span>Momentum: {resources.momentumMultiplier}x</span>
