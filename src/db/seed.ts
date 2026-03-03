@@ -260,10 +260,10 @@ const beats = [
 // ─── Choices ──────────────────────────────────────────────────────────────────
 
 const choices = [
-  // beat_01 — Choose Your Path
-  { id: "beat_01_a", beatId: "beat_01", nextBeatId: "beat_02", label: "Urban Threads — The streets need better style. I'm giving it to them.", immediateFeedback: "Fashion and hustle. You're betting on your eye for style and the city's appetite for it. The Kantamanto runs are about to become your second home." },
-  { id: "beat_01_b", beatId: "beat_01", nextBeatId: "beat_02", label: "Campus Kitchen — The food situation is a crime. I'm fixing it.", immediateFeedback: "Food is the most honest business there is. People eat every day. You're betting on quality and consistency — and the fact that hunger never takes a day off." },
-  { id: "beat_01_c", beatId: "beat_01", nextBeatId: "beat_02", label: "Digital Solve — Local businesses are stuck offline. I'm dragging them forward.", immediateFeedback: "You're selling something most people know they need but don't know how to get. That's a powerful position — if you can close the gap between awareness and action." },
+  // beat_00 — The GHS 10,000 Moment (venture selection — merged from beat_01)
+  { id: "beat_01_a", beatId: "beat_00", nextBeatId: "beat_02", label: "Urban Threads — The streets need better style. I'm giving it to them.", immediateFeedback: "Fashion and hustle. You're betting on your eye for style and the city's appetite for it. The Kantamanto runs are about to become your second home." },
+  { id: "beat_01_b", beatId: "beat_00", nextBeatId: "beat_02", label: "Campus Kitchen — The food situation is a crime. I'm fixing it.", immediateFeedback: "Food is the most honest business there is. People eat every day. You're betting on quality and consistency — and the fact that hunger never takes a day off." },
+  { id: "beat_01_c", beatId: "beat_00", nextBeatId: "beat_02", label: "Digital Solve — Local businesses are stuck offline. I'm dragging them forward.", immediateFeedback: "You're selling something most people know they need but don't know how to get. That's a powerful position — if you can close the gap between awareness and action." },
 
   // beat_02 — All In or Play It Safe?
   { id: "beat_02_a", beatId: "beat_02", nextBeatId: "beat_03", label: "Go big. Spend GHS 4,000 upfront. Make a statement.", immediateFeedback: "Bold move. You're putting real skin in the game early. The market will notice — and so will you when the pressure is on to make it back." },
