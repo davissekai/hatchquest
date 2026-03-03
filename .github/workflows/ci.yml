@@ -34,6 +34,13 @@ jobs:
       - name: Lint
         run: npm run lint
 
+      - name: Verify test secrets are set
+        run: |
+          echo "DATABASE_URL set: ${{ secrets.TEST_DATABASE_URL != '' }}"
+          echo "SUPABASE_URL set: ${{ secrets.TEST_NEXT_PUBLIC_SUPABASE_URL != '' }}"
+          echo "ANON_KEY set: ${{ secrets.TEST_NEXT_PUBLIC_SUPABASE_ANON_KEY != '' }}"
+          echo "SERVICE_ROLE set: ${{ secrets.TEST_SUPABASE_SERVICE_ROLE_KEY != '' }}"
+
       - name: Test
         run: npm run test
         env:
