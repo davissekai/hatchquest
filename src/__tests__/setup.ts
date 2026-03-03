@@ -1,5 +1,8 @@
 import { config } from "dotenv";
+import { existsSync } from "fs";
 
-// Load test environment variables BEFORE any module that reads process.env.
-// This must happen before the db/client module is imported.
-config({ path: ".env.test" });
+// Load .env.test if it exists (local dev).
+// In CI, env vars are injected directly by the workflow — no file needed.
+if (existsSync(".env.test")) {
+  config({ path: ".env.test" });
+}
