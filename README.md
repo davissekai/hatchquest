@@ -103,12 +103,3 @@ npm run test:coverage  # coverage report
 
 ---
 
-## Frontend Team
-
-Clone only what you need:
-
-```bash
-git clone --single-branch --branch feat/frontend https://github.com/davissekai/hatchquest.git
-```
-
-Start with `FRONTEND.md`.
