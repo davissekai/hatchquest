@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/db/client";
 import { gameSessions, narrativeBeats, narrativeChoices, choiceImpacts } from "@/db/schema";
 import { processChoice } from "@/engine/transition";
+import { calculateEOScores, calculateAcumenScore } from "@/engine/scoring";
 import { eq } from "drizzle-orm";
 import { GameState, ChoiceImpact } from "@/types/game";
 
@@ -75,6 +76,11 @@ export async function POST(req: NextRequest) {
       ? { ...newState, session: { ...newState.session, isStoryComplete: true } }
       : newState;
 
+    // Compute acumen score on completion
+    const acumenScore = isLastBeat
+      ? calculateAcumenScore(calculateEOScores(finalState))
+      : null;
+
     // Persist new state
     await db
       .update(gameSessions)
@@ -82,6 +88,7 @@ export async function POST(req: NextRequest) {
         state: finalState,
         isComplete: isLastBeat,
         completedAt: isLastBeat ? new Date() : null,
+        ...(acumenScore !== null && { acumenScore }),
       })
       .where(eq(gameSessions.id, sessionId));
 
