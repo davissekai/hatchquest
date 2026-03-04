@@ -1,0 +1,6 @@
+[
+  { "name": "Blue Bell",    "hex": "#1b98e0", "rgb": [27, 152, 224] },
+  { "name": "White",        "hex": "#fbfbfb", "rgb": [251, 251, 251] },
+  { "name": "Navy",         "hex": "#150578", "rgb": [21, 5, 120] },
+  { "name": "Bright Amber", "hex": "#f0c808", "rgb": [240, 200, 8] }
+]
