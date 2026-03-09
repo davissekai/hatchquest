@@ -1,0 +1,15 @@
+@import "tailwindcss";
+
+@theme {
+  --color-primary: #001124;
+  --color-light: #F7F7FF;
+  --color-accent: #D99B00;
+  --color-mutedBlue: #7389AE;
+  --color-tealAccent: #62929E;
+}
+
+body {
+  background-color: #001124;
+  color: #F7F7FF;
+  font-family: Arial, Helvetica, sans-serif;
+}
