@@ -1,0 +1,14 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(gh auth:*)",
+      "Bash(/c/Users/P/PROJECTS/gh auth:*)",
+      "Bash(/c/Users/P/PROJECTS/gh repo:*)",
+      "Bash(cd /c/Users/P/PROJECTS/Work/HQ && git init && git remote add origin https://github.com/davissekai/hatchquest.git && git fetch origin 2>&1)",
+      "Bash(cd /c/Users/P/PROJECTS/Work/HQ && git checkout master && git pull origin master 2>&1)",
+      "Bash(cd /c/Users/P/PROJECTS/Work/HQ && git checkout -b develop && git push -u origin develop 2>&1)",
+      "Bash(cd:*)",
+      "Bash(mkdir:*)"
+    ]
+  }
+}
