@@ -7,94 +7,106 @@
  * NEVER expose impact deltas in API responses to the client.
  */
 
-// ─── Primitives ───────────────────────────────────────────────────────────────
+// ─── Base Types (API Contract) ────────────────────────────────────────────────
 
-export type NarrativeId = string;
-export type ChoiceId = string;
-
-// ─── EO Dimensions ────────────────────────────────────────────────────────────
-
-export interface Dimensions {
-  autonomy: number;
-  innovativeness: number;
-  proactiveness: number;
-  riskTaking: number;
-  competitiveAggressiveness: number;
-}
-
-// ─── Resources ────────────────────────────────────────────────────────────────
-
-export interface Resources {
-  capital: number;           // Starting: GHS 10,000
-  reputation: number;        // Scale: 0–100
-  network: number;           // Scale: 0–100
-  momentumMultiplier: number; // Compounds resource changes
-}
-
-// ─── History ──────────────────────────────────────────────────────────────────
-
-export interface HistoryEntry {
-  narrativeId: NarrativeId;
-  choiceId: ChoiceId;
-}
-
-// ─── Game State ───────────────────────────────────────────────────────────────
-
-export interface GameState {
+export interface GlobalState {
   session: {
-    playerId: string;
-    currentNarrativeId: NarrativeId;
+    currentNarrativeId: string;
     isStoryComplete: boolean;
-    history: HistoryEntry[];  // Full path: every beat visited + choice made
   };
-  resources: Resources;
-  dimensions: Dimensions;
+  resources: {
+    v_capital: number;
+    momentumMultiplier: number;
+    reputation: number;
+    network: number;
+  };
+  dimensions: {
+    autonomy: number;
+    innovativeness: number;
+    proactiveness: number;
+    riskTaking: number;
+    competitiveAggressiveness: number;
+  };
   flags: {
     hasDebt: boolean;
     hiredTeam: boolean;
-    [key: string]: boolean;   // Dynamic story flags
+    [key: string]: boolean;
   };
+  history: ChoiceRecord[];
 }
 
-// ─── Narrative (Public) ───────────────────────────────────────────────────────
-
-export interface Choice {
-  choiceId: ChoiceId;
-  label: string;
-  immediateFeedback: string;
-  nextNarrativeId?: NarrativeId; // Overrides default progression if set
+export interface ChoiceRecord {
+  narrativeId: string;
+  choiceId: string;
+  capitalBefore: number;
+  capitalAfter: number;
+  timestamp: number;
 }
 
 export interface NarrativeBeat {
-  id: NarrativeId;
+  id: string;           // e.g. "N_005"
   title: string;
   storyText: string;
-  choices: Choice[];
+  choices: PublicChoice[];
 }
 
-// ─── Private (Backend Only — never sent to client) ────────────────────────────
-
-export interface ChoiceImpact {
-  choiceId: ChoiceId;
-  resourceDeltas: Partial<Resources>;    // e.g. { capital: -2000, reputation: 1 }
-  dimensionDeltas: Partial<Dimensions>;  // e.g. { innovativeness: 0.2 }
-  flagUpdates: Record<string, boolean>;  // e.g. { hired_first_employee: true }
+export interface PublicChoice {
+  choiceId: string;     // e.g. "C_05A"
+  label: string;
+  immediateFeedback: string;
 }
 
-// ─── API Response Shapes (what the client actually receives) ──────────────────
+// ─── API Endpoints (Responses) ────────────────────────────────────────────────
+
+export interface StartSessionResponse {
+  sessionId: string;
+  state: GlobalState;        // initial state with v_capital: 10000
+  narrative: NarrativeBeat;  // always N_001
+}
 
 export interface SessionResponse {
-  beat: NarrativeBeat;
-  state: Omit<GameState, 'dimensions'>; // EO scores hidden during gameplay
+  sessionId: string;
+  state: GlobalState;
+  narrative: NarrativeBeat;  // the current beat based on state.session.currentNarrativeId
 }
 
 export interface ChoiceResponse {
-  nextBeat: NarrativeBeat;
-  updatedState: Omit<GameState, 'dimensions'>;
-  feedback: string;
+  state: GlobalState;        // updated state after applying the choice
+  narrative: NarrativeBeat | null;  // the next beat to render (or null if isStoryComplete = true)
+  feedback: string;          // the immediateFeedback string for the chosen option
 }
 
 export interface ResultsResponse {
-  finalState: GameState; // dimensions revealed only on results page
-  summary: string;
+  sessionId: string;
+  state: GlobalState;    // final state, state.session.isStoryComplete === true
+  completedAt: string;   // ISO 8601 timestamp
+}
+
+// ─── Backend / Internal Types ─────────────────────────────────────────────────
+
+// For backwards compatibility and backend operations
+export type GameState = GlobalState;
+export type Dimensions = GlobalState["dimensions"];
+export type Resources = GlobalState["resources"];
+export type NarrativeId = string;
+export type ChoiceId = string;
+export type HistoryEntry = ChoiceRecord; // Used in some engine files
+
+export interface ChoiceImpact {
+  choiceId: ChoiceId;
+  resourceDeltas: Partial<{
+    v_capital: number;
+    reputation: number;
+    network: number;
+    momentumMultiplier: number;
+  }>;
+  dimensionDeltas: Partial<Dimensions>;
+  flagUpdates: Record<string, boolean>;
+}
+
+export interface Choice {
+  id: ChoiceId; // In DB it's "id"
+  label: string;
+  immediateFeedback: string;
+  nextBeatId?: NarrativeId | null;
 }

@@ -1,8 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useMemo } from "react";
 
 // Icons
 const CurrencyDollarIcon = () => (
@@ -60,65 +59,62 @@ interface StartupStats {
 }
 
 export default function FounderDashboard() {
-  const router = useRouter();
-  const [config, setConfig] = useState<StartupConfig | null>(null);
-  const [stats, setStats] = useState<StartupStats | null>(null);
-  const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    // Load config client-side only
-    const storedConfig = localStorage.getItem("hatchquest_startup_config");
-    
-    if (storedConfig) {
-      try {
-        const parsed = JSON.parse(storedConfig) as StartupConfig;
-        setConfig(parsed);
-        
-        // Calculate starting stats
-        let structureDisplay = "Solo Founder";
-        let teamSize = parsed.teamSize || 1;
+  const config = useMemo<StartupConfig | null>(() => {
+    if (typeof window === "undefined") return null;
 
-        if (parsed.structure === "partnership") {
-          structureDisplay = "Partnership";
-        } else if (parsed.structure === "joint_venture") {
-          structureDisplay = "Joint Venture";
-        }
+    const storedConfig = window.localStorage.getItem("hatchquest_startup_config");
+    if (!storedConfig) return null;
 
-        let calculatedStats: StartupStats = {
-          capital: "$25,000",
-          teamSize,
-          reputation: "Moderate",
-          stage: "Idea",
-          structureDisplay
-        };
-        
-        if (parsed.difficulty === "beginner") {
-          calculatedStats.capital = "$50,000";
-          calculatedStats.reputation = "High";
-        } else if (parsed.difficulty === "hardcore") {
-          calculatedStats.capital = "$10,000";
-          calculatedStats.reputation = "Low";
-        }
-        
-        setStats(calculatedStats);
-      } catch (e) {
-        console.error("Failed to parse startup config", e);
-      }
+    try {
+      return JSON.parse(storedConfig) as StartupConfig;
+    } catch (e) {
+      console.error("Failed to parse startup config", e);
+      return null;
     }
-    
-    setLoading(false);
   }, []);
 
+  const stats = useMemo<StartupStats | null>(() => {
+    if (!config) return null;
+
+    let structureDisplay = "Solo Founder";
+    const teamSize = config.teamSize || 1;
+
+    if (config.structure === "partnership") {
+      structureDisplay = "Partnership";
+    } else if (config.structure === "joint_venture") {
+      structureDisplay = "Joint Venture";
+    }
+
+    const calculatedStats: StartupStats = {
+      capital: "$25,000",
+      teamSize,
+      reputation: "Moderate",
+      stage: "Idea",
+      structureDisplay
+    };
+
+    if (config.difficulty === "beginner") {
+      calculatedStats.capital = "$50,000";
+      calculatedStats.reputation = "High";
+    } else if (config.difficulty === "hardcore") {
+      calculatedStats.capital = "$10,000";
+      calculatedStats.reputation = "Low";
+    }
+
+    return calculatedStats;
+  }, [config]);
+
   // Graceful fallback UI built inside the same component route
-  if (!loading && !config) {
+  if (!config) {
     return (
       <div className="min-h-screen bg-primary text-light flex flex-col items-center justify-center p-6 selection:bg-accent selection:text-primary">
         <div className="bg-light text-primary w-full max-w-md rounded-2xl shadow-2xl p-8 sm:p-10 border-t-4 border-red-400 text-center">
           <h2 className="text-2xl font-bold mb-4">Startup Data Missing</h2>
           <p className="text-primary/70 mb-8">
-            We couldn't find your startup configuration. Did you skip the setup phase?
+            We couldn&apos;t find your startup configuration. Did you skip the setup phase?
           </p>
-          <Link 
+          <Link
             href="/startup-setup"
             className="inline-block w-full bg-accent text-primary font-bold text-lg py-3.5 rounded-xl shadow-[0_4px_14px_0_rgba(217,155,0,0.39)] hover:shadow-[0_6px_20px_rgba(217,155,0,0.23)] hover:bg-[#ffb600] transition-all transform hover:-translate-y-0.5"
           >
@@ -129,8 +125,8 @@ export default function FounderDashboard() {
     );
   }
 
-  // Loading state (avoids hydration mismatch)
-  if (loading || !config || !stats) {
+  // Loading state (avoids hydration mismatch, though without isMounted it might warn)
+  if (!config || !stats) {
     return <div className="min-h-screen bg-primary"></div>;
   }
 
@@ -172,15 +168,15 @@ export default function FounderDashboard() {
             <span className="ml-2">Startup Snapshot</span>
           </h2>
           <p className="text-light/80 text-lg leading-relaxed max-w-3xl">
-            Your <span className="font-bold text-accent">{config.industry}</span> startup is entering the market at the <span className="font-bold text-tealAccent">{stats.stage}</span> stage. 
-            You are operating on <span className="font-bold text-light">"{config.difficulty === 'hardcore' ? 'Hardcore Founder' : config.difficulty === 'standard' ? 'Standard' : 'Beginner'}"</span> difficulty. 
+            Your <span className="font-bold text-accent">{config.industry}</span> startup is entering the market at the <span className="font-bold text-tealAccent">{stats.stage}</span> stage.
+            You are operating on <span className="font-bold text-light">&quot;{config.difficulty === 'hardcore' ? 'Hardcore Founder' : config.difficulty === 'standard' ? 'Standard' : 'Beginner'}&quot;</span> difficulty.
             Your next decisions will determine whether you survive long enough to scale or run out of runway.
           </p>
         </div>
 
         {/* Dashboard Overview Cards */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-16">
-          
+
           {/* Capital Card */}
           <div className="bg-light text-primary rounded-2xl p-6 shadow-xl border-t-4 border-accent transform hover:-translate-y-1 transition-transform">
             <div className="flex justify-between items-start mb-4">
@@ -234,7 +230,7 @@ export default function FounderDashboard() {
 
         {/* Call to Action */}
         <div className="flex justify-center mt-12 pb-12">
-          <Link 
+          <Link
             href="/game"
             className="inline-flex items-center justify-center bg-accent text-primary font-extrabold text-xl sm:text-2xl py-5 px-16 rounded-2xl shadow-[0_4px_20px_0_rgba(217,155,0,0.4)] hover:shadow-[0_8px_30px_rgba(217,155,0,0.3)] hover:bg-[#ffb600] transition-all transform hover:-translate-y-1"
           >

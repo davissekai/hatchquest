@@ -49,7 +49,7 @@ export async function POST(req: NextRequest) {
     const choiceImpact: ChoiceImpact = {
       choiceId,
       resourceDeltas: {
-        capital: impact.capitalDelta,
+        v_capital: impact.capitalDelta,
         reputation: impact.reputationDelta,
         network: impact.networkDelta,
         momentumMultiplier: impact.momentumDelta,
@@ -105,12 +105,20 @@ export async function POST(req: NextRequest) {
       where: eq(narrativeChoices.beatId, nextBeatId),
     });
 
-    // Strip dimensions from response
-    const { dimensions: _dimensions, ...stateWithoutDimensions } = finalState;
+    const formattedChoices = nextChoices.map(c => ({
+      choiceId: c.id,
+      label: c.label,
+      immediateFeedback: c.immediateFeedback
+    }));
 
     return NextResponse.json({
-      nextBeat: { ...nextBeat, choices: nextChoices },
-      updatedState: stateWithoutDimensions,
+      state: finalState,
+      narrative: isLastBeat ? null : { 
+        id: nextBeat.id,
+        title: nextBeat.title,
+        storyText: nextBeat.storyText,
+        choices: formattedChoices 
+      },
       feedback: choice.immediateFeedback,
     });
   } catch (error) {

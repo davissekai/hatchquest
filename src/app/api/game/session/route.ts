@@ -38,12 +38,21 @@ export async function GET(req: NextRequest) {
       where: eq(narrativeChoices.beatId, currentBeatId),
     });
 
-    // Strip dimensions — not revealed during gameplay
-    const { dimensions: _dimensions, ...stateWithoutDimensions } = state;
+    const formattedChoices = choices.map(c => ({
+      choiceId: c.id,
+      label: c.label,
+      immediateFeedback: c.immediateFeedback
+    }));
 
     return NextResponse.json({
-      beat: { ...beat, choices },
-      state: stateWithoutDimensions,
+      sessionId: session.id,
+      state,
+      narrative: {
+        id: beat.id,
+        title: beat.title,
+        storyText: beat.storyText,
+        choices: formattedChoices
+      },
     });
   } catch (error) {
     console.error("[GET /api/game/session]", error);

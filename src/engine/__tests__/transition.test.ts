@@ -1,5 +1,4 @@
-import { describe, it, expect } from "vitest";
-import { processChoice } from "../transition";
+import { describe, it } from "vitest";
 
 // TODO: Implement full test suite using TDD (Red → Green → Refactor)
 // Required coverage: 100% on all engine functions

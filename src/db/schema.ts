@@ -7,7 +7,6 @@ import {
   boolean,
   jsonb,
   timestamp,
-  primaryKey,
 } from "drizzle-orm/pg-core";
 import { GameState } from "@/types/game";
 

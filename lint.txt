@@ -1,0 +1,37 @@
+﻿
+C:\Users\Larbi\Desktop\HatchQuest\hatchquest\src\app\api\game\start\route.ts
+  56:25  warning  '_dimensions' is assigned a value but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\Larbi\Desktop\HatchQuest\hatchquest\src\app\dashboard\page.tsx
+  65:5  error  Error: Calling setState synchronously within an effect can trigger cascading renders
+
+Effects are intended to synchronize state between React and external systems such as manually updating the DOM, state management libraries, or other platform APIs. In general, the body of an effect should do one or both of the following:
+* Update external systems with the latest state from React.
+* Subscribe for updates from some external system, calling setState in a callback function when external state changes.
+
+Calling setState synchronously within an effect body causes cascading renders that can hurt performance, and is not recommended. (https://react.dev/learn/you-might-not-need-an-effect).
+
+C:\Users\Larbi\Desktop\HatchQuest\hatchquest\src\app\dashboard\page.tsx:65:5
+  63 |
+  64 |   useEffect(() => {
+> 65 |     setIsMounted(true);
+     |     ^^^^^^^^^^^^ Avoid calling setState() directly within an effect
+  66 |   }, []);
+  67 |
+  68 |   const config = useMemo<StartupConfig | null>(() => {  react-hooks/set-state-in-effect
+
+C:\Users\Larbi\Desktop\HatchQuest\hatchquest\src\db\schema.ts
+  10:3  warning  'primaryKey' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\Larbi\Desktop\HatchQuest\hatchquest\src\engine\__tests__\transition.test.ts
+  1:24  warning  'expect' is defined but never used         @typescript-eslint/no-unused-vars
+  2:10  warning  'processChoice' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\Larbi\Desktop\HatchQuest\hatchquest\src\engine\transition.ts
+  12:36  warning  'playerId' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\Larbi\Desktop\HatchQuest\hatchquest\src\lib\game-api.ts
+  13:5  warning  'mockSessionId' is assigned a value but never used  @typescript-eslint/no-unused-vars
+
+Γ£û 7 problems (1 error, 6 warnings)
+
