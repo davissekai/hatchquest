@@ -53,7 +53,7 @@ export async function POST(req: NextRequest) {
       where: eq(narrativeChoices.beatId, "beat_00"),
     });
 
-    const { dimensions: _dimensions, ...stateWithoutDimensions } = initialState;
+    const { dimensions, ...stateWithoutDimensions } = initialState;
 
     return NextResponse.json({
       sessionId: session.id,

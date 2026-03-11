@@ -33,27 +33,26 @@ function VerifyEmailContent() {
       </div>
 
       <h2 className="text-2xl sm:text-3xl font-bold mb-4">Verify Your Email</h2>
-      
+
       <p className="text-primary/80 mb-6 leading-relaxed">
-        We've sent a verification link to <span className="font-bold text-tealAccent">{email}</span>. Please check your inbox to continue.
+        We&apos;ve sent a verification link to <span className="font-bold text-tealAccent">{email}</span>. Please check your inbox to continue.
       </p>
 
       <div className="space-y-4">
-        <Link 
+        <Link
           href="/startup-setup"
           className="block w-full bg-accent text-primary font-bold text-lg py-3.5 rounded-xl shadow-[0_4px_14px_0_rgba(217,155,0,0.39)] hover:shadow-[0_6px_20px_rgba(217,155,0,0.23)] hover:bg-[#ffb600] transition-all transform hover:-translate-y-0.5"
         >
           Simulate Email Verification
         </Link>
-        
-        <button 
+
+        <button
           onClick={handleResend}
           disabled={resendStatus === "sent"}
-          className={`w-full py-3 font-medium text-sm transition-colors rounded-xl border ${
-            resendStatus === "sent" 
-              ? "bg-green-50 text-green-700 border-green-200" 
+          className={`w-full py-3 font-medium text-sm transition-colors rounded-xl border ${resendStatus === "sent"
+              ? "bg-green-50 text-green-700 border-green-200"
               : "bg-transparent text-mutedBlue hover:text-primary hover:bg-primary/5 border-mutedBlue/30"
-          }`}
+            }`}
         >
           {resendStatus === "sent" ? "Verification email sent again." : "Resend verification email"}
         </button>

@@ -9,16 +9,15 @@ import {
 
 // ─── createInitialState ───────────────────────────────────────────────────────
 
-export function createInitialState(playerId: string): GameState {
+export function createInitialState(_playerId?: string): GameState {
   return {
     session: {
-      playerId,
       currentNarrativeId: "beat_00",
       isStoryComplete: false,
-      history: [],
     },
+    history: [],
     resources: {
-      capital: 10000,
+      v_capital: 10000,
       reputation: 50,
       network: 10,
       momentumMultiplier: 1.0,
@@ -50,7 +49,7 @@ export function isDuplicateSubmission(
   narrativeId: NarrativeId,
   choiceId: ChoiceId
 ): boolean {
-  return state.session.history.some(
+  return state.history.some(
     (entry) => entry.narrativeId === narrativeId && entry.choiceId === choiceId
   );
 }
@@ -68,9 +67,9 @@ export function applyChoiceToState(
   const newResources: Resources = { ...state.resources };
   for (const key of Object.keys(impact.resourceDeltas) as (keyof Resources)[]) {
     const delta = impact.resourceDeltas[key] ?? 0;
-    if (key === "capital") {
-      newResources.capital = clampCapital(
-        state.resources.capital + delta * momentumMultiplier
+    if (key === "v_capital") {
+      newResources.v_capital = clampCapital(
+        state.resources.v_capital + delta * momentumMultiplier
       );
     } else {
       (newResources[key] as number) = (state.resources[key] as number) + delta;
@@ -86,7 +85,7 @@ export function applyChoiceToState(
 
   // Apply flag updates, then set hasDebt if capital was clamped to 0
   const newFlags = { ...state.flags, ...impact.flagUpdates };
-  if (newResources.capital === 0 && state.resources.capital > 0) {
+  if (newResources.v_capital === 0 && state.resources.v_capital > 0) {
     newFlags.hasDebt = true;
   }
 
@@ -94,11 +93,17 @@ export function applyChoiceToState(
     session: {
       ...state.session,
       currentNarrativeId: nextNarrativeId,
-      history: [
-        ...state.session.history,
-        { narrativeId: state.session.currentNarrativeId, choiceId: impact.choiceId },
-      ],
     },
+    history: [
+      ...state.history,
+      {
+        narrativeId: state.session.currentNarrativeId,
+        choiceId: impact.choiceId,
+        capitalBefore: state.resources.v_capital,
+        capitalAfter: newResources.v_capital,
+        timestamp: Date.now(),
+      },
+    ],
     resources: newResources,
     dimensions: newDimensions,
     flags: newFlags,

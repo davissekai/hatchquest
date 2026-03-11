@@ -27,10 +27,10 @@ export async function GET(req: NextRequest) {
 
     const finalState = session.state as GameState;
 
-    // Full state revealed here — including EO dimensions
     return NextResponse.json({
-      finalState,
-      acumenScore: session.acumenScore,
+      sessionId: session.id,
+      state: finalState,
+      completedAt: session.completedAt?.toISOString() || new Date().toISOString(),
     });
   } catch (error) {
     console.error("[GET /api/game/results]", error);

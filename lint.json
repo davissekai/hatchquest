@@ -1,0 +1,501 @@
+[
+  {
+    "filePath": "C:\\Users\\Larbi\\Desktop\\HatchQuest\\hatchquest\\src\\app\\api\\game\\choice\\route.ts",
+    "messages": [],
+    "suppressedMessages": [],
+    "errorCount": 0,
+    "fatalErrorCount": 0,
+    "warningCount": 0,
+    "fixableErrorCount": 0,
+    "fixableWarningCount": 0,
+    "usedDeprecatedRules": []
+  },
+  {
+    "filePath": "C:\\Users\\Larbi\\Desktop\\HatchQuest\\hatchquest\\src\\app\\api\\game\\results\\route.ts",
+    "messages": [],
+    "suppressedMessages": [],
+    "errorCount": 0,
+    "fatalErrorCount": 0,
+    "warningCount": 0,
+    "fixableErrorCount": 0,
+    "fixableWarningCount": 0,
+    "usedDeprecatedRules": []
+  },
+  {
+    "filePath": "C:\\Users\\Larbi\\Desktop\\HatchQuest\\hatchquest\\src\\app\\api\\game\\session\\route.ts",
+    "messages": [],
+    "suppressedMessages": [],
+    "errorCount": 0,
+    "fatalErrorCount": 0,
+    "warningCount": 0,
+    "fixableErrorCount": 0,
+    "fixableWarningCount": 0,
+    "usedDeprecatedRules": []
+  },
+  {
+    "filePath": "C:\\Users\\Larbi\\Desktop\\HatchQuest\\hatchquest\\src\\app\\api\\game\\start\\route.ts",
+    "messages": [
+      {
+        "ruleId": "@typescript-eslint/no-unused-vars",
+        "severity": 1,
+        "message": "'_dimensions' is assigned a value but never used.",
+        "line": 56,
+        "column": 25,
+        "nodeType": "Identifier",
+        "messageId": "unusedVar",
+        "endLine": 56,
+        "endColumn": 36
+      }
+    ],
+    "suppressedMessages": [],
+    "errorCount": 0,
+    "fatalErrorCount": 0,
+    "warningCount": 1,
+    "fixableErrorCount": 0,
+    "fixableWarningCount": 0,
+    "source": "import { NextRequest, NextResponse } from \"next/server\";\r\nimport { db } from \"@/db/client\";\r\nimport { players, gameSessions, narrativeBeats, narrativeChoices } from \"@/db/schema\";\r\nimport { createInitialState } from \"@/engine/transition\";\r\nimport { eq } from \"drizzle-orm\";\r\n\r\nexport async function POST(req: NextRequest) {\r\n  try {\r\n    const { email, name } = await req.json();\r\n\r\n    if (!email || typeof email !== \"string\") {\r\n      return NextResponse.json({ error: \"email is required\" }, { status: 400 });\r\n    }\r\n    if (!name || typeof name !== \"string\") {\r\n      return NextResponse.json({ error: \"name is required\" }, { status: 400 });\r\n    }\r\n\r\n    // Upsert player — find existing or create new\r\n    const existing = await db.query.players.findFirst({\r\n      where: eq(players.email, email),\r\n    });\r\n\r\n    let playerId: string;\r\n    if (existing) {\r\n      playerId = existing.id;\r\n    } else {\r\n      const [newPlayer] = await db\r\n        .insert(players)\r\n        .values({ email, displayName: name })\r\n        .returning({ id: players.id });\r\n      playerId = newPlayer.id;\r\n    }\r\n\r\n    // Create fresh game state\r\n    const initialState = createInitialState(playerId);\r\n\r\n    // Persist session to DB\r\n    const [session] = await db\r\n      .insert(gameSessions)\r\n      .values({ playerId, state: initialState, isComplete: false })\r\n      .returning({ id: gameSessions.id });\r\n\r\n    // Fetch preamble beat (beat_00)\r\n    const beat = await db.query.narrativeBeats.findFirst({\r\n      where: eq(narrativeBeats.id, \"beat_00\"),\r\n    });\r\n\r\n    if (!beat) {\r\n      return NextResponse.json({ error: \"Preamble beat not found\" }, { status: 404 });\r\n    }\r\n\r\n    const choices = await db.query.narrativeChoices.findMany({\r\n      where: eq(narrativeChoices.beatId, \"beat_00\"),\r\n    });\r\n\r\n    const { dimensions: _dimensions, ...stateWithoutDimensions } = initialState;\r\n\r\n    return NextResponse.json({\r\n      sessionId: session.id,\r\n      beat: { ...beat, choices },\r\n      state: stateWithoutDimensions,\r\n    });\r\n  } catch (error) {\r\n    const message = error instanceof Error ? error.message : String(error);\r\n    console.error(\"[POST /api/game/start]\", message);\r\n    return NextResponse.json({ error: \"Internal server error\" }, { status: 500 });\r\n  }\r\n}\r\n",
+    "usedDeprecatedRules": []
+  },
+  {
+    "filePath": "C:\\Users\\Larbi\\Desktop\\HatchQuest\\hatchquest\\src\\app\\auth\\signin\\page.tsx",
+    "messages": [],
+    "suppressedMessages": [],
+    "errorCount": 0,
+    "fatalErrorCount": 0,
+    "warningCount": 0,
+    "fixableErrorCount": 0,
+    "fixableWarningCount": 0,
+    "usedDeprecatedRules": []
+  },
+  {
+    "filePath": "C:\\Users\\Larbi\\Desktop\\HatchQuest\\hatchquest\\src\\app\\auth\\signup\\page.tsx",
+    "messages": [],
+    "suppressedMessages": [],
+    "errorCount": 0,
+    "fatalErrorCount": 0,
+    "warningCount": 0,
+    "fixableErrorCount": 0,
+    "fixableWarningCount": 0,
+    "usedDeprecatedRules": []
+  },
+  {
+    "filePath": "C:\\Users\\Larbi\\Desktop\\HatchQuest\\hatchquest\\src\\app\\auth\\verify-email\\page.tsx",
+    "messages": [],
+    "suppressedMessages": [],
+    "errorCount": 0,
+    "fatalErrorCount": 0,
+    "warningCount": 0,
+    "fixableErrorCount": 0,
+    "fixableWarningCount": 0,
+    "usedDeprecatedRules": []
+  },
+  {
+    "filePath": "C:\\Users\\Larbi\\Desktop\\HatchQuest\\hatchquest\\src\\app\\dashboard\\page.tsx",
+    "messages": [
+      {
+        "ruleId": "react-hooks/set-state-in-effect",
+        "severity": 2,
+        "message": "Error: Calling setState synchronously within an effect can trigger cascading renders\n\nEffects are intended to synchronize state between React and external systems such as manually updating the DOM, state management libraries, or other platform APIs. In general, the body of an effect should do one or both of the following:\n* Update external systems with the latest state from React.\n* Subscribe for updates from some external system, calling setState in a callback function when external state changes.\n\nCalling setState synchronously within an effect body causes cascading renders that can hurt performance, and is not recommended. (https://react.dev/learn/you-might-not-need-an-effect).\n\nC:\\Users\\Larbi\\Desktop\\HatchQuest\\hatchquest\\src\\app\\dashboard\\page.tsx:65:5\n  63 |\n  64 |   useEffect(() => {\n> 65 |     setIsMounted(true);\n     |     ^^^^^^^^^^^^ Avoid calling setState() directly within an effect\n  66 |   }, []);\n  67 |\n  68 |   const config = useMemo<StartupConfig | null>(() => {",
+        "line": 65,
+        "column": 5,
+        "nodeType": null,
+        "endLine": 65,
+        "endColumn": 17
+      }
+    ],
+    "suppressedMessages": [],
+    "errorCount": 1,
+    "fatalErrorCount": 0,
+    "warningCount": 0,
+    "fixableErrorCount": 0,
+    "fixableWarningCount": 0,
+    "source": "\"use client\";\r\n\r\nimport Link from \"next/link\";\r\nimport { useEffect, useState, useMemo } from \"react\";\r\n\r\n// Icons\r\nconst CurrencyDollarIcon = () => (\r\n  <svg className=\"w-6 h-6 text-accent\" fill=\"none\" stroke=\"currentColor\" viewBox=\"0 0 24 24\">\r\n    <path strokeLinecap=\"round\" strokeLinejoin=\"round\" strokeWidth=\"2\" d=\"M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z\" />\r\n  </svg>\r\n);\r\n\r\nconst UserGroupIcon = () => (\r\n  <svg className=\"w-6 h-6 text-accent\" fill=\"none\" stroke=\"currentColor\" viewBox=\"0 0 24 24\">\r\n    <path strokeLinecap=\"round\" strokeLinejoin=\"round\" strokeWidth=\"2\" d=\"M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z\" />\r\n  </svg>\r\n);\r\n\r\nconst ChartBarIcon = () => (\r\n  <svg className=\"w-6 h-6 text-accent\" fill=\"none\" stroke=\"currentColor\" viewBox=\"0 0 24 24\">\r\n    <path strokeLinecap=\"round\" strokeLinejoin=\"round\" strokeWidth=\"2\" d=\"M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z\" />\r\n  </svg>\r\n);\r\n\r\nconst TagIcon = () => (\r\n  <svg className=\"w-6 h-6 text-accent\" fill=\"none\" stroke=\"currentColor\" viewBox=\"0 0 24 24\">\r\n    <path strokeLinecap=\"round\" strokeLinejoin=\"round\" strokeWidth=\"2\" d=\"M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z\" />\r\n  </svg>\r\n);\r\n\r\nconst SparklesIcon = () => (\r\n  <svg className=\"w-6 h-6 text-accent\" fill=\"none\" stroke=\"currentColor\" viewBox=\"0 0 24 24\">\r\n    <path strokeLinecap=\"round\" strokeLinejoin=\"round\" strokeWidth=\"2\" d=\"M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z\" />\r\n  </svg>\r\n);\r\n\r\nconst BuildingOfficeIcon = () => (\r\n  <svg className=\"w-6 h-6 text-accent\" fill=\"none\" stroke=\"currentColor\" viewBox=\"0 0 24 24\">\r\n    <path strokeLinecap=\"round\" strokeLinejoin=\"round\" strokeWidth=\"2\" d=\"M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4\" />\r\n  </svg>\r\n);\r\n\r\n// Types\r\ninterface StartupConfig {\r\n  founderName: string;\r\n  startupName: string;\r\n  industry: string;\r\n  difficulty: \"beginner\" | \"standard\" | \"hardcore\";\r\n  structure?: string;\r\n  teamSize?: number;\r\n}\r\n\r\ninterface StartupStats {\r\n  capital: string;\r\n  teamSize: number;\r\n  reputation: string;\r\n  stage: string;\r\n  structureDisplay: string;\r\n}\r\n\r\nexport default function FounderDashboard() {\r\n  const [isMounted, setIsMounted] = useState(false);\r\n\r\n  useEffect(() => {\r\n    setIsMounted(true);\r\n  }, []);\r\n\r\n  const config = useMemo<StartupConfig | null>(() => {\r\n    if (typeof window === \"undefined\") return null;\r\n\r\n    const storedConfig = window.localStorage.getItem(\"hatchquest_startup_config\");\r\n    if (!storedConfig) return null;\r\n\r\n    try {\r\n      return JSON.parse(storedConfig) as StartupConfig;\r\n    } catch (e) {\r\n      console.error(\"Failed to parse startup config\", e);\r\n      return null;\r\n    }\r\n  }, []);\r\n\r\n  const stats = useMemo<StartupStats | null>(() => {\r\n    if (!config) return null;\r\n\r\n    let structureDisplay = \"Solo Founder\";\r\n    const teamSize = config.teamSize || 1;\r\n\r\n    if (config.structure === \"partnership\") {\r\n      structureDisplay = \"Partnership\";\r\n    } else if (config.structure === \"joint_venture\") {\r\n      structureDisplay = \"Joint Venture\";\r\n    }\r\n\r\n    const calculatedStats: StartupStats = {\r\n      capital: \"$25,000\",\r\n      teamSize,\r\n      reputation: \"Moderate\",\r\n      stage: \"Idea\",\r\n      structureDisplay\r\n    };\r\n\r\n    if (config.difficulty === \"beginner\") {\r\n      calculatedStats.capital = \"$50,000\";\r\n      calculatedStats.reputation = \"High\";\r\n    } else if (config.difficulty === \"hardcore\") {\r\n      calculatedStats.capital = \"$10,000\";\r\n      calculatedStats.reputation = \"Low\";\r\n    }\r\n\r\n    return calculatedStats;\r\n  }, [config]);\r\n\r\n  // Graceful fallback UI built inside the same component route\r\n  if (isMounted && !config) {\r\n    return (\r\n      <div className=\"min-h-screen bg-primary text-light flex flex-col items-center justify-center p-6 selection:bg-accent selection:text-primary\">\r\n        <div className=\"bg-light text-primary w-full max-w-md rounded-2xl shadow-2xl p-8 sm:p-10 border-t-4 border-red-400 text-center\">\r\n          <h2 className=\"text-2xl font-bold mb-4\">Startup Data Missing</h2>\r\n          <p className=\"text-primary/70 mb-8\">\r\n            We couldn&apos;t find your startup configuration. Did you skip the setup phase?\r\n          </p>\r\n          <Link\r\n            href=\"/startup-setup\"\r\n            className=\"inline-block w-full bg-accent text-primary font-bold text-lg py-3.5 rounded-xl shadow-[0_4px_14px_0_rgba(217,155,0,0.39)] hover:shadow-[0_6px_20px_rgba(217,155,0,0.23)] hover:bg-[#ffb600] transition-all transform hover:-translate-y-0.5\"\r\n          >\r\n            Go to Startup Setup\r\n          </Link>\r\n        </div>\r\n      </div>\r\n    );\r\n  }\r\n\r\n  // Loading state (avoids hydration mismatch)\r\n  if (!isMounted || !config || !stats) {\r\n    return <div className=\"min-h-screen bg-primary\"></div>;\r\n  }\r\n\r\n  return (\r\n    <div className=\"min-h-screen bg-primary text-light p-6 sm:p-12 pb-24 selection:bg-accent selection:text-primary relative overflow-x-hidden\">\r\n      {/* Background decorations */}\r\n      <div className=\"absolute top-0 right-0 w-full h-full overflow-hidden -z-10 pointer-events-none opacity-20\">\r\n        <div className=\"absolute top-[-5%] right-[-5%] w-[40%] h-[40%] bg-tealAccent blur-[140px] rounded-full\"></div>\r\n        <div className=\"absolute bottom-[10%] left-[-10%] w-[35%] h-[35%] bg-mutedBlue blur-[120px] rounded-full\"></div>\r\n      </div>\r\n\r\n      <div className=\"max-w-4xl mx-auto w-full\">\r\n        {/* Dashboard Header */}\r\n        <header className=\"mb-12 flex flex-col md:flex-row justify-between items-start md:items-end border-b border-mutedBlue/30 pb-6 gap-6\">\r\n          <div>\r\n            <div className=\"flex items-center gap-3 mb-2\">\r\n              <span className=\"bg-tealAccent/20 text-tealAccent font-bold px-3 py-1 rounded-lg text-sm uppercase tracking-wider\">\r\n                Founder Dashboard\r\n              </span>\r\n            </div>\r\n            <h1 className=\"text-4xl sm:text-5xl font-extrabold tracking-tight drop-shadow-sm mb-2 text-light\">\r\n              {config.startupName}\r\n            </h1>\r\n            <p className=\"text-xl text-tealAccent font-medium\">\r\n              Founded by <span className=\"text-light\">{config.founderName}</span>\r\n            </p>\r\n          </div>\r\n          <div className=\"text-left md:text-right\">\r\n            <p className=\"text-primary/10 text-mutedBlue max-w-xs text-sm sm:text-base leading-relaxed\">\r\n              Your company is ready. Now the real decisions begin.\r\n            </p>\r\n          </div>\r\n        </header>\r\n\r\n        {/* Status Panel Summary */}\r\n        <div className=\"bg-primary/20 backdrop-blur-sm border border-mutedBlue/20 rounded-2xl p-6 sm:p-8 mb-10 shadow-lg\">\r\n          <h2 className=\"text-xl font-bold mb-3 flex items-center text-light\">\r\n            <SparklesIcon />\r\n            <span className=\"ml-2\">Startup Snapshot</span>\r\n          </h2>\r\n          <p className=\"text-light/80 text-lg leading-relaxed max-w-3xl\">\r\n            Your <span className=\"font-bold text-accent\">{config.industry}</span> startup is entering the market at the <span className=\"font-bold text-tealAccent\">{stats.stage}</span> stage.\r\n            You are operating on <span className=\"font-bold text-light\">&quot;{config.difficulty === 'hardcore' ? 'Hardcore Founder' : config.difficulty === 'standard' ? 'Standard' : 'Beginner'}&quot;</span> difficulty.\r\n            Your next decisions will determine whether you survive long enough to scale or run out of runway.\r\n          </p>\r\n        </div>\r\n\r\n        {/* Dashboard Overview Cards */}\r\n        <div className=\"grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-16\">\r\n\r\n          {/* Capital Card */}\r\n          <div className=\"bg-light text-primary rounded-2xl p-6 shadow-xl border-t-4 border-accent transform hover:-translate-y-1 transition-transform\">\r\n            <div className=\"flex justify-between items-start mb-4\">\r\n              <h3 className=\"font-bold text-primary/70 text-sm uppercase tracking-wider\">Capital</h3>\r\n              <div className=\"p-2 bg-primary/5 rounded-lg\"><CurrencyDollarIcon /></div>\r\n            </div>\r\n            <p className=\"text-3xl font-extrabold text-primary\">{stats.capital}</p>\r\n          </div>\r\n\r\n          {/* Team Size Card */}\r\n          <div className=\"bg-light text-primary rounded-2xl p-6 shadow-xl border-t-4 border-tealAccent transform hover:-translate-y-1 transition-transform\">\r\n            <div className=\"flex justify-between items-start mb-4\">\r\n              <h3 className=\"font-bold text-primary/70 text-sm uppercase tracking-wider\">Team Size</h3>\r\n              <div className=\"p-2 bg-primary/5 rounded-lg\"><UserGroupIcon /></div>\r\n            </div>\r\n            <p className=\"text-3xl font-extrabold text-primary\">{stats.teamSize}</p>\r\n          </div>\r\n\r\n          {/* Reputation Card */}\r\n          <div className=\"bg-light text-primary rounded-2xl p-6 shadow-xl border-t-4 border-mutedBlue transform hover:-translate-y-1 transition-transform\">\r\n            <div className=\"flex justify-between items-start mb-4\">\r\n              <h3 className=\"font-bold text-primary/70 text-sm uppercase tracking-wider\">Reputation</h3>\r\n              <div className=\"p-2 bg-primary/5 rounded-lg\"><ChartBarIcon /></div>\r\n            </div>\r\n            <p className=\"text-3xl font-extrabold text-primary\">{stats.reputation}</p>\r\n          </div>\r\n\r\n          {/* Industry Card */}\r\n          <div className=\"bg-light text-primary rounded-2xl p-6 shadow-xl border-t-4 border-primary transform hover:-translate-y-1 transition-transform\">\r\n            <div className=\"flex justify-between items-start mb-4\">\r\n              <h3 className=\"font-bold text-primary/70 text-sm uppercase tracking-wider\">Industry</h3>\r\n              <div className=\"p-2 bg-primary/5 rounded-lg\"><TagIcon /></div>\r\n            </div>\r\n            <p className=\"text-xl sm:text-2xl font-extrabold text-primary truncate\" title={config.industry}>\r\n              {config.industry}\r\n            </p>\r\n          </div>\r\n\r\n          {/* Structure Card */}\r\n          <div className=\"bg-light text-primary rounded-2xl p-6 shadow-xl border-t-4 border-mutedBlue transform hover:-translate-y-1 transition-transform sm:col-span-2 lg:col-span-1\">\r\n            <div className=\"flex justify-between items-start mb-4\">\r\n              <h3 className=\"font-bold text-primary/70 text-sm uppercase tracking-wider\">Structure</h3>\r\n              <div className=\"p-2 bg-primary/5 rounded-lg\"><BuildingOfficeIcon /></div>\r\n            </div>\r\n            <p className=\"text-xl sm:text-2xl font-extrabold text-primary truncate\" title={stats.structureDisplay}>\r\n              {stats.structureDisplay}\r\n            </p>\r\n          </div>\r\n\r\n        </div>\r\n\r\n        {/* Call to Action */}\r\n        <div className=\"flex justify-center mt-12 pb-12\">\r\n          <Link\r\n            href=\"/game\"\r\n            className=\"inline-flex items-center justify-center bg-accent text-primary font-extrabold text-xl sm:text-2xl py-5 px-16 rounded-2xl shadow-[0_4px_20px_0_rgba(217,155,0,0.4)] hover:shadow-[0_8px_30px_rgba(217,155,0,0.3)] hover:bg-[#ffb600] transition-all transform hover:-translate-y-1\"\r\n          >\r\n            Start Your Journey\r\n            <svg className=\"ml-3 w-6 h-6\" fill=\"none\" stroke=\"currentColor\" viewBox=\"0 0 24 24\">\r\n              <path strokeLinecap=\"round\" strokeLinejoin=\"round\" strokeWidth=\"3\" d=\"M14 5l7 7m0 0l-7 7m7-7H3\" />\r\n            </svg>\r\n          </Link>\r\n        </div>\r\n\r\n      </div>\r\n    </div>\r\n  );\r\n}\r\n",
+    "usedDeprecatedRules": []
+  },
+  {
+    "filePath": "C:\\Users\\Larbi\\Desktop\\HatchQuest\\hatchquest\\src\\app\\game\\page.tsx",
+    "messages": [],
+    "suppressedMessages": [],
+    "errorCount": 0,
+    "fatalErrorCount": 0,
+    "warningCount": 0,
+    "fixableErrorCount": 0,
+    "fixableWarningCount": 0,
+    "usedDeprecatedRules": []
+  },
+  {
+    "filePath": "C:\\Users\\Larbi\\Desktop\\HatchQuest\\hatchquest\\src\\app\\layout.tsx",
+    "messages": [],
+    "suppressedMessages": [],
+    "errorCount": 0,
+    "fatalErrorCount": 0,
+    "warningCount": 0,
+    "fixableErrorCount": 0,
+    "fixableWarningCount": 0,
+    "usedDeprecatedRules": []
+  },
+  {
+    "filePath": "C:\\Users\\Larbi\\Desktop\\HatchQuest\\hatchquest\\src\\app\\page.tsx",
+    "messages": [],
+    "suppressedMessages": [],
+    "errorCount": 0,
+    "fatalErrorCount": 0,
+    "warningCount": 0,
+    "fixableErrorCount": 0,
+    "fixableWarningCount": 0,
+    "usedDeprecatedRules": []
+  },
+  {
+    "filePath": "C:\\Users\\Larbi\\Desktop\\HatchQuest\\hatchquest\\src\\app\\results\\page.tsx",
+    "messages": [],
+    "suppressedMessages": [],
+    "errorCount": 0,
+    "fatalErrorCount": 0,
+    "warningCount": 0,
+    "fixableErrorCount": 0,
+    "fixableWarningCount": 0,
+    "usedDeprecatedRules": []
+  },
+  {
+    "filePath": "C:\\Users\\Larbi\\Desktop\\HatchQuest\\hatchquest\\src\\app\\startup-setup\\page.tsx",
+    "messages": [],
+    "suppressedMessages": [],
+    "errorCount": 0,
+    "fatalErrorCount": 0,
+    "warningCount": 0,
+    "fixableErrorCount": 0,
+    "fixableWarningCount": 0,
+    "usedDeprecatedRules": []
+  },
+  {
+    "filePath": "C:\\Users\\Larbi\\Desktop\\HatchQuest\\hatchquest\\src\\components\\ChoiceButton.tsx",
+    "messages": [],
+    "suppressedMessages": [],
+    "errorCount": 0,
+    "fatalErrorCount": 0,
+    "warningCount": 0,
+    "fixableErrorCount": 0,
+    "fixableWarningCount": 0,
+    "usedDeprecatedRules": []
+  },
+  {
+    "filePath": "C:\\Users\\Larbi\\Desktop\\HatchQuest\\hatchquest\\src\\components\\ChoicePanel.tsx",
+    "messages": [],
+    "suppressedMessages": [],
+    "errorCount": 0,
+    "fatalErrorCount": 0,
+    "warningCount": 0,
+    "fixableErrorCount": 0,
+    "fixableWarningCount": 0,
+    "usedDeprecatedRules": []
+  },
+  {
+    "filePath": "C:\\Users\\Larbi\\Desktop\\HatchQuest\\hatchquest\\src\\components\\NarrativeBeat.tsx",
+    "messages": [],
+    "suppressedMessages": [],
+    "errorCount": 0,
+    "fatalErrorCount": 0,
+    "warningCount": 0,
+    "fixableErrorCount": 0,
+    "fixableWarningCount": 0,
+    "usedDeprecatedRules": []
+  },
+  {
+    "filePath": "C:\\Users\\Larbi\\Desktop\\HatchQuest\\hatchquest\\src\\components\\NarrativeCard.tsx",
+    "messages": [],
+    "suppressedMessages": [],
+    "errorCount": 0,
+    "fatalErrorCount": 0,
+    "warningCount": 0,
+    "fixableErrorCount": 0,
+    "fixableWarningCount": 0,
+    "usedDeprecatedRules": []
+  },
+  {
+    "filePath": "C:\\Users\\Larbi\\Desktop\\HatchQuest\\hatchquest\\src\\components\\ResourceBar.tsx",
+    "messages": [],
+    "suppressedMessages": [],
+    "errorCount": 0,
+    "fatalErrorCount": 0,
+    "warningCount": 0,
+    "fixableErrorCount": 0,
+    "fixableWarningCount": 0,
+    "usedDeprecatedRules": []
+  },
+  {
+    "filePath": "C:\\Users\\Larbi\\Desktop\\HatchQuest\\hatchquest\\src\\db\\client.ts",
+    "messages": [],
+    "suppressedMessages": [],
+    "errorCount": 0,
+    "fatalErrorCount": 0,
+    "warningCount": 0,
+    "fixableErrorCount": 0,
+    "fixableWarningCount": 0,
+    "usedDeprecatedRules": []
+  },
+  {
+    "filePath": "C:\\Users\\Larbi\\Desktop\\HatchQuest\\hatchquest\\src\\db\\schema.ts",
+    "messages": [
+      {
+        "ruleId": "@typescript-eslint/no-unused-vars",
+        "severity": 1,
+        "message": "'primaryKey' is defined but never used.",
+        "line": 10,
+        "column": 3,
+        "nodeType": "Identifier",
+        "messageId": "unusedVar",
+        "endLine": 10,
+        "endColumn": 13,
+        "suggestions": [
+          {
+            "messageId": "removeUnusedVar",
+            "data": {
+              "varName": "primaryKey"
+            },
+            "fix": {
+              "range": [
+                94,
+                109
+              ],
+              "text": ""
+            },
+            "desc": "Remove unused variable \"primaryKey\"."
+          }
+        ]
+      }
+    ],
+    "suppressedMessages": [],
+    "errorCount": 0,
+    "fatalErrorCount": 0,
+    "warningCount": 1,
+    "fixableErrorCount": 0,
+    "fixableWarningCount": 0,
+    "source": "import {\r\n  pgTable,\r\n  uuid,\r\n  text,\r\n  integer,\r\n  real,\r\n  boolean,\r\n  jsonb,\r\n  timestamp,\r\n  primaryKey,\r\n} from \"drizzle-orm/pg-core\";\r\nimport { GameState } from \"@/types/game\";\r\n\r\n// ─── players ──────────────────────────────────────────────────────────────────\r\n\r\nexport const players = pgTable(\"players\", {\r\n  id: uuid(\"id\").defaultRandom().primaryKey(),\r\n  email: text(\"email\").notNull().unique(),\r\n  displayName: text(\"display_name\").notNull(),\r\n  createdAt: timestamp(\"created_at\").defaultNow().notNull(),\r\n});\r\n\r\n// ─── game_sessions ────────────────────────────────────────────────────────────\r\n// state is stored as a JSON blob — one read/write per turn, no joins needed.\r\n\r\nexport const gameSessions = pgTable(\"game_sessions\", {\r\n  id: uuid(\"id\").defaultRandom().primaryKey(),\r\n  playerId: uuid(\"player_id\")\r\n    .notNull()\r\n    .references(() => players.id, { onDelete: \"cascade\" }),\r\n  state: jsonb(\"state\").$type<GameState>().notNull(),\r\n  isComplete: boolean(\"is_complete\").default(false).notNull(),\r\n  acumenScore: real(\"acumen_score\"),         // null until game ends\r\n  startedAt: timestamp(\"started_at\").defaultNow().notNull(),\r\n  completedAt: timestamp(\"completed_at\"),\r\n});\r\n\r\n// ─── narrative_beats ──────────────────────────────────────────────────────────\r\n// Seeded by narrative-agent. Read-only at runtime.\r\n\r\nexport const narrativeBeats = pgTable(\"narrative_beats\", {\r\n  id: text(\"id\").primaryKey(),              // e.g. \"beat_00\", \"beat_01\"\r\n  round: integer(\"round\").notNull(),         // 0 = preamble, 1-3 = rounds\r\n  title: text(\"title\").notNull(),\r\n  storyText: text(\"story_text\").notNull(),\r\n  orderIndex: integer(\"order_index\").notNull(), // position within round\r\n});\r\n\r\n// ─── narrative_choices ────────────────────────────────────────────────────────\r\n// The public-facing choices for each beat. Safe to expose to client.\r\n\r\nexport const narrativeChoices = pgTable(\"narrative_choices\", {\r\n  id: text(\"id\").primaryKey(),              // e.g. \"choice_01a\"\r\n  beatId: text(\"beat_id\")\r\n    .notNull()\r\n    .references(() => narrativeBeats.id, { onDelete: \"cascade\" }),\r\n  label: text(\"label\").notNull(),\r\n  immediateFeedback: text(\"immediate_feedback\").notNull(),\r\n  nextBeatId: text(\"next_beat_id\"),         // null = default progression\r\n});\r\n\r\n// ─── choice_impacts ───────────────────────────────────────────────────────────\r\n// PRIVATE — backend only. Never exposed in API responses to client.\r\n// RLS: no public access.\r\n\r\nexport const choiceImpacts = pgTable(\"choice_impacts\", {\r\n  choiceId: text(\"choice_id\")\r\n    .primaryKey()\r\n    .references(() => narrativeChoices.id, { onDelete: \"cascade\" }),\r\n  capitalDelta: real(\"capital_delta\").default(0).notNull(),\r\n  reputationDelta: real(\"reputation_delta\").default(0).notNull(),\r\n  networkDelta: real(\"network_delta\").default(0).notNull(),\r\n  momentumDelta: real(\"momentum_delta\").default(0).notNull(),\r\n  autonomyDelta: real(\"autonomy_delta\").default(0).notNull(),\r\n  innovativenessDelta: real(\"innovativeness_delta\").default(0).notNull(),\r\n  proactivenessDelta: real(\"proactiveness_delta\").default(0).notNull(),\r\n  riskTakingDelta: real(\"risk_taking_delta\").default(0).notNull(),\r\n  competitiveAggressivenessDelta: real(\"competitive_aggressiveness_delta\").default(0).notNull(),\r\n  flagUpdates: jsonb(\"flag_updates\").$type<Record<string, boolean>>().default({}).notNull(),\r\n});\r\n",
+    "usedDeprecatedRules": []
+  },
+  {
+    "filePath": "C:\\Users\\Larbi\\Desktop\\HatchQuest\\hatchquest\\src\\db\\seed.ts",
+    "messages": [],
+    "suppressedMessages": [],
+    "errorCount": 0,
+    "fatalErrorCount": 0,
+    "warningCount": 0,
+    "fixableErrorCount": 0,
+    "fixableWarningCount": 0,
+    "usedDeprecatedRules": []
+  },
+  {
+    "filePath": "C:\\Users\\Larbi\\Desktop\\HatchQuest\\hatchquest\\src\\engine\\scoring.ts",
+    "messages": [],
+    "suppressedMessages": [],
+    "errorCount": 0,
+    "fatalErrorCount": 0,
+    "warningCount": 0,
+    "fixableErrorCount": 0,
+    "fixableWarningCount": 0,
+    "usedDeprecatedRules": []
+  },
+  {
+    "filePath": "C:\\Users\\Larbi\\Desktop\\HatchQuest\\hatchquest\\src\\engine\\transition.ts",
+    "messages": [
+      {
+        "ruleId": "@typescript-eslint/no-unused-vars",
+        "severity": 1,
+        "message": "'playerId' is defined but never used.",
+        "line": 12,
+        "column": 36,
+        "nodeType": "Identifier",
+        "messageId": "unusedVar",
+        "endLine": 12,
+        "endColumn": 44
+      }
+    ],
+    "suppressedMessages": [],
+    "errorCount": 0,
+    "fatalErrorCount": 0,
+    "warningCount": 1,
+    "fixableErrorCount": 0,
+    "fixableWarningCount": 0,
+    "source": "import {\r\n  GameState,\r\n  ChoiceImpact,\r\n  NarrativeId,\r\n  ChoiceId,\r\n  Resources,\r\n  Dimensions,\r\n} from \"@/types/game\";\r\n\r\n// ─── createInitialState ───────────────────────────────────────────────────────\r\n\r\nexport function createInitialState(playerId: string): GameState {\r\n  return {\r\n    session: {\r\n      currentNarrativeId: \"beat_00\",\r\n      isStoryComplete: false,\r\n    },\r\n    history: [],\r\n    resources: {\r\n      v_capital: 10000,\r\n      reputation: 50,\r\n      network: 10,\r\n      momentumMultiplier: 1.0,\r\n    },\r\n    dimensions: {\r\n      autonomy: 0,\r\n      innovativeness: 0,\r\n      proactiveness: 0,\r\n      riskTaking: 0,\r\n      competitiveAggressiveness: 0,\r\n    },\r\n    flags: {\r\n      hasDebt: false,\r\n      hiredTeam: false,\r\n    },\r\n  };\r\n}\r\n\r\n// ─── clampCapital ─────────────────────────────────────────────────────────────\r\n\r\nexport function clampCapital(value: number): number {\r\n  return Math.max(0, value);\r\n}\r\n\r\n// ─── isDuplicateSubmission ────────────────────────────────────────────────────\r\n\r\nexport function isDuplicateSubmission(\r\n  state: GameState,\r\n  narrativeId: NarrativeId,\r\n  choiceId: ChoiceId\r\n): boolean {\r\n  return state.history.some(\r\n    (entry) => entry.narrativeId === narrativeId && entry.choiceId === choiceId\r\n  );\r\n}\r\n\r\n// ─── applyChoiceToState ───────────────────────────────────────────────────────\r\n\r\nexport function applyChoiceToState(\r\n  state: GameState,\r\n  impact: ChoiceImpact,\r\n  nextNarrativeId: NarrativeId\r\n): GameState {\r\n  const { momentumMultiplier } = state.resources;\r\n\r\n  // Apply resource deltas\r\n  const newResources: Resources = { ...state.resources };\r\n  for (const key of Object.keys(impact.resourceDeltas) as (keyof Resources)[]) {\r\n    const delta = impact.resourceDeltas[key] ?? 0;\r\n    if (key === \"v_capital\") {\r\n      newResources.v_capital = clampCapital(\r\n        state.resources.v_capital + delta * momentumMultiplier\r\n      );\r\n    } else {\r\n      (newResources[key] as number) = (state.resources[key] as number) + delta;\r\n    }\r\n  }\r\n\r\n  // Apply dimension deltas\r\n  const newDimensions: Dimensions = { ...state.dimensions };\r\n  for (const key of Object.keys(impact.dimensionDeltas) as (keyof Dimensions)[]) {\r\n    const delta = impact.dimensionDeltas[key] ?? 0;\r\n    newDimensions[key] = state.dimensions[key] + delta;\r\n  }\r\n\r\n  // Apply flag updates, then set hasDebt if capital was clamped to 0\r\n  const newFlags = { ...state.flags, ...impact.flagUpdates };\r\n  if (newResources.v_capital === 0 && state.resources.v_capital > 0) {\r\n    newFlags.hasDebt = true;\r\n  }\r\n\r\n  return {\r\n    session: {\r\n      ...state.session,\r\n      currentNarrativeId: nextNarrativeId,\r\n    },\r\n    history: [\r\n      ...state.history,\r\n      {\r\n        narrativeId: state.session.currentNarrativeId,\r\n        choiceId: impact.choiceId,\r\n        capitalBefore: state.resources.v_capital,\r\n        capitalAfter: newResources.v_capital,\r\n        timestamp: Date.now(),\r\n      },\r\n    ],\r\n    resources: newResources,\r\n    dimensions: newDimensions,\r\n    flags: newFlags,\r\n  };\r\n}\r\n\r\n// ─── processChoice ────────────────────────────────────────────────────────────\r\n\r\nexport function processChoice(\r\n  state: GameState,\r\n  choiceId: ChoiceId,\r\n  impact: ChoiceImpact,\r\n  nextNarrativeId: NarrativeId\r\n): GameState {\r\n  if (state.session.isStoryComplete) return state;\r\n  if (isDuplicateSubmission(state, state.session.currentNarrativeId, choiceId)) return state;\r\n  if (!isFinite(state.resources.momentumMultiplier) || isNaN(state.resources.momentumMultiplier)) {\r\n    return state;\r\n  }\r\n  return applyChoiceToState(state, impact, nextNarrativeId);\r\n}\r\n\r\n// ─── completeStory ────────────────────────────────────────────────────────────\r\n\r\nexport function completeStory(state: GameState): GameState {\r\n  return {\r\n    ...state,\r\n    session: { ...state.session, isStoryComplete: true },\r\n  };\r\n}\r\n",
+    "usedDeprecatedRules": []
+  },
+  {
+    "filePath": "C:\\Users\\Larbi\\Desktop\\HatchQuest\\hatchquest\\src\\engine\\__tests__\\scoring.test.ts",
+    "messages": [],
+    "suppressedMessages": [],
+    "errorCount": 0,
+    "fatalErrorCount": 0,
+    "warningCount": 0,
+    "fixableErrorCount": 0,
+    "fixableWarningCount": 0,
+    "usedDeprecatedRules": []
+  },
+  {
+    "filePath": "C:\\Users\\Larbi\\Desktop\\HatchQuest\\hatchquest\\src\\engine\\__tests__\\transition.test.ts",
+    "messages": [
+      {
+        "ruleId": "@typescript-eslint/no-unused-vars",
+        "severity": 1,
+        "message": "'expect' is defined but never used.",
+        "line": 1,
+        "column": 24,
+        "nodeType": "Identifier",
+        "messageId": "unusedVar",
+        "endLine": 1,
+        "endColumn": 30,
+        "suggestions": [
+          {
+            "messageId": "removeUnusedVar",
+            "data": {
+              "varName": "expect"
+            },
+            "fix": {
+              "range": [
+                21,
+                29
+              ],
+              "text": ""
+            },
+            "desc": "Remove unused variable \"expect\"."
+          }
+        ]
+      },
+      {
+        "ruleId": "@typescript-eslint/no-unused-vars",
+        "severity": 1,
+        "message": "'processChoice' is defined but never used.",
+        "line": 2,
+        "column": 10,
+        "nodeType": "Identifier",
+        "messageId": "unusedVar",
+        "endLine": 2,
+        "endColumn": 23,
+        "suggestions": [
+          {
+            "messageId": "removeUnusedImportDeclaration",
+            "data": {
+              "varName": "processChoice"
+            },
+            "fix": {
+              "range": [
+                48,
+                96
+              ],
+              "text": ""
+            },
+            "desc": "Remove unused import declaration."
+          }
+        ]
+      }
+    ],
+    "suppressedMessages": [],
+    "errorCount": 0,
+    "fatalErrorCount": 0,
+    "warningCount": 2,
+    "fixableErrorCount": 0,
+    "fixableWarningCount": 0,
+    "source": "import { describe, it, expect } from \"vitest\";\r\nimport { processChoice } from \"../transition\";\r\n\r\n// TODO: Implement full test suite using TDD (Red → Green → Refactor)\r\n// Required coverage: 100% on all engine functions\r\n\r\ndescribe(\"transition()\", () => {\r\n    it.todo(\"applies choice impact to v_capital with momentumMultiplier\");\r\n    it.todo(\"updates the correct EO dimension on a choice\");\r\n    it.todo(\"sets flags correctly when a flag impact is present\");\r\n    it.todo(\"follows nextNarrativeId override when present\");\r\n    it.todo(\"advances to next narrative in default sequence when no override\");\r\n    it.todo(\"does not allow v_capital to drop below 0 (bankruptcy guard)\");\r\n    it.todo(\"does not mutate the original state (immutability)\");\r\n    it.todo(\"ignores duplicate submissions (idempotency guard)\");\r\n});\r\n",
+    "usedDeprecatedRules": []
+  },
+  {
+    "filePath": "C:\\Users\\Larbi\\Desktop\\HatchQuest\\hatchquest\\src\\hooks\\useGameSession.ts",
+    "messages": [],
+    "suppressedMessages": [],
+    "errorCount": 0,
+    "fatalErrorCount": 0,
+    "warningCount": 0,
+    "fixableErrorCount": 0,
+    "fixableWarningCount": 0,
+    "usedDeprecatedRules": []
+  },
+  {
+    "filePath": "C:\\Users\\Larbi\\Desktop\\HatchQuest\\hatchquest\\src\\lib\\game-api.ts",
+    "messages": [
+      {
+        "ruleId": "@typescript-eslint/no-unused-vars",
+        "severity": 1,
+        "message": "'mockSessionId' is assigned a value but never used.",
+        "line": 13,
+        "column": 5,
+        "nodeType": "Identifier",
+        "messageId": "unusedVar",
+        "endLine": 13,
+        "endColumn": 18
+      }
+    ],
+    "suppressedMessages": [],
+    "errorCount": 0,
+    "fatalErrorCount": 0,
+    "warningCount": 1,
+    "fixableErrorCount": 0,
+    "fixableWarningCount": 0,
+    "source": "import {\n  StartSessionResponse,\n  SessionResponse,\n  ChoiceResponse,\n  ResultsResponse,\n  GlobalState\n} from \"../types/game\";\nimport { getMockSessionResponse, playMockChoice } from \"../__mocks__/api\";\n\nconst USE_MOCKS = true;\n\nlet mockCurrentState: GlobalState | null = null;\nlet mockSessionId: string | null = null;\n\nexport async function startGame(token: string): Promise<StartSessionResponse> {\n  if (USE_MOCKS) {\n    await new Promise(resolve => setTimeout(resolve, 800));\n    const res = getMockSessionResponse();\n    mockSessionId = res.sessionId;\n    mockCurrentState = res.state;\n    return {\n      sessionId: res.sessionId,\n      state: res.state,\n      narrative: res.narrative\n    };\n  }\n\n  const response = await fetch(\"/api/game/start\", {\n    method: \"POST\",\n    headers: {\n      \"Content-Type\": \"application/json\",\n      \"Authorization\": `Bearer ${token}`\n    }\n  });\n\n  if (!response.ok) {\n    throw new Error(`Failed to start game: ${response.statusText}`);\n  }\n\n  return response.json();\n}\n\nexport async function getCurrentSession(token: string): Promise<SessionResponse> {\n  if (USE_MOCKS) {\n    await new Promise(resolve => setTimeout(resolve, 800));\n    if (!mockCurrentState) {\n      const res = getMockSessionResponse();\n      mockSessionId = res.sessionId;\n      mockCurrentState = res.state;\n    }\n    // We ideally should return the narrative corresponding to mockCurrentState.session.currentNarrativeId,\n    // but the getMockSessionResponse returns N_001. We would need a more robust loader here if we paused mid-game.\n    // Assuming simple behavior since it's a mock.\n    return getMockSessionResponse();\n  }\n\n  const response = await fetch(\"/api/game/session\", {\n    method: \"GET\",\n    headers: {\n      \"Authorization\": `Bearer ${token}`\n    }\n  });\n\n  if (!response.ok) {\n    throw new Error(`Failed to get session: ${response.statusText}`);\n  }\n\n  return response.json();\n}\n\nexport async function submitChoice(token: string, payload: { choiceId: string }): Promise<ChoiceResponse> {\n  if (USE_MOCKS) {\n    await new Promise(resolve => setTimeout(resolve, 1200));\n    if (!mockCurrentState) {\n      throw new Error(\"No active mock session\");\n    }\n    const res = playMockChoice(mockCurrentState, payload.choiceId);\n    mockCurrentState = res.state;\n    return res;\n  }\n\n  const response = await fetch(\"/api/game/choice\", {\n    method: \"POST\",\n    headers: {\n      \"Content-Type\": \"application/json\",\n      \"Authorization\": `Bearer ${token}`\n    },\n    body: JSON.stringify(payload)\n  });\n\n  if (!response.ok) {\n    throw new Error(`Failed to submit choice: ${response.statusText}`);\n  }\n\n  return response.json();\n}\n\nexport async function getSessionResults(token: string, sessionId: string): Promise<ResultsResponse> {\n  if (USE_MOCKS) {\n    await new Promise(resolve => setTimeout(resolve, 800));\n    return {\n      sessionId,\n      state: mockCurrentState || getMockSessionResponse().state,\n      completedAt: new Date().toISOString()\n    };\n  }\n\n  const response = await fetch(`/api/game/results/${sessionId}`, {\n    method: \"GET\",\n    headers: {\n      \"Authorization\": `Bearer ${token}`\n    }\n  });\n\n  if (!response.ok) {\n    throw new Error(`Failed to get results: ${response.statusText}`);\n  }\n\n  return response.json();\n}\n",
+    "usedDeprecatedRules": []
+  },
+  {
+    "filePath": "C:\\Users\\Larbi\\Desktop\\HatchQuest\\hatchquest\\src\\lib\\supabase.ts",
+    "messages": [],
+    "suppressedMessages": [],
+    "errorCount": 0,
+    "fatalErrorCount": 0,
+    "warningCount": 0,
+    "fixableErrorCount": 0,
+    "fixableWarningCount": 0,
+    "usedDeprecatedRules": []
+  },
+  {
+    "filePath": "C:\\Users\\Larbi\\Desktop\\HatchQuest\\hatchquest\\src\\lib\\utils.ts",
+    "messages": [],
+    "suppressedMessages": [],
+    "errorCount": 0,
+    "fatalErrorCount": 0,
+    "warningCount": 0,
+    "fixableErrorCount": 0,
+    "fixableWarningCount": 0,
+    "usedDeprecatedRules": []
+  },
+  {
+    "filePath": "C:\\Users\\Larbi\\Desktop\\HatchQuest\\hatchquest\\src\\types\\game.ts",
+    "messages": [],
+    "suppressedMessages": [],
+    "errorCount": 0,
+    "fatalErrorCount": 0,
+    "warningCount": 0,
+    "fixableErrorCount": 0,
+    "fixableWarningCount": 0,
+    "usedDeprecatedRules": []
+  },
+  {
+    "filePath": "C:\\Users\\Larbi\\Desktop\\HatchQuest\\hatchquest\\src\\__mocks__\\api.ts",
+    "messages": [],
+    "suppressedMessages": [],
+    "errorCount": 0,
+    "fatalErrorCount": 0,
+    "warningCount": 0,
+    "fixableErrorCount": 0,
+    "fixableWarningCount": 0,
+    "usedDeprecatedRules": []
+  },
+  {
+    "filePath": "C:\\Users\\Larbi\\Desktop\\HatchQuest\\hatchquest\\src\\__tests__\\api.integration.test.ts",
+    "messages": [],
+    "suppressedMessages": [],
+    "errorCount": 0,
+    "fatalErrorCount": 0,
+    "warningCount": 0,
+    "fixableErrorCount": 0,
+    "fixableWarningCount": 0,
+    "usedDeprecatedRules": []
+  },
+  {
+    "filePath": "C:\\Users\\Larbi\\Desktop\\HatchQuest\\hatchquest\\src\\__tests__\\setup.ts",
+    "messages": [],
+    "suppressedMessages": [],
+    "errorCount": 0,
+    "fatalErrorCount": 0,
+    "warningCount": 0,
+    "fixableErrorCount": 0,
+    "fixableWarningCount": 0,
+    "usedDeprecatedRules": []
+  }
+]

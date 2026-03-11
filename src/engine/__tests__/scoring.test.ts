@@ -7,13 +7,12 @@ import { GameState, Dimensions } from "@/types/game";
 function makeState(dimensions: Dimensions): GameState {
   return {
     session: {
-      playerId: "player_test",
       currentNarrativeId: "beat_30",
       isStoryComplete: true,
-      history: [],
     },
+    history: [],
     resources: {
-      capital: 8000,
+      v_capital: 8000,
       reputation: 50,
       network: 10,
       momentumMultiplier: 1.0,
