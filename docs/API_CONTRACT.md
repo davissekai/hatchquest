@@ -8,13 +8,23 @@
 
 ## Authentication
 
-Every request to `/api/game/*` must include a Supabase JWT in the Authorization header:
+Authentication is **not yet implemented.** No token is required. All endpoints are currently open.
+
+This section will be updated when Supabase Auth is integrated.
+
+---
+
+## Base URL
 
 ```
-Authorization: Bearer <supabase_access_token>
+https://hatchquest.vercel.app
 ```
 
-The token is obtained after the player logs in via Supabase Auth. All endpoints return `401` if the token is missing or invalid.
+For local development:
+
+```
+http://localhost:3000
+```
 
 ---
 
@@ -23,17 +33,29 @@ The token is obtained after the player logs in via Supabase Auth. All endpoints 
 These types are the shared language between frontend and backend. Do not redefine them inline.
 
 ```typescript
-interface GlobalState {
+// State returned during gameplay — dimensions are hidden until results
+interface GameplayState {
   session: {
-    currentNarrativeId: string;
+    playerId: string;
+    currentNarrativeId: string;   // e.g. "beat_00", "beat_01"
     isStoryComplete: boolean;
+    history: HistoryEntry[];
   };
   resources: {
-    v_capital: number;
-    momentumMultiplier: number;
-    reputation: number;
-    network: number;
+    capital: number;              // GHS — starts at 10,000
+    reputation: number;           // Scale: 0–100, starts at 50
+    network: number;              // Scale: 0–100, starts at 10
+    momentumMultiplier: number;   // Starts at 1.0
   };
+  flags: {
+    hasDebt: boolean;
+    hiredTeam: boolean;
+    [key: string]: boolean;       // Dynamic venture flags e.g. venture_threads
+  };
+}
+
+// Full state — only returned on results page
+interface FinalState extends GameplayState {
   dimensions: {
     autonomy: number;
     innovativeness: number;
@@ -41,38 +63,33 @@ interface GlobalState {
     riskTaking: number;
     competitiveAggressiveness: number;
   };
-  flags: {
-    hasDebt: boolean;
-    hiredTeam: boolean;
-    [key: string]: boolean;
-  };
-  history: ChoiceRecord[];
 }
 
-interface ChoiceRecord {
+interface HistoryEntry {
   narrativeId: string;
   choiceId: string;
-  capitalBefore: number;
-  capitalAfter: number;
-  timestamp: number;
 }
 
-interface NarrativeBeat {
-  id: string;           // e.g. "N_005"
+interface Beat {
+  id: string;               // e.g. "beat_00", "beat_01"
+  round: number;            // 0 = preamble, 1–3 = game rounds
   title: string;
   storyText: string;
-  choices: PublicChoice[];
+  orderIndex: number;
+  choices: Choice[];
 }
 
-interface PublicChoice {
-  choiceId: string;     // e.g. "C_05A"
+interface Choice {
+  id: string;               // e.g. "beat_01_a"
+  beatId: string;
   label: string;
   immediateFeedback: string;
+  nextBeatId: string | null; // null = default linear progression
 }
 ```
 
-> **Important:** `GlobalState.dimensions` and EO scores are **never displayed to the player
-> during gameplay.** They are hidden diagnostic metrics. Only show them on the results page.
+> **Rule:** `FinalState.dimensions` and EO scores are **never displayed during gameplay.**
+> Only reveal them on the results page.
 
 ---
 
@@ -84,51 +101,64 @@ interface PublicChoice {
 POST /api/game/start
 ```
 
-Creates a new session for the authenticated player with initial state. Call this when the player clicks "Begin" on the landing page.
+Creates a new player (or finds existing by email) and starts a fresh game session.
+Call this when the player submits the landing page form.
 
-**Request body:** none
+**Request body:**
+```typescript
+{
+  email: string;   // player's email — used to upsert the player record
+  name: string;    // display name
+}
+```
 
 **Response `200`:**
 ```typescript
 {
-  sessionId: string;
-  state: GlobalState;        // initial state with v_capital: 10000
-  narrative: NarrativeBeat;  // always N_001
+  sessionId: string;    // UUID — store this, needed for all subsequent calls
+  beat: Beat;           // always beat_00 (the preamble)
+  state: GameplayState; // initial state: capital 10000, reputation 50, network 10
 }
 ```
 
 **Error responses:**
 | Status | Meaning |
 |--------|---------|
-| `401` | Missing or invalid auth token |
-| `409` | Player already has an active incomplete session |
+| `400` | `email` or `name` missing or not a string |
+| `404` | Preamble beat (beat_00) not found in DB |
+| `500` | Internal server error |
 
 ---
 
 ### 2. Get Current Session
 
 ```
-GET /api/game/session
+GET /api/game/session?sessionId=<sessionId>
 ```
 
-Returns the current session state and the narrative beat the player is on. Call this on page load/refresh to restore session.
+Returns the current session state and the beat the player is on.
+Call this on page load or refresh to restore an in-progress session.
 
-**Request body:** none
+**Query params:**
+| Param | Type | Required |
+|-------|------|----------|
+| `sessionId` | string (UUID) | yes |
 
 **Response `200`:**
 ```typescript
 {
-  sessionId: string;
-  state: GlobalState;
-  narrative: NarrativeBeat;  // the current beat based on state.session.currentNarrativeId
+  beat: Beat;           // the current beat based on state.session.currentNarrativeId
+  state: GameplayState;
 }
 ```
 
 **Error responses:**
 | Status | Meaning |
 |--------|---------|
-| `401` | Missing or invalid auth token |
-| `404` | No active session found for this player |
+| `400` | `sessionId` query param missing |
+| `404` | Session not found |
+| `404` | Narrative beat not found |
+| `500` | Internal server error |
 
 ---
 
@@ -138,125 +168,204 @@ Returns the current session state and the narrative beat the player is on. Call 
 POST /api/game/choice
 ```
 
-The core gameplay endpoint. Submits the player's choice for the current narrative beat. The backend applies the game logic and returns the updated state and next beat.
+The core gameplay endpoint. Submits the player's choice for the current beat.
+The backend applies game logic and returns the updated state and next beat.
 
 **Request body:**
 ```typescript
 {
-  sessionId: string;
-  narrativeId: string;   // must match state.session.currentNarrativeId
-  choiceId: string;      // must be a valid choice for that narrativeId
+  sessionId: string;  // UUID from /start
+  choiceId: string;   // e.g. "beat_01_a" — must be a valid choice ID
 }
 ```
 
 **Response `200`:**
 ```typescript
 {
-  state: GlobalState;        // updated state after applying the choice
-  narrative: NarrativeBeat;  // the next beat to render (or null if isStoryComplete = true)
-  feedback: string;          // the immediateFeedback string for the chosen option
+  nextBeat: Beat;           // the next beat to render
+  updatedState: GameplayState;
+  feedback: string;         // immediateFeedback text for the chosen option
 }
 ```
 
 **Error responses:**
 | Status | Meaning |
 |--------|---------|
-| `400` | Invalid `choiceId` or `narrativeId` |
-| `400` | `narrativeId` does not match the player's current position |
-| `401` | Missing or invalid auth token |
-| `403` | `sessionId` does not belong to the authenticated player |
-| `409` | Choice already submitted for this beat (duplicate submission) |
+| `400` | `sessionId` or `choiceId` missing |
+| `404` | Session not found |
+| `404` | Choice not found |
+| `404` | Next beat not found |
+| `409` | Session is already complete |
+| `500` | Internal server error |
 
-> **UI rule:** Disable the choice buttons immediately on click. Re-enable only if you receive
-> a `4xx` response. Never let the player submit twice for the same beat.
+> **UI rule:** Disable choice buttons immediately on click. Re-enable only if you receive
+> a `4xx` response. Never allow double submission.
 
 ---
 
 ### 4. Get Session Results
 
 ```
-GET /api/game/results/[sessionId]
+GET /api/game/results?sessionId=<sessionId>
 ```
 
-Returns the final state of a completed session. Use this to populate the results/dashboard page.
+Returns the final state of a completed session. Only available after all 30 beats are played.
+Use this to populate the results page.
 
-**Request params:** `sessionId` in the URL path
+**Query params:**
+| Param | Type | Required |
+|-------|------|----------|
+| `sessionId` | string (UUID) | yes |
 
 **Response `200`:**
 ```typescript
 {
-  sessionId: string;
-  state: GlobalState;    // final state, state.session.isStoryComplete === true
-  completedAt: string;   // ISO 8601 timestamp
+  finalState: FinalState;     // full state including dimensions — reveal EO scores here
+  acumenScore: number | null; // composite score — may be null if not yet calculated
 }
 ```
 
 **Error responses:**
 | Status | Meaning |
 |--------|---------|
-| `401` | Missing or invalid auth token |
-| `403` | Session does not belong to the authenticated player |
+| `400` | `sessionId` missing or session not yet complete |
 | `404` | Session not found |
-| `409` | Session is not yet complete |
+| `500` | Internal server error |
 
 ---
 
 ## What the Frontend Never Receives
 
-The following data **never appears in any API response.** Do not look for it, do not request it:
+The following data **never appears in any API response:**
 
 - Raw choice impact values (capital delta, dimension deltas, flag mutations)
-- The private narrative impact schema
+- `GameplayState.dimensions` — stripped from all responses except `/results`
 - Other players' session data
 
 ---
 
 ## Mock Data for Local Development
 
-Until the backend endpoints are live, use this mock to build and test your components:
+Use this mock to build and test components before hitting the live API.
 
 ```typescript
 // __mocks__/api.ts
 
-export const MOCK_SESSION_RESPONSE = {
+export const MOCK_START_RESPONSE = {
   sessionId: "mock-session-001",
-  state: {
-    session: { currentNarrativeId: "N_001", isStoryComplete: false },
-    resources: { v_capital: 10000, momentumMultiplier: 1.0, reputation: 50, network: 10 },
-    dimensions: { autonomy: 0, innovativeness: 0, proactiveness: 0, riskTaking: 0, competitiveAggressiveness: 0 },
-    flags: { hasDebt: false, hiredTeam: false },
-    history: []
-  },
-  narrative: {
-    id: "N_001",
-    title: "Day One",
-    storyText: "You've just received your first GHS 10,000 in seed capital. Your university mentor gives you 48 hours to make your first move. The market won't wait.",
+  beat: {
+    id: "beat_00",
+    round: 0,
+    title: "The GHS 10,000 Moment",
+    storyText: "Your room is small but your screen is bright. GHS 10,000 sits in your mobile money account — every pesewa earned through late nights, odd jobs, and stubborn saving.\n\nThe city outside your window is already moving. Accra doesn't pause for anyone. You've had this dream for a while. Now the money is real, and there are no more excuses.\n\nThe question isn't whether you're ready. The question is: what are you building?",
+    orderIndex: 0,
     choices: [
-      { choiceId: "C_01A", label: "Rent a stall at the Accra Mall and launch immediately.", immediateFeedback: "Bold move. You're in the market before anyone else." },
-      { choiceId: "C_01B", label: "Spend two weeks researching competitors first.", immediateFeedback: "Careful. You know your landscape — but so does everyone else now." },
-      { choiceId: "C_01C", label: "Partner with a classmate to split costs and risk.", immediateFeedback: "You've halved your exposure. You've also halved your control." }
+      {
+        id: "beat_01_a",
+        beatId: "beat_00",
+        label: "Urban Threads — The streets need better style. I'm giving it to them.",
+        immediateFeedback: "Fashion and hustle. You're betting on your eye for style and the city's appetite for it.",
+        nextBeatId: "beat_02"
+      },
+      {
+        id: "beat_01_b",
+        beatId: "beat_00",
+        label: "Campus Kitchen — The food situation is a crime. I'm fixing it.",
+        immediateFeedback: "Food is the most honest business there is. People eat every day.",
+        nextBeatId: "beat_02"
+      },
+      {
+        id: "beat_01_c",
+        beatId: "beat_00",
+        label: "Digital Solve — Local businesses are stuck offline. I'm dragging them forward.",
+        immediateFeedback: "You're selling something most people know they need but don't know how to get.",
+        nextBeatId: "beat_02"
+      }
     ]
+  },
+  state: {
+    session: {
+      playerId: "mock-player-001",
+      currentNarrativeId: "beat_00",
+      isStoryComplete: false,
+      history: []
+    },
+    resources: {
+      capital: 10000,
+      reputation: 50,
+      network: 10,
+      momentumMultiplier: 1.0
+    },
+    flags: { hasDebt: false, hiredTeam: false }
   }
 };
 
 export const MOCK_CHOICE_RESPONSE = {
-  state: {
-    session: { currentNarrativeId: "N_002", isStoryComplete: false },
-    resources: { v_capital: 8500, momentumMultiplier: 1.1, reputation: 55, network: 12 },
-    dimensions: { autonomy: 2, innovativeness: 0, proactiveness: 3, riskTaking: 2, competitiveAggressiveness: 0 },
-    flags: { hasDebt: false, hiredTeam: false },
-    history: [{ narrativeId: "N_001", choiceId: "C_01A", capitalBefore: 10000, capitalAfter: 8500, timestamp: 1709000000000 }]
-  },
-  narrative: {
-    id: "N_002",
-    title: "First Week",
-    storyText: "Your stall is up. Foot traffic is decent but not what you hoped. A supplier offers you a bulk discount — take it now or lose the deal.",
+  nextBeat: {
+    id: "beat_02",
+    round: 1,
+    title: "All In or Play It Safe?",
+    storyText: "You've told two people about your venture. One hyped you up. The other asked if you had a 'backup plan.' Classic.\n\nNow comes your first real test: how do you deploy your capital?",
+    orderIndex: 2,
     choices: [
-      { choiceId: "C_02A", label: "Take the bulk deal. Commit the capital.", immediateFeedback: "All in. Your shelves are full." },
-      { choiceId: "C_02B", label: "Decline. Preserve cash for flexibility.", immediateFeedback: "You kept your options open. The supplier moves on." }
+      {
+        id: "beat_02_a",
+        beatId: "beat_02",
+        label: "Go big. Spend GHS 4,000 upfront. Make a statement.",
+        immediateFeedback: "Bold move. You're putting real skin in the game early.",
+        nextBeatId: "beat_03"
+      },
+      {
+        id: "beat_02_b",
+        beatId: "beat_02",
+        label: "Start lean. Spend GHS 1,000, test fast, learn faster.",
+        immediateFeedback: "Smart. You're buying information before you buy inventory.",
+        nextBeatId: "beat_03"
+      }
     ]
   },
-  feedback: "Bold move. You're in the market before anyone else."
+  updatedState: {
+    session: {
+      playerId: "mock-player-001",
+      currentNarrativeId: "beat_02",
+      isStoryComplete: false,
+      history: [{ narrativeId: "beat_00", choiceId: "beat_01_a" }]
+    },
+    resources: {
+      capital: 10000,
+      reputation: 50,
+      network: 10,
+      momentumMultiplier: 1.0
+    },
+    flags: { hasDebt: false, hiredTeam: false, venture_threads: true }
+  },
+  feedback: "Fashion and hustle. You're betting on your eye for style and the city's appetite for it."
+};
+
+export const MOCK_RESULTS_RESPONSE = {
+  finalState: {
+    session: {
+      playerId: "mock-player-001",
+      currentNarrativeId: "beat_30",
+      isStoryComplete: true,
+      history: []
+    },
+    resources: {
+      capital: 12500,
+      reputation: 68,
+      network: 24,
+      momentumMultiplier: 1.3
+    },
+    dimensions: {
+      autonomy: 14,
+      innovativeness: 11,
+      proactiveness: 16,
+      riskTaking: 13,
+      competitiveAggressiveness: 9
+    },
+    flags: { hasDebt: false, hiredTeam: true, venture_threads: true }
+  },
+  acumenScore: 72.4
 };
 ```
 
@@ -264,4 +373,5 @@ export const MOCK_CHOICE_RESPONSE = {
 
 ## Questions or Discrepancies
 
-If an endpoint behaves differently from this contract during integration, flag it immediately — do not work around it. Raise it with the backend lead so the contract can be updated for both sides.
+If an endpoint behaves differently from this contract during integration, flag it immediately.
+Do not work around it — raise it with the backend lead so both sides stay in sync.
