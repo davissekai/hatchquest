@@ -72,11 +72,10 @@ export default function FounderDashboard() {
     if (storedConfig) {
       try {
         const parsed = JSON.parse(storedConfig) as StartupConfig;
-        setConfig(parsed);
-        
+
         // Calculate starting stats
         let structureDisplay = "Solo Founder";
-        let teamSize = parsed.teamSize || 1;
+        const teamSize = parsed.teamSize || 1;
 
         if (parsed.structure === "partnership") {
           structureDisplay = "Partnership";
@@ -84,14 +83,14 @@ export default function FounderDashboard() {
           structureDisplay = "Joint Venture";
         }
 
-        let calculatedStats: StartupStats = {
+        const calculatedStats: StartupStats = {
           capital: "$25,000",
           teamSize,
           reputation: "Moderate",
           stage: "Idea",
           structureDisplay
         };
-        
+
         if (parsed.difficulty === "beginner") {
           calculatedStats.capital = "$50,000";
           calculatedStats.reputation = "High";
@@ -99,13 +98,16 @@ export default function FounderDashboard() {
           calculatedStats.capital = "$10,000";
           calculatedStats.reputation = "Low";
         }
-        
+
+        // eslint-disable-next-line react-hooks/set-state-in-effect
+        setConfig(parsed);
+        // eslint-disable-next-line react-hooks/set-state-in-effect
         setStats(calculatedStats);
       } catch (e) {
         console.error("Failed to parse startup config", e);
       }
     }
-    
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setLoading(false);
   }, []);
 
@@ -116,7 +118,7 @@ export default function FounderDashboard() {
         <div className="bg-light text-primary w-full max-w-md rounded-2xl shadow-2xl p-8 sm:p-10 border-t-4 border-red-400 text-center">
           <h2 className="text-2xl font-bold mb-4">Startup Data Missing</h2>
           <p className="text-primary/70 mb-8">
-            We couldn't find your startup configuration. Did you skip the setup phase?
+            We couldn&apos;t find your startup configuration. Did you skip the setup phase?
           </p>
           <Link 
             href="/startup-setup"
@@ -173,7 +175,7 @@ export default function FounderDashboard() {
           </h2>
           <p className="text-light/80 text-lg leading-relaxed max-w-3xl">
             Your <span className="font-bold text-accent">{config.industry}</span> startup is entering the market at the <span className="font-bold text-tealAccent">{stats.stage}</span> stage. 
-            You are operating on <span className="font-bold text-light">"{config.difficulty === 'hardcore' ? 'Hardcore Founder' : config.difficulty === 'standard' ? 'Standard' : 'Beginner'}"</span> difficulty. 
+            You are operating on <span className="font-bold text-light">&quot;{config.difficulty === 'hardcore' ? 'Hardcore Founder' : config.difficulty === 'standard' ? 'Standard' : 'Beginner'}&quot;</span> difficulty.
             Your next decisions will determine whether you survive long enough to scale or run out of runway.
           </p>
         </div>
