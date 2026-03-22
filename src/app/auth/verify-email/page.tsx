@@ -35,7 +35,7 @@ function VerifyEmailContent() {
       <h2 className="text-2xl sm:text-3xl font-bold mb-4">Verify Your Email</h2>
       
       <p className="text-primary/80 mb-6 leading-relaxed">
-        We've sent a verification link to <span className="font-bold text-tealAccent">{email}</span>. Please check your inbox to continue.
+        We&apos;ve sent a verification link to <span className="font-bold text-tealAccent">{email}</span>. Please check your inbox to continue.
       </p>
 
       <div className="space-y-4">
