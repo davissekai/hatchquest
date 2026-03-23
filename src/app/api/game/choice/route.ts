@@ -78,7 +78,7 @@ export async function POST(req: NextRequest) {
 
     // Compute acumen score on completion
     const acumenScore = isLastBeat
-      ? calculateAcumenScore(calculateEOScores(finalState))
+      ? calculateAcumenScore(calculateEOScores(finalState), finalState.resources)
       : null;
 
     // Persist new state
