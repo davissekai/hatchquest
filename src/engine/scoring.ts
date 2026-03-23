@@ -1,16 +1,11 @@
-import { GameState, Dimensions } from "@/types/game";
+import { GameState, Dimensions, Resources } from "@/types/game";
 
-// Maximum possible raw score per dimension.
-// Based on highest single delta (0.7) × 29 choice beats ≈ 20.
-// Realistically players hit 3–12. Ceiling of 20 maps cleanly to 0–100.
-const MAX_DIMENSION_SCORE = 20;
-
-// ─── calculateEOScores ────────────────────────────────────────────────────────
+// Realistic ceiling per dimension.
+// 29 choice beats × avg delta ~0.3 = ~8.7 raw max. Set to 10 for headroom.
+const MAX_DIMENSION_SCORE = 10;
 
 /**
  * Normalizes raw EO dimension scores to a 0–100 scale.
- * Formula: normalized = clamp((raw / MAX) * 100, 0, 100)
- *
  * Called at end of game to produce Radar Chart data.
  */
 export function calculateEOScores(state: GameState): Dimensions {
@@ -26,23 +21,34 @@ export function calculateEOScores(state: GameState): Dimensions {
   };
 }
 
-// ─── calculateAcumenScore ─────────────────────────────────────────────────────
-
 /**
- * Calculates the aggregate Entrepreneurial Acumen Score.
- * Simple average of the 5 normalized EO dimension scores.
- * Formula: acumen = (sum of all 5 dimensions) / 5
+ * Composite Entrepreneurial Acumen Score (0–100).
+ * Blends EO behavior (50%) with business outcomes (50%).
+ * Capital-weighted within resources — reflects Ghanaian entrepreneurial context
+ * where profit optimization is the primary mark of a good entrepreneur.
  *
- * @param dimensions - Already normalized Dimensions (0–100 scale)
- * @returns A number between 0 and 100
+ * @param dimensions - Already normalized EO dimensions (0–100 scale)
+ * @param resources  - Final game resources
  */
-export function calculateAcumenScore(dimensions: Dimensions): number {
-  const sum =
-    dimensions.autonomy +
-    dimensions.innovativeness +
-    dimensions.proactiveness +
-    dimensions.riskTaking +
-    dimensions.competitiveAggressiveness;
+export function calculateAcumenScore(dimensions: Dimensions, resources: Resources): number {
+  // EO score: simple average of 5 normalized dimensions
+  const eoScore =
+    (dimensions.autonomy +
+      dimensions.innovativeness +
+      dimensions.proactiveness +
+      dimensions.riskTaking +
+      dimensions.competitiveAggressiveness) /
+    5;
 
-  return Math.round((sum / 5) * 100) / 100;
+  // Resource scores
+  const capitalScore = Math.min(100, (resources.capital / 50000) * 100);  // 50K GHS = ceiling
+  const repScore = Math.min(100, (resources.reputation / 80) * 100);      // 80 = realistic max
+  const networkScore = Math.min(100, (resources.network / 80) * 100);     // 80 = realistic max
+
+  // Capital carries 60% of resource weight (profit is the primary signal)
+  const resourceScore = capitalScore * 0.6 + repScore * 0.2 + networkScore * 0.2;
+
+  // Composite: equal weight EO behavior vs business outcomes
+  const composite = eoScore * 0.5 + resourceScore * 0.5;
+  return Math.round(composite * 100) / 100;
 }
