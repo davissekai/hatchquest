@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { calculateEOScores, calculateAcumenScore } from "../scoring";
-import { GameState, Dimensions } from "@/types/game";
+import { GameState, Dimensions, Resources } from "@/types/game";
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -23,6 +23,16 @@ function makeState(dimensions: Dimensions): GameState {
   };
 }
 
+function makeResources(overrides: Partial<Resources> = {}): Resources {
+  return {
+    capital: 0,
+    reputation: 0,
+    network: 0,
+    momentumMultiplier: 1.0,
+    ...overrides,
+  };
+}
+
 const zeroDimensions: Dimensions = {
   autonomy: 0,
   innovativeness: 0,
@@ -31,20 +41,21 @@ const zeroDimensions: Dimensions = {
   competitiveAggressiveness: 0,
 };
 
+// MAX_DIMENSION_SCORE = 10
 const maxDimensions: Dimensions = {
-  autonomy: 20,
-  innovativeness: 20,
-  proactiveness: 20,
-  riskTaking: 20,
-  competitiveAggressiveness: 20,
+  autonomy: 10,
+  innovativeness: 10,
+  proactiveness: 10,
+  riskTaking: 10,
+  competitiveAggressiveness: 10,
 };
 
 const midDimensions: Dimensions = {
-  autonomy: 10,
-  innovativeness: 5,
-  proactiveness: 15,
-  riskTaking: 8,
-  competitiveAggressiveness: 4,
+  autonomy: 5,
+  innovativeness: 2.5,
+  proactiveness: 7.5,
+  riskTaking: 4,
+  competitiveAggressiveness: 2,
 };
 
 // ─── calculateEOScores ────────────────────────────────────────────────────────
@@ -59,7 +70,7 @@ describe("calculateEOScores()", () => {
     expect(result.competitiveAggressiveness).toBe(0);
   });
 
-  it("returns 100 for all dimensions when raw scores are at max (20)", () => {
+  it("returns 100 for all dimensions when raw scores are at max (10)", () => {
     const result = calculateEOScores(makeState(maxDimensions));
     expect(result.autonomy).toBe(100);
     expect(result.innovativeness).toBe(100);
@@ -70,20 +81,20 @@ describe("calculateEOScores()", () => {
 
   it("normalizes mid-range scores correctly", () => {
     const result = calculateEOScores(makeState(midDimensions));
-    // autonomy: 10/20 * 100 = 50
+    // autonomy: 5/10 * 100 = 50
     expect(result.autonomy).toBe(50);
-    // innovativeness: 5/20 * 100 = 25
+    // innovativeness: 2.5/10 * 100 = 25
     expect(result.innovativeness).toBe(25);
-    // proactiveness: 15/20 * 100 = 75
+    // proactiveness: 7.5/10 * 100 = 75
     expect(result.proactiveness).toBe(75);
-    // riskTaking: 8/20 * 100 = 40
+    // riskTaking: 4/10 * 100 = 40
     expect(result.riskTaking).toBe(40);
-    // competitiveAggressiveness: 4/20 * 100 = 20
+    // competitiveAggressiveness: 2/10 * 100 = 20
     expect(result.competitiveAggressiveness).toBe(20);
   });
 
   it("clamps scores above max to 100", () => {
-    const overMax: Dimensions = { ...zeroDimensions, autonomy: 25 };
+    const overMax: Dimensions = { ...zeroDimensions, autonomy: 15 };
     const result = calculateEOScores(makeState(overMax));
     expect(result.autonomy).toBe(100);
   });
@@ -97,11 +108,11 @@ describe("calculateEOScores()", () => {
 
   it("each dimension is normalized independently", () => {
     const mixed: Dimensions = {
-      autonomy: 20,
+      autonomy: 10,
       innovativeness: 0,
-      proactiveness: 10,
+      proactiveness: 5,
       riskTaking: 0,
-      competitiveAggressiveness: 20,
+      competitiveAggressiveness: 10,
     };
     const result = calculateEOScores(makeState(mixed));
     expect(result.autonomy).toBe(100);
@@ -115,12 +126,15 @@ describe("calculateEOScores()", () => {
 // ─── calculateAcumenScore ─────────────────────────────────────────────────────
 
 describe("calculateAcumenScore()", () => {
-  it("returns 0 when all normalized dimensions are 0", () => {
+  it("returns 0 when all normalized dimensions and all resources are 0", () => {
+    // eoScore=0, resourceScore=0 → composite=0
     const normalized: Dimensions = { ...zeroDimensions };
-    expect(calculateAcumenScore(normalized)).toBe(0);
+    const resources = makeResources();
+    expect(calculateAcumenScore(normalized, resources)).toBe(0);
   });
 
-  it("returns 100 when all normalized dimensions are 100", () => {
+  it("returns 100 when all dimensions are 100 and all resources are maxed", () => {
+    // eoScore=100, capital=50K, rep=80, net=80 → resourceScore=100 → composite=100
     const normalized: Dimensions = {
       autonomy: 100,
       innovativeness: 100,
@@ -128,34 +142,38 @@ describe("calculateAcumenScore()", () => {
       riskTaking: 100,
       competitiveAggressiveness: 100,
     };
-    expect(calculateAcumenScore(normalized)).toBe(100);
+    const resources = makeResources({ capital: 50000, reputation: 80, network: 80 });
+    expect(calculateAcumenScore(normalized, resources)).toBe(100);
   });
 
-  it("returns correct average of 5 dimensions", () => {
+  it("computes composite correctly — equal EO and resource contribution", () => {
+    // eoScore = (100+100+100+100+100)/5 = 100
+    // capital=25000 → capitalScore=50, rep=40 → repScore=50, net=40 → networkScore=50
+    // resourceScore = 50*0.6 + 50*0.2 + 50*0.2 = 50
+    // composite = 100*0.5 + 50*0.5 = 75
     const normalized: Dimensions = {
-      autonomy: 50,
-      innovativeness: 25,
-      proactiveness: 75,
-      riskTaking: 40,
-      competitiveAggressiveness: 20,
+      autonomy: 100,
+      innovativeness: 100,
+      proactiveness: 100,
+      riskTaking: 100,
+      competitiveAggressiveness: 100,
     };
-    // (50 + 25 + 75 + 40 + 20) / 5 = 42
-    expect(calculateAcumenScore(normalized)).toBe(42);
+    const resources = makeResources({ capital: 25000, reputation: 40, network: 40 });
+    expect(calculateAcumenScore(normalized, resources)).toBe(75);
+  });
+
+  it("capital dominates resource score (60% weight)", () => {
+    // eoScore=0, capital=50000 → capitalScore=100, rep=0, net=0
+    // resourceScore = 100*0.6 = 60
+    // composite = 0*0.5 + 60*0.5 = 30
+    const normalized: Dimensions = { ...zeroDimensions };
+    const resources = makeResources({ capital: 50000 });
+    expect(calculateAcumenScore(normalized, resources)).toBe(30);
   });
 
   it("rounds result to 2 decimal places", () => {
-    const normalized: Dimensions = {
-      autonomy: 100,
-      innovativeness: 0,
-      proactiveness: 0,
-      riskTaking: 0,
-      competitiveAggressiveness: 0,
-    };
-    // 100 / 5 = 20.00
-    expect(calculateAcumenScore(normalized)).toBe(20);
-  });
-
-  it("handles non-round averages correctly", () => {
+    // eoScore = (33+33+33+33+34)/5 = 33.2
+    // resources all zero → composite = 33.2 * 0.5 = 16.6
     const normalized: Dimensions = {
       autonomy: 33,
       innovativeness: 33,
@@ -163,7 +181,7 @@ describe("calculateAcumenScore()", () => {
       riskTaking: 33,
       competitiveAggressiveness: 34,
     };
-    // (33+33+33+33+34) / 5 = 33.2
-    expect(calculateAcumenScore(normalized)).toBeCloseTo(33.2, 1);
+    const resources = makeResources();
+    expect(calculateAcumenScore(normalized, resources)).toBeCloseTo(16.6, 1);
   });
 });
