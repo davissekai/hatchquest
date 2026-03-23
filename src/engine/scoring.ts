@@ -40,10 +40,13 @@ export function calculateAcumenScore(dimensions: Dimensions, resources: Resource
       dimensions.competitiveAggressiveness) /
     5;
 
-  // Resource scores
+  // Resource scores.
+  // Rep and network are normalized against 80, not 100, because transition.ts
+  // clamps both to 80 at runtime — 80 IS the reachable ceiling in normal play.
+  // This is intentional: changing the clamp and this ceiling must be done together.
   const capitalScore = Math.min(100, (resources.capital / 50000) * 100);  // 50K GHS = ceiling
-  const repScore = Math.min(100, (resources.reputation / 80) * 100);      // 80 = realistic max
-  const networkScore = Math.min(100, (resources.network / 80) * 100);     // 80 = realistic max
+  const repScore = Math.min(100, (resources.reputation / 80) * 100);      // 80 = clamped max (see transition.ts)
+  const networkScore = Math.min(100, (resources.network / 80) * 100);     // 80 = clamped max (see transition.ts)
 
   // Capital carries 60% of resource weight (profit is the primary signal)
   const resourceScore = capitalScore * 0.6 + repScore * 0.2 + networkScore * 0.2;
