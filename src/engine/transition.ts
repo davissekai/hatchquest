@@ -19,8 +19,8 @@ export function createInitialState(playerId: string): GameState {
     },
     resources: {
       capital: 10000,
-      reputation: 50,
-      network: 10,
+      reputation: 0,
+      network: 0,
       momentumMultiplier: 1.0,
     },
     dimensions: {
@@ -73,7 +73,7 @@ export function applyChoiceToState(
         state.resources.capital + delta * momentumMultiplier
       );
     } else {
-      (newResources[key] as number) = (state.resources[key] as number) + delta;
+      (newResources[key] as number) = Math.min(80, Math.max(0, (state.resources[key] as number) + delta));
     }
   }
 
