@@ -65,7 +65,7 @@ const RadarChart = ({ dimensions, maxValue }: RadarChartProps) => {
       })}
 
       {Array.from({ length: 5 }, (_, i) => {
-        const p = getPoint(i, maxValue);
+        const p = getPoint(i, effectiveMax);
         return <line key={i} x1={cx} y1={cy} x2={p.x} y2={p.y} stroke={primary} strokeWidth="1" opacity={0.2} />;
       })}
 
