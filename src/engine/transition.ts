@@ -81,7 +81,7 @@ export function applyChoiceToState(
   const newDimensions: Dimensions = { ...state.dimensions };
   for (const key of Object.keys(impact.dimensionDeltas) as (keyof Dimensions)[]) {
     const delta = impact.dimensionDeltas[key] ?? 0;
-    newDimensions[key] = state.dimensions[key] + delta;
+    newDimensions[key] = Math.min(10, Math.max(0, state.dimensions[key] + delta));
   }
 
   // Apply flag updates, then set hasDebt if capital was clamped to 0
