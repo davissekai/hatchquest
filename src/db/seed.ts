@@ -381,122 +381,122 @@ const choices = [
 // ─── Choice Impacts ───────────────────────────────────────────────────────────
 
 const impacts: (typeof choiceImpacts.$inferInsert)[] = [
-  // beat_01 — path selection sets venture flags, no capital cost
-  { choiceId: "beat_01_a", capitalDelta: 0, reputationDelta: 0, networkDelta: 0, momentumDelta: 0, autonomyDelta: 0.1, innovativenessDelta: 0.1, proactivenessDelta: 0.1, riskTakingDelta: 0.1, competitiveAggressivenessDelta: 0.3, flagUpdates: { venture_threads: true } },
-  { choiceId: "beat_01_b", capitalDelta: 0, reputationDelta: 0, networkDelta: 0, momentumDelta: 0, autonomyDelta: 0.1, innovativenessDelta: 0.1, proactivenessDelta: 0.2, riskTakingDelta: 0.3, competitiveAggressivenessDelta: 0.1, flagUpdates: { venture_kitchen: true } },
-  { choiceId: "beat_01_c", capitalDelta: 0, reputationDelta: 0, networkDelta: 0, momentumDelta: 0, autonomyDelta: 0.2, innovativenessDelta: 0.3, proactivenessDelta: 0.2, riskTakingDelta: 0.1, competitiveAggressivenessDelta: 0.1, flagUpdates: { venture_digital: true } },
+  // beat_01 — path selection: venture type sets play style archetype
+  { choiceId: "beat_01_a", capitalDelta: 0, reputationDelta: 0, networkDelta: 0, momentumDelta: 0, autonomyDelta: 0, innovativenessDelta: 0, proactivenessDelta: 0, riskTakingDelta: 0.3, competitiveAggressivenessDelta: 0.7, flagUpdates: { venture_threads: true } },
+  { choiceId: "beat_01_b", capitalDelta: 0, reputationDelta: 0, networkDelta: 0, momentumDelta: 0, autonomyDelta: 0, innovativenessDelta: 0, proactivenessDelta: 0.6, riskTakingDelta: 0.4, competitiveAggressivenessDelta: 0, flagUpdates: { venture_kitchen: true } },
+  { choiceId: "beat_01_c", capitalDelta: 0, reputationDelta: 0, networkDelta: 0, momentumDelta: 0, autonomyDelta: 0.3, innovativenessDelta: 0.7, proactivenessDelta: 0, riskTakingDelta: 0, competitiveAggressivenessDelta: 0, flagUpdates: { venture_digital: true } },
 
   // beat_02 — go big vs lean start
-  { choiceId: "beat_02_a", capitalDelta: -4000, reputationDelta: 2, networkDelta: 0, momentumDelta: 0.1, autonomyDelta: 0.1, innovativenessDelta: 0.1, proactivenessDelta: 0.1, riskTakingDelta: 0.4, competitiveAggressivenessDelta: 0.2, flagUpdates: {} },
-  { choiceId: "beat_02_b", capitalDelta: -1500, reputationDelta: 0, networkDelta: 0, momentumDelta: 0, autonomyDelta: 0.3, innovativenessDelta: 0.2, proactivenessDelta: 0.3, riskTakingDelta: 0.1, competitiveAggressivenessDelta: 0, flagUpdates: {} },
+  { choiceId: "beat_02_a", capitalDelta: -4000, reputationDelta: 2, networkDelta: 0, momentumDelta: 0.1, autonomyDelta: 0, innovativenessDelta: 0, proactivenessDelta: 0, riskTakingDelta: 0.9, competitiveAggressivenessDelta: 0.1, flagUpdates: {} },
+  { choiceId: "beat_02_b", capitalDelta: -1500, reputationDelta: 0, networkDelta: 0, momentumDelta: 0, autonomyDelta: 0.5, innovativenessDelta: 0, proactivenessDelta: 0.5, riskTakingDelta: 0, competitiveAggressivenessDelta: 0, flagUpdates: {} },
 
-  // beat_03 — network vs solo
-  { choiceId: "beat_03_a", capitalDelta: 0, reputationDelta: 1, networkDelta: 10, momentumDelta: 0.05, autonomyDelta: 0, innovativenessDelta: 0.1, proactivenessDelta: 0.2, riskTakingDelta: 0.1, competitiveAggressivenessDelta: 0.3, flagUpdates: { has_cofounder: true } },
-  { choiceId: "beat_03_b", capitalDelta: 0, reputationDelta: 0, networkDelta: 0, momentumDelta: 0, autonomyDelta: 0.4, innovativenessDelta: 0.1, proactivenessDelta: 0.1, riskTakingDelta: 0.2, competitiveAggressivenessDelta: 0.1, flagUpdates: {} },
+  // beat_03 — cofounder vs solo
+  { choiceId: "beat_03_a", capitalDelta: 0, reputationDelta: 1, networkDelta: 10, momentumDelta: 0.05, autonomyDelta: 0, innovativenessDelta: 0, proactivenessDelta: 0.5, riskTakingDelta: 0, competitiveAggressivenessDelta: 0.5, flagUpdates: { has_cofounder: true } },
+  { choiceId: "beat_03_b", capitalDelta: 0, reputationDelta: 0, networkDelta: 0, momentumDelta: 0, autonomyDelta: 1.0, innovativenessDelta: 0, proactivenessDelta: 0, riskTakingDelta: 0, competitiveAggressivenessDelta: 0, flagUpdates: {} },
 
   // beat_04 — copycat response
-  { choiceId: "beat_04_a", capitalDelta: 0, reputationDelta: -2, networkDelta: 2, momentumDelta: 0, autonomyDelta: 0.1, innovativenessDelta: 0, proactivenessDelta: 0.2, riskTakingDelta: 0.2, competitiveAggressivenessDelta: 0.4, flagUpdates: {} },
-  { choiceId: "beat_04_b", capitalDelta: 0, reputationDelta: 3, networkDelta: 0, momentumDelta: 0.05, autonomyDelta: 0.3, innovativenessDelta: 0.3, proactivenessDelta: 0.1, riskTakingDelta: 0.1, competitiveAggressivenessDelta: 0, flagUpdates: {} },
+  { choiceId: "beat_04_a", capitalDelta: 0, reputationDelta: -2, networkDelta: 2, momentumDelta: 0, autonomyDelta: 0, innovativenessDelta: 0, proactivenessDelta: 0, riskTakingDelta: 0.2, competitiveAggressivenessDelta: 0.8, flagUpdates: {} },
+  { choiceId: "beat_04_b", capitalDelta: 0, reputationDelta: 3, networkDelta: 0, momentumDelta: 0.05, autonomyDelta: 0.4, innovativenessDelta: 0.6, proactivenessDelta: 0, riskTakingDelta: 0, competitiveAggressivenessDelta: 0, flagUpdates: {} },
 
   // beat_05 — fuel spike
-  { choiceId: "beat_05_a", capitalDelta: 0, reputationDelta: -1, networkDelta: 0, momentumDelta: 0, autonomyDelta: 0.2, innovativenessDelta: 0, proactivenessDelta: 0.4, riskTakingDelta: 0.1, competitiveAggressivenessDelta: 0.2, flagUpdates: {} },
-  { choiceId: "beat_05_b", capitalDelta: -500, reputationDelta: 3, networkDelta: 0, momentumDelta: 0, autonomyDelta: 0.1, innovativenessDelta: 0.1, proactivenessDelta: 0.1, riskTakingDelta: 0.3, competitiveAggressivenessDelta: 0.1, flagUpdates: {} },
+  { choiceId: "beat_05_a", capitalDelta: 0, reputationDelta: -1, networkDelta: 0, momentumDelta: 0, autonomyDelta: 0, innovativenessDelta: 0, proactivenessDelta: 0.6, riskTakingDelta: 0, competitiveAggressivenessDelta: 0.4, flagUpdates: {} },
+  { choiceId: "beat_05_b", capitalDelta: -500, reputationDelta: 3, networkDelta: 0, momentumDelta: 0, autonomyDelta: 0, innovativenessDelta: 0, proactivenessDelta: 0.4, riskTakingDelta: 0.6, competitiveAggressivenessDelta: 0, flagUpdates: {} },
 
   // beat_06 — difficult customer
-  { choiceId: "beat_06_a", capitalDelta: 0, reputationDelta: 4, networkDelta: 3, momentumDelta: 0, autonomyDelta: 0, innovativenessDelta: 0.1, proactivenessDelta: 0.3, riskTakingDelta: 0.1, competitiveAggressivenessDelta: 0.2, flagUpdates: {} },
-  { choiceId: "beat_06_b", capitalDelta: 0, reputationDelta: 2, networkDelta: 0, momentumDelta: 0.05, autonomyDelta: 0.4, innovativenessDelta: 0.1, proactivenessDelta: 0.1, riskTakingDelta: 0.2, competitiveAggressivenessDelta: 0.1, flagUpdates: {} },
+  { choiceId: "beat_06_a", capitalDelta: 0, reputationDelta: 4, networkDelta: 3, momentumDelta: 0, autonomyDelta: 0, innovativenessDelta: 0, proactivenessDelta: 0.9, riskTakingDelta: 0, competitiveAggressivenessDelta: 0.1, flagUpdates: {} },
+  { choiceId: "beat_06_b", capitalDelta: 0, reputationDelta: 2, networkDelta: 0, momentumDelta: 0.05, autonomyDelta: 0.9, innovativenessDelta: 0, proactivenessDelta: 0, riskTakingDelta: 0.1, competitiveAggressivenessDelta: 0, flagUpdates: {} },
 
   // beat_07 — small win
-  { choiceId: "beat_07_a", capitalDelta: 1500, reputationDelta: 2, networkDelta: 0, momentumDelta: 0.1, autonomyDelta: 0.1, innovativenessDelta: 0.2, proactivenessDelta: 0.2, riskTakingDelta: 0.3, competitiveAggressivenessDelta: 0.2, flagUpdates: {} },
-  { choiceId: "beat_07_b", capitalDelta: 500, reputationDelta: 1, networkDelta: 0, momentumDelta: 0.05, autonomyDelta: 0.3, innovativenessDelta: 0.3, proactivenessDelta: 0.3, riskTakingDelta: 0.1, competitiveAggressivenessDelta: 0, flagUpdates: {} },
+  { choiceId: "beat_07_a", capitalDelta: 1500, reputationDelta: 2, networkDelta: 0, momentumDelta: 0.1, autonomyDelta: 0, innovativenessDelta: 0, proactivenessDelta: 0, riskTakingDelta: 0.5, competitiveAggressivenessDelta: 0.5, flagUpdates: {} },
+  { choiceId: "beat_07_b", capitalDelta: 500, reputationDelta: 1, networkDelta: 0, momentumDelta: 0.05, autonomyDelta: 0, innovativenessDelta: 0.4, proactivenessDelta: 0.6, riskTakingDelta: 0, competitiveAggressivenessDelta: 0, flagUpdates: {} },
 
   // beat_08 — the nest
-  { choiceId: "beat_08_a", capitalDelta: -300, reputationDelta: 5, networkDelta: 15, momentumDelta: 0.05, autonomyDelta: 0.2, innovativenessDelta: 0.2, proactivenessDelta: 0.4, riskTakingDelta: 0.1, competitiveAggressivenessDelta: 0.1, flagUpdates: { attended_nest: true } },
-  { choiceId: "beat_08_b", capitalDelta: 0, reputationDelta: 0, networkDelta: 0, momentumDelta: 0, autonomyDelta: 0.4, innovativenessDelta: 0.1, proactivenessDelta: 0.1, riskTakingDelta: 0.2, competitiveAggressivenessDelta: 0.2, flagUpdates: {} },
+  { choiceId: "beat_08_a", capitalDelta: -300, reputationDelta: 5, networkDelta: 15, momentumDelta: 0.05, autonomyDelta: 0, innovativenessDelta: 0.4, proactivenessDelta: 0.6, riskTakingDelta: 0, competitiveAggressivenessDelta: 0, flagUpdates: { attended_nest: true } },
+  { choiceId: "beat_08_b", capitalDelta: 0, reputationDelta: 0, networkDelta: 0, momentumDelta: 0, autonomyDelta: 0.6, innovativenessDelta: 0, proactivenessDelta: 0, riskTakingDelta: 0.4, competitiveAggressivenessDelta: 0, flagUpdates: {} },
 
   // beat_09 — cashflow squeeze
-  { choiceId: "beat_09_a", capitalDelta: 2000, reputationDelta: 0, networkDelta: 0, momentumDelta: 0, autonomyDelta: 0.1, innovativenessDelta: 0.1, proactivenessDelta: 0.2, riskTakingDelta: 0.4, competitiveAggressivenessDelta: 0.2, flagUpdates: { hasDebt: true } },
-  { choiceId: "beat_09_b", capitalDelta: -800, reputationDelta: 0, networkDelta: 0, momentumDelta: -0.05, autonomyDelta: 0.4, innovativenessDelta: 0.2, proactivenessDelta: 0.2, riskTakingDelta: 0.1, competitiveAggressivenessDelta: 0.1, flagUpdates: {} },
+  { choiceId: "beat_09_a", capitalDelta: 2000, reputationDelta: 0, networkDelta: 0, momentumDelta: 0, autonomyDelta: 0, innovativenessDelta: 0, proactivenessDelta: 0, riskTakingDelta: 1.0, competitiveAggressivenessDelta: 0, flagUpdates: { hasDebt: true } },
+  { choiceId: "beat_09_b", capitalDelta: -800, reputationDelta: 0, networkDelta: 0, momentumDelta: -0.05, autonomyDelta: 0.6, innovativenessDelta: 0, proactivenessDelta: 0.4, riskTakingDelta: 0, competitiveAggressivenessDelta: 0, flagUpdates: {} },
 
   // beat_10 — end of round 1
-  { choiceId: "beat_10_a", capitalDelta: 0, reputationDelta: 0, networkDelta: 0, momentumDelta: 0.1, autonomyDelta: 0.1, innovativenessDelta: 0.2, proactivenessDelta: 0.2, riskTakingDelta: 0.4, competitiveAggressivenessDelta: 0.3, flagUpdates: {} },
-  { choiceId: "beat_10_b", capitalDelta: 0, reputationDelta: 0, networkDelta: 0, momentumDelta: 0.05, autonomyDelta: 0.4, innovativenessDelta: 0.3, proactivenessDelta: 0.4, riskTakingDelta: 0.1, competitiveAggressivenessDelta: 0.1, flagUpdates: {} },
+  { choiceId: "beat_10_a", capitalDelta: 0, reputationDelta: 0, networkDelta: 0, momentumDelta: 0.1, autonomyDelta: 0, innovativenessDelta: 0, proactivenessDelta: 0, riskTakingDelta: 0.5, competitiveAggressivenessDelta: 0.5, flagUpdates: {} },
+  { choiceId: "beat_10_b", capitalDelta: 0, reputationDelta: 0, networkDelta: 0, momentumDelta: 0.05, autonomyDelta: 0.5, innovativenessDelta: 0, proactivenessDelta: 0.5, riskTakingDelta: 0, competitiveAggressivenessDelta: 0, flagUpdates: {} },
 
   // beat_11 — new month
-  { choiceId: "beat_11_a", capitalDelta: 0, reputationDelta: 0, networkDelta: 0, momentumDelta: 0.1, autonomyDelta: 0.1, innovativenessDelta: 0.2, proactivenessDelta: 0.2, riskTakingDelta: 0.4, competitiveAggressivenessDelta: 0.3, flagUpdates: {} },
-  { choiceId: "beat_11_b", capitalDelta: 0, reputationDelta: 2, networkDelta: 0, momentumDelta: 0, autonomyDelta: 0.3, innovativenessDelta: 0.2, proactivenessDelta: 0.4, riskTakingDelta: 0.1, competitiveAggressivenessDelta: 0.1, flagUpdates: {} },
+  { choiceId: "beat_11_a", capitalDelta: 0, reputationDelta: 0, networkDelta: 0, momentumDelta: 0.1, autonomyDelta: 0, innovativenessDelta: 0, proactivenessDelta: 0, riskTakingDelta: 0.5, competitiveAggressivenessDelta: 0.5, flagUpdates: {} },
+  { choiceId: "beat_11_b", capitalDelta: 0, reputationDelta: 2, networkDelta: 0, momentumDelta: 0, autonomyDelta: 0, innovativenessDelta: 0.4, proactivenessDelta: 0.6, riskTakingDelta: 0, competitiveAggressivenessDelta: 0, flagUpdates: {} },
 
   // beat_12 — scale up or stay small
-  { choiceId: "beat_12_a", capitalDelta: -3000, reputationDelta: 3, networkDelta: 5, momentumDelta: 0.1, autonomyDelta: 0.1, innovativenessDelta: 0.2, proactivenessDelta: 0.2, riskTakingDelta: 0.4, competitiveAggressivenessDelta: 0.3, flagUpdates: { scaled_up: true } },
-  { choiceId: "beat_12_b", capitalDelta: 0, reputationDelta: 1, networkDelta: 0, momentumDelta: 0, autonomyDelta: 0.4, innovativenessDelta: 0.3, proactivenessDelta: 0.3, riskTakingDelta: 0.1, competitiveAggressivenessDelta: 0.1, flagUpdates: {} },
+  { choiceId: "beat_12_a", capitalDelta: -3000, reputationDelta: 3, networkDelta: 5, momentumDelta: 0.1, autonomyDelta: 0, innovativenessDelta: 0, proactivenessDelta: 0, riskTakingDelta: 0.5, competitiveAggressivenessDelta: 0.5, flagUpdates: { scaled_up: true } },
+  { choiceId: "beat_12_b", capitalDelta: 0, reputationDelta: 1, networkDelta: 0, momentumDelta: 0, autonomyDelta: 0.5, innovativenessDelta: 0, proactivenessDelta: 0.5, riskTakingDelta: 0, competitiveAggressivenessDelta: 0, flagUpdates: {} },
 
   // beat_13 — partnership offer
-  { choiceId: "beat_13_a", capitalDelta: 2000, reputationDelta: 5, networkDelta: 20, momentumDelta: 0.1, autonomyDelta: 0, innovativenessDelta: 0.2, proactivenessDelta: 0.3, riskTakingDelta: 0.2, competitiveAggressivenessDelta: 0.4, flagUpdates: { has_partner: true } },
-  { choiceId: "beat_13_b", capitalDelta: 0, reputationDelta: 0, networkDelta: 0, momentumDelta: 0, autonomyDelta: 0.5, innovativenessDelta: 0.2, proactivenessDelta: 0.2, riskTakingDelta: 0.2, competitiveAggressivenessDelta: 0.2, flagUpdates: {} },
+  { choiceId: "beat_13_a", capitalDelta: 2000, reputationDelta: 5, networkDelta: 20, momentumDelta: 0.1, autonomyDelta: 0, innovativenessDelta: 0, proactivenessDelta: 0.4, riskTakingDelta: 0, competitiveAggressivenessDelta: 0.6, flagUpdates: { has_partner: true } },
+  { choiceId: "beat_13_b", capitalDelta: 0, reputationDelta: 0, networkDelta: 0, momentumDelta: 0, autonomyDelta: 1.0, innovativenessDelta: 0, proactivenessDelta: 0, riskTakingDelta: 0, competitiveAggressivenessDelta: 0, flagUpdates: {} },
 
   // beat_14 — big player moves in
-  { choiceId: "beat_14_a", capitalDelta: -1000, reputationDelta: 3, networkDelta: 0, momentumDelta: 0, autonomyDelta: 0.1, innovativenessDelta: 0.1, proactivenessDelta: 0.2, riskTakingDelta: 0.3, competitiveAggressivenessDelta: 0.5, flagUpdates: {} },
-  { choiceId: "beat_14_b", capitalDelta: 0, reputationDelta: 2, networkDelta: 0, momentumDelta: 0.05, autonomyDelta: 0.3, innovativenessDelta: 0.5, proactivenessDelta: 0.3, riskTakingDelta: 0.1, competitiveAggressivenessDelta: 0.1, flagUpdates: {} },
+  { choiceId: "beat_14_a", capitalDelta: -1000, reputationDelta: 3, networkDelta: 0, momentumDelta: 0, autonomyDelta: 0, innovativenessDelta: 0, proactivenessDelta: 0, riskTakingDelta: 0.3, competitiveAggressivenessDelta: 0.7, flagUpdates: {} },
+  { choiceId: "beat_14_b", capitalDelta: 0, reputationDelta: 2, networkDelta: 0, momentumDelta: 0.05, autonomyDelta: 0, innovativenessDelta: 0.6, proactivenessDelta: 0.4, riskTakingDelta: 0, competitiveAggressivenessDelta: 0, flagUpdates: {} },
 
   // beat_15 — lights out
-  { choiceId: "beat_15_a", capitalDelta: -2000, reputationDelta: 3, networkDelta: 0, momentumDelta: 0.05, autonomyDelta: 0.2, innovativenessDelta: 0.2, proactivenessDelta: 0.5, riskTakingDelta: 0.2, competitiveAggressivenessDelta: 0.2, flagUpdates: { has_backup_power: true } },
-  { choiceId: "beat_15_b", capitalDelta: 0, reputationDelta: 1, networkDelta: 0, momentumDelta: 0, autonomyDelta: 0.3, innovativenessDelta: 0.5, proactivenessDelta: 0.3, riskTakingDelta: 0.2, competitiveAggressivenessDelta: 0.1, flagUpdates: {} },
+  { choiceId: "beat_15_a", capitalDelta: -2000, reputationDelta: 3, networkDelta: 0, momentumDelta: 0.05, autonomyDelta: 0, innovativenessDelta: 0, proactivenessDelta: 0.6, riskTakingDelta: 0, competitiveAggressivenessDelta: 0.4, flagUpdates: { has_backup_power: true } },
+  { choiceId: "beat_15_b", capitalDelta: 0, reputationDelta: 1, networkDelta: 0, momentumDelta: 0, autonomyDelta: 0.3, innovativenessDelta: 0.7, proactivenessDelta: 0, riskTakingDelta: 0, competitiveAggressivenessDelta: 0, flagUpdates: {} },
 
   // beat_16 — do you hire
-  { choiceId: "beat_16_a", capitalDelta: -1500, reputationDelta: 0, networkDelta: 5, momentumDelta: 0.1, autonomyDelta: 0, innovativenessDelta: 0.2, proactivenessDelta: 0.3, riskTakingDelta: 0.2, competitiveAggressivenessDelta: 0.4, flagUpdates: { hiredTeam: true } },
-  { choiceId: "beat_16_b", capitalDelta: 0, reputationDelta: 0, networkDelta: 0, momentumDelta: 0.05, autonomyDelta: 0.5, innovativenessDelta: 0.3, proactivenessDelta: 0.4, riskTakingDelta: 0.1, competitiveAggressivenessDelta: 0.1, flagUpdates: {} },
+  { choiceId: "beat_16_a", capitalDelta: -1500, reputationDelta: 0, networkDelta: 5, momentumDelta: 0.1, autonomyDelta: 0, innovativenessDelta: 0, proactivenessDelta: 0.4, riskTakingDelta: 0, competitiveAggressivenessDelta: 0.6, flagUpdates: { hiredTeam: true } },
+  { choiceId: "beat_16_b", capitalDelta: 0, reputationDelta: 0, networkDelta: 0, momentumDelta: 0.05, autonomyDelta: 0.6, innovativenessDelta: 0.4, proactivenessDelta: 0, riskTakingDelta: 0, competitiveAggressivenessDelta: 0, flagUpdates: {} },
 
   // beat_17 — pitch competition
-  { choiceId: "beat_17_a", capitalDelta: 2000, reputationDelta: 10, networkDelta: 15, momentumDelta: 0.1, autonomyDelta: 0.2, innovativenessDelta: 0.3, proactivenessDelta: 0.5, riskTakingDelta: 0.3, competitiveAggressivenessDelta: 0.3, flagUpdates: { pitched_nest: true } },
-  { choiceId: "beat_17_b", capitalDelta: 0, reputationDelta: 0, networkDelta: 0, momentumDelta: 0, autonomyDelta: 0.4, innovativenessDelta: 0.1, proactivenessDelta: 0.1, riskTakingDelta: 0.1, competitiveAggressivenessDelta: 0.2, flagUpdates: {} },
+  { choiceId: "beat_17_a", capitalDelta: 2000, reputationDelta: 10, networkDelta: 15, momentumDelta: 0.1, autonomyDelta: 0, innovativenessDelta: 0, proactivenessDelta: 0.5, riskTakingDelta: 0, competitiveAggressivenessDelta: 0.5, flagUpdates: { pitched_nest: true } },
+  { choiceId: "beat_17_b", capitalDelta: 0, reputationDelta: 0, networkDelta: 0, momentumDelta: 0, autonomyDelta: 0.7, innovativenessDelta: 0, proactivenessDelta: 0, riskTakingDelta: 0.3, competitiveAggressivenessDelta: 0, flagUpdates: {} },
 
-  // beat_18 — market shifts
-  { choiceId: "beat_18_a", capitalDelta: -500, reputationDelta: 2, networkDelta: 0, momentumDelta: 0.05, autonomyDelta: 0.2, innovativenessDelta: 0.5, proactivenessDelta: 0.4, riskTakingDelta: 0.2, competitiveAggressivenessDelta: 0.2, flagUpdates: { pivoted: true } },
-  { choiceId: "beat_18_b", capitalDelta: 0, reputationDelta: 1, networkDelta: 0, momentumDelta: 0, autonomyDelta: 0.5, innovativenessDelta: 0.1, proactivenessDelta: 0.1, riskTakingDelta: 0.3, competitiveAggressivenessDelta: 0.2, flagUpdates: {} },
+  // beat_18 — market shifts / pivot
+  { choiceId: "beat_18_a", capitalDelta: -500, reputationDelta: 2, networkDelta: 0, momentumDelta: 0.05, autonomyDelta: 0, innovativenessDelta: 0.7, proactivenessDelta: 0.3, riskTakingDelta: 0, competitiveAggressivenessDelta: 0, flagUpdates: { pivoted: true } },
+  { choiceId: "beat_18_b", capitalDelta: 0, reputationDelta: 1, networkDelta: 0, momentumDelta: 0, autonomyDelta: 0.5, innovativenessDelta: 0, proactivenessDelta: 0, riskTakingDelta: 0.5, competitiveAggressivenessDelta: 0, flagUpdates: {} },
 
   // beat_19 — loan decision
-  { choiceId: "beat_19_a", capitalDelta: 5000, reputationDelta: 0, networkDelta: 0, momentumDelta: 0.1, autonomyDelta: 0.1, innovativenessDelta: 0.2, proactivenessDelta: 0.3, riskTakingDelta: 0.5, competitiveAggressivenessDelta: 0.3, flagUpdates: { hasDebt: true } },
-  { choiceId: "beat_19_b", capitalDelta: 0, reputationDelta: 2, networkDelta: 0, momentumDelta: 0, autonomyDelta: 0.5, innovativenessDelta: 0.4, proactivenessDelta: 0.3, riskTakingDelta: 0.1, competitiveAggressivenessDelta: 0.1, flagUpdates: {} },
+  { choiceId: "beat_19_a", capitalDelta: 5000, reputationDelta: 0, networkDelta: 0, momentumDelta: 0.1, autonomyDelta: 0, innovativenessDelta: 0, proactivenessDelta: 0, riskTakingDelta: 1.0, competitiveAggressivenessDelta: 0, flagUpdates: { hasDebt: true } },
+  { choiceId: "beat_19_b", capitalDelta: 0, reputationDelta: 2, networkDelta: 0, momentumDelta: 0, autonomyDelta: 0.5, innovativenessDelta: 0.5, proactivenessDelta: 0, riskTakingDelta: 0, competitiveAggressivenessDelta: 0, flagUpdates: {} },
 
   // beat_20 — end of round 2
-  { choiceId: "beat_20_a", capitalDelta: 0, reputationDelta: 0, networkDelta: 0, momentumDelta: 0.1, autonomyDelta: 0.2, innovativenessDelta: 0.3, proactivenessDelta: 0.3, riskTakingDelta: 0.4, competitiveAggressivenessDelta: 0.4, flagUpdates: {} },
-  { choiceId: "beat_20_b", capitalDelta: 0, reputationDelta: 2, networkDelta: 0, momentumDelta: 0.05, autonomyDelta: 0.4, innovativenessDelta: 0.3, proactivenessDelta: 0.4, riskTakingDelta: 0.2, competitiveAggressivenessDelta: 0.2, flagUpdates: {} },
+  { choiceId: "beat_20_a", capitalDelta: 0, reputationDelta: 0, networkDelta: 0, momentumDelta: 0.1, autonomyDelta: 0, innovativenessDelta: 0, proactivenessDelta: 0, riskTakingDelta: 0.5, competitiveAggressivenessDelta: 0.5, flagUpdates: {} },
+  { choiceId: "beat_20_b", capitalDelta: 0, reputationDelta: 2, networkDelta: 0, momentumDelta: 0.05, autonomyDelta: 0.5, innovativenessDelta: 0, proactivenessDelta: 0.5, riskTakingDelta: 0, competitiveAggressivenessDelta: 0, flagUpdates: {} },
 
   // beat_21 — final chapter
-  { choiceId: "beat_21_a", capitalDelta: -1000, reputationDelta: 0, networkDelta: 0, momentumDelta: 0.15, autonomyDelta: 0.2, innovativenessDelta: 0.3, proactivenessDelta: 0.3, riskTakingDelta: 0.4, competitiveAggressivenessDelta: 0.5, flagUpdates: {} },
-  { choiceId: "beat_21_b", capitalDelta: 0, reputationDelta: 2, networkDelta: 0, momentumDelta: 0.05, autonomyDelta: 0.5, innovativenessDelta: 0.2, proactivenessDelta: 0.4, riskTakingDelta: 0.2, competitiveAggressivenessDelta: 0.2, flagUpdates: {} },
+  { choiceId: "beat_21_a", capitalDelta: -1000, reputationDelta: 0, networkDelta: 0, momentumDelta: 0.15, autonomyDelta: 0, innovativenessDelta: 0, proactivenessDelta: 0, riskTakingDelta: 0.5, competitiveAggressivenessDelta: 0.5, flagUpdates: {} },
+  { choiceId: "beat_21_b", capitalDelta: 0, reputationDelta: 2, networkDelta: 0, momentumDelta: 0.05, autonomyDelta: 0.5, innovativenessDelta: 0, proactivenessDelta: 0.5, riskTakingDelta: 0, competitiveAggressivenessDelta: 0, flagUpdates: {} },
 
   // beat_22 — the crisis
-  { choiceId: "beat_22_a", capitalDelta: -500, reputationDelta: 8, networkDelta: 5, momentumDelta: 0, autonomyDelta: 0.3, innovativenessDelta: 0.2, proactivenessDelta: 0.4, riskTakingDelta: 0.3, competitiveAggressivenessDelta: 0.3, flagUpdates: { handled_crisis_publicly: true } },
-  { choiceId: "beat_22_b", capitalDelta: -200, reputationDelta: 2, networkDelta: 0, momentumDelta: 0, autonomyDelta: 0.4, innovativenessDelta: 0.3, proactivenessDelta: 0.2, riskTakingDelta: 0.2, competitiveAggressivenessDelta: 0.2, flagUpdates: {} },
+  { choiceId: "beat_22_a", capitalDelta: -500, reputationDelta: 8, networkDelta: 5, momentumDelta: 0, autonomyDelta: 0, innovativenessDelta: 0, proactivenessDelta: 0.5, riskTakingDelta: 0, competitiveAggressivenessDelta: 0.5, flagUpdates: { handled_crisis_publicly: true } },
+  { choiceId: "beat_22_b", capitalDelta: -200, reputationDelta: 2, networkDelta: 0, momentumDelta: 0, autonomyDelta: 0.5, innovativenessDelta: 0.5, proactivenessDelta: 0, riskTakingDelta: 0, competitiveAggressivenessDelta: 0, flagUpdates: {} },
 
   // beat_23 — unlikely ally
-  { choiceId: "beat_23_a", capitalDelta: 3000, reputationDelta: 5, networkDelta: 15, momentumDelta: 0.1, autonomyDelta: 0.1, innovativenessDelta: 0.3, proactivenessDelta: 0.3, riskTakingDelta: 0.2, competitiveAggressivenessDelta: 0.4, flagUpdates: { accepted_ally: true } },
-  { choiceId: "beat_23_b", capitalDelta: 0, reputationDelta: 3, networkDelta: 0, momentumDelta: 0, autonomyDelta: 0.6, innovativenessDelta: 0.2, proactivenessDelta: 0.2, riskTakingDelta: 0.3, competitiveAggressivenessDelta: 0.2, flagUpdates: {} },
+  { choiceId: "beat_23_a", capitalDelta: 3000, reputationDelta: 5, networkDelta: 15, momentumDelta: 0.1, autonomyDelta: 0, innovativenessDelta: 0, proactivenessDelta: 0.4, riskTakingDelta: 0, competitiveAggressivenessDelta: 0.6, flagUpdates: { accepted_ally: true } },
+  { choiceId: "beat_23_b", capitalDelta: 0, reputationDelta: 3, networkDelta: 0, momentumDelta: 0, autonomyDelta: 1.0, innovativenessDelta: 0, proactivenessDelta: 0, riskTakingDelta: 0, competitiveAggressivenessDelta: 0, flagUpdates: {} },
 
   // beat_24 — the shortcut
-  { choiceId: "beat_24_a", capitalDelta: 2000, reputationDelta: -5, networkDelta: 0, momentumDelta: 0.1, autonomyDelta: 0.1, innovativenessDelta: 0.1, proactivenessDelta: 0.2, riskTakingDelta: 0.5, competitiveAggressivenessDelta: 0.4, flagUpdates: { took_shortcut: true } },
-  { choiceId: "beat_24_b", capitalDelta: 0, reputationDelta: 6, networkDelta: 3, momentumDelta: 0.05, autonomyDelta: 0.5, innovativenessDelta: 0.3, proactivenessDelta: 0.3, riskTakingDelta: 0.1, competitiveAggressivenessDelta: 0.1, flagUpdates: {} },
+  { choiceId: "beat_24_a", capitalDelta: 2000, reputationDelta: -5, networkDelta: 0, momentumDelta: 0.1, autonomyDelta: 0, innovativenessDelta: 0, proactivenessDelta: 0, riskTakingDelta: 0.5, competitiveAggressivenessDelta: 0.5, flagUpdates: { took_shortcut: true } },
+  { choiceId: "beat_24_b", capitalDelta: 0, reputationDelta: 6, networkDelta: 3, momentumDelta: 0.05, autonomyDelta: 0.5, innovativenessDelta: 0, proactivenessDelta: 0.5, riskTakingDelta: 0, competitiveAggressivenessDelta: 0, flagUpdates: {} },
 
   // beat_25 — media moment
-  { choiceId: "beat_25_a", capitalDelta: 0, reputationDelta: 12, networkDelta: 20, momentumDelta: 0.1, autonomyDelta: 0.2, innovativenessDelta: 0.4, proactivenessDelta: 0.5, riskTakingDelta: 0.3, competitiveAggressivenessDelta: 0.3, flagUpdates: { got_press: true } },
-  { choiceId: "beat_25_b", capitalDelta: 0, reputationDelta: 0, networkDelta: 0, momentumDelta: 0, autonomyDelta: 0.4, innovativenessDelta: 0.2, proactivenessDelta: 0.1, riskTakingDelta: 0.1, competitiveAggressivenessDelta: 0.1, flagUpdates: {} },
+  { choiceId: "beat_25_a", capitalDelta: 0, reputationDelta: 12, networkDelta: 20, momentumDelta: 0.1, autonomyDelta: 0, innovativenessDelta: 0, proactivenessDelta: 0.5, riskTakingDelta: 0, competitiveAggressivenessDelta: 0.5, flagUpdates: { got_press: true } },
+  { choiceId: "beat_25_b", capitalDelta: 0, reputationDelta: 0, networkDelta: 0, momentumDelta: 0, autonomyDelta: 0.5, innovativenessDelta: 0.5, proactivenessDelta: 0, riskTakingDelta: 0, competitiveAggressivenessDelta: 0, flagUpdates: {} },
 
   // beat_26 — rival strikes
-  { choiceId: "beat_26_a", capitalDelta: -1000, reputationDelta: -2, networkDelta: 0, momentumDelta: -0.05, autonomyDelta: 0.1, innovativenessDelta: 0.1, proactivenessDelta: 0.2, riskTakingDelta: 0.3, competitiveAggressivenessDelta: 0.6, flagUpdates: {} },
-  { choiceId: "beat_26_b", capitalDelta: 0, reputationDelta: 5, networkDelta: 3, momentumDelta: 0.05, autonomyDelta: 0.4, innovativenessDelta: 0.4, proactivenessDelta: 0.3, riskTakingDelta: 0.1, competitiveAggressivenessDelta: 0.2, flagUpdates: {} },
+  { choiceId: "beat_26_a", capitalDelta: -1000, reputationDelta: -2, networkDelta: 0, momentumDelta: -0.05, autonomyDelta: 0, innovativenessDelta: 0, proactivenessDelta: 0, riskTakingDelta: 0.2, competitiveAggressivenessDelta: 0.8, flagUpdates: {} },
+  { choiceId: "beat_26_b", capitalDelta: 0, reputationDelta: 5, networkDelta: 3, momentumDelta: 0.05, autonomyDelta: 0, innovativenessDelta: 0.5, proactivenessDelta: 0.5, riskTakingDelta: 0, competitiveAggressivenessDelta: 0, flagUpdates: {} },
 
   // beat_27 — the big offer
-  { choiceId: "beat_27_a", capitalDelta: 8000, reputationDelta: 5, networkDelta: 10, momentumDelta: 0.1, autonomyDelta: 0, innovativenessDelta: 0.2, proactivenessDelta: 0.3, riskTakingDelta: 0.4, competitiveAggressivenessDelta: 0.4, flagUpdates: { took_investment: true } },
-  { choiceId: "beat_27_b", capitalDelta: 0, reputationDelta: 3, networkDelta: 0, momentumDelta: 0.1, autonomyDelta: 0.7, innovativenessDelta: 0.3, proactivenessDelta: 0.2, riskTakingDelta: 0.5, competitiveAggressivenessDelta: 0.2, flagUpdates: {} },
+  { choiceId: "beat_27_a", capitalDelta: 8000, reputationDelta: 5, networkDelta: 10, momentumDelta: 0.1, autonomyDelta: 0, innovativenessDelta: 0, proactivenessDelta: 0, riskTakingDelta: 0.5, competitiveAggressivenessDelta: 0.5, flagUpdates: { took_investment: true } },
+  { choiceId: "beat_27_b", capitalDelta: 0, reputationDelta: 3, networkDelta: 0, momentumDelta: 0.1, autonomyDelta: 0.7, innovativenessDelta: 0, proactivenessDelta: 0, riskTakingDelta: 0.3, competitiveAggressivenessDelta: 0, flagUpdates: {} },
 
   // beat_28 — community asks
-  { choiceId: "beat_28_a", capitalDelta: -500, reputationDelta: 10, networkDelta: 10, momentumDelta: 0.05, autonomyDelta: 0.2, innovativenessDelta: 0.2, proactivenessDelta: 0.5, riskTakingDelta: 0.1, competitiveAggressivenessDelta: 0.2, flagUpdates: { gave_back: true } },
-  { choiceId: "beat_28_b", capitalDelta: 0, reputationDelta: 0, networkDelta: 0, momentumDelta: 0, autonomyDelta: 0.3, innovativenessDelta: 0.2, proactivenessDelta: 0.2, riskTakingDelta: 0.2, competitiveAggressivenessDelta: 0.3, flagUpdates: {} },
+  { choiceId: "beat_28_a", capitalDelta: -500, reputationDelta: 10, networkDelta: 10, momentumDelta: 0.05, autonomyDelta: 0, innovativenessDelta: 0.4, proactivenessDelta: 0.6, riskTakingDelta: 0, competitiveAggressivenessDelta: 0, flagUpdates: { gave_back: true } },
+  { choiceId: "beat_28_b", capitalDelta: 0, reputationDelta: 0, networkDelta: 0, momentumDelta: 0, autonomyDelta: 0.5, innovativenessDelta: 0, proactivenessDelta: 0, riskTakingDelta: 0, competitiveAggressivenessDelta: 0.5, flagUpdates: {} },
 
   // beat_29 — the final push
-  { choiceId: "beat_29_a", capitalDelta: -2000, reputationDelta: 5, networkDelta: 5, momentumDelta: 0.2, autonomyDelta: 0.3, innovativenessDelta: 0.4, proactivenessDelta: 0.4, riskTakingDelta: 0.6, competitiveAggressivenessDelta: 0.5, flagUpdates: { final_push_bold: true } },
-  { choiceId: "beat_29_b", capitalDelta: 1000, reputationDelta: 3, networkDelta: 0, momentumDelta: 0.1, autonomyDelta: 0.5, innovativenessDelta: 0.3, proactivenessDelta: 0.4, riskTakingDelta: 0.2, competitiveAggressivenessDelta: 0.2, flagUpdates: { final_push_safe: true } },
+  { choiceId: "beat_29_a", capitalDelta: -2000, reputationDelta: 5, networkDelta: 5, momentumDelta: 0.2, autonomyDelta: 0, innovativenessDelta: 0, proactivenessDelta: 0, riskTakingDelta: 0.5, competitiveAggressivenessDelta: 0.5, flagUpdates: { final_push_bold: true } },
+  { choiceId: "beat_29_b", capitalDelta: 1000, reputationDelta: 3, networkDelta: 0, momentumDelta: 0.1, autonomyDelta: 0.5, innovativenessDelta: 0, proactivenessDelta: 0.5, riskTakingDelta: 0, competitiveAggressivenessDelta: 0, flagUpdates: { final_push_safe: true } },
 ];
 
 // ─── Seed ─────────────────────────────────────────────────────────────────────
