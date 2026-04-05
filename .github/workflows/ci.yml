@@ -4,17 +4,17 @@ on:
   pull_request:
     branches:
       - develop
-      - master
+      - main
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
-  ci:
-    name: Type Check · Lint · Test · Build
+  # Backend engine — pure TypeScript, no secrets needed
+  backend:
+    name: Backend · Type Check · Test
     runs-on: ubuntu-latest
-
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -23,29 +23,42 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 20
-          cache: npm            # caches node_modules between runs — faster CI
+          cache: npm
 
       - name: Install dependencies
-        run: npm ci             # deterministic install from package-lock.json
+        run: npm ci
 
-      - name: Type check
-        run: npm run type-check
+      - name: Type check (shared)
+        run: npm run type-check --workspace=packages/shared
 
-      - name: Lint
-        run: npm run lint
+      - name: Type check (backend)
+        run: npm run type-check --workspace=backend
 
-      - name: Test
-        run: npm run test
+      - name: Test (backend)
+        run: npm run test --workspace=backend
+
+  # Frontend — Next.js build, needs Supabase env vars
+  frontend:
+    name: Frontend · Lint · Build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Lint (frontend)
+        run: npm run lint --workspace=frontend
+
+      - name: Build (frontend)
+        run: npm run build --workspace=frontend
         env:
-          DATABASE_URL: ${{ secrets.TEST_DATABASE_URL }}
-          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.TEST_NEXT_PUBLIC_SUPABASE_URL }}
-          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.TEST_NEXT_PUBLIC_SUPABASE_ANON_KEY }}
-          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.TEST_SUPABASE_SERVICE_ROLE_KEY }}
-
-      - name: Build
-        run: npm run build
-        env:
-          # Build needs these to exist — values are dummies for CI
-          # Real secrets live in Supabase and are never committed
           NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
           NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
