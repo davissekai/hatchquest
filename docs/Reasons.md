@@ -72,4 +72,4 @@ Frontend (Next.js on Vercel) is a pure consumer — no game logic. Backend (Fast
 
 ---
 
-_Document owner: Davis Dey | Started: April 2026_
+_Started: April 2026_

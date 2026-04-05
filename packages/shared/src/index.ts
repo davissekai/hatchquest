@@ -1,5 +1,5 @@
 // HatchQuest shared types — single source of truth for frontend + backend
-// Davis defines the world state model; types go here before either side implements.
+// World state model and shared types — single source of truth for frontend + backend.
 
 export type {
   WorldState,
