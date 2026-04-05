@@ -4,59 +4,85 @@ on:
   pull_request:
     branches:
       - develop
-      - main
+      - master
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
-  # Backend engine — pure TypeScript, no secrets needed
-  backend:
-    name: Backend · Type Check · Test
+  # Runs on PRs from packages branch — pure type checking, no runtime
+  packages:
+    name: Packages · Type Check
     runs-on: ubuntu-latest
+    if: startsWith(github.head_ref, 'packages')
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
         with:
           node-version: 20
           cache: npm
-
-      - name: Install dependencies
-        run: npm ci
-
+      - run: npm ci
       - name: Type check (shared)
         run: npm run type-check --workspace=packages/shared
 
-      - name: Type check (backend)
-        run: npm run type-check --workspace=backend
-
-      - name: Test (backend)
-        run: npm run test --workspace=backend
-
-  # Frontend — Next.js build, needs Supabase env vars
-  frontend:
-    name: Frontend · Lint · Build
+  # Runs on PRs from backend branch
+  backend:
+    name: Backend · Type Check · Test
     runs-on: ubuntu-latest
+    if: startsWith(github.head_ref, 'backend')
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
         with:
           node-version: 20
           cache: npm
+      - run: npm ci
+      - name: Type check (shared)
+        run: npm run type-check --workspace=packages/shared
+      - name: Type check (backend)
+        run: npm run type-check --workspace=backend
+      - name: Test (backend)
+        run: npm run test --workspace=backend
 
-      - name: Install dependencies
-        run: npm ci
-
+  # Runs on PRs from frontend branch
+  frontend:
+    name: Frontend · Lint · Build
+    runs-on: ubuntu-latest
+    if: startsWith(github.head_ref, 'frontend')
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
       - name: Lint (frontend)
         run: npm run lint --workspace=frontend
+      - name: Build (frontend)
+        run: npm run build --workspace=frontend
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
 
+  # Full suite — runs on all PRs to master
+  full:
+    name: Full Suite · All Checks
+    runs-on: ubuntu-latest
+    if: github.base_ref == 'master'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - name: Type check (all)
+        run: npm run type-check --workspaces
+      - name: Test (backend)
+        run: npm run test --workspace=backend
+      - name: Lint (frontend)
+        run: npm run lint --workspace=frontend
       - name: Build (frontend)
         run: npm run build --workspace=frontend
         env:
