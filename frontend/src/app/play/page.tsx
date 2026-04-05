@@ -51,18 +51,11 @@ const Gameplay = () => {
     }
   }, [state.currentBeat, isLoading, router]);
 
-  if (!state.currentBeat) {
-    return null;
-  }
-
-  const beat = state.currentBeat;
-  const transitionMessages = isFinalTransition ? finalMessages : beatMessages.slice(0, 3);
-
   const handleChoice = useCallback(
     async (index: number) => {
       if (isTransitioning || showFeedback || choiceDisabled) return;
 
-      const choice = beat.choices[index];
+      const choice = state.currentBeat?.choices[index];
       if (!choice) return;
 
       setChoiceDisabled(true);
@@ -81,7 +74,7 @@ const Gameplay = () => {
         setIsTransitioning(false);
       }
     },
-    [isTransitioning, showFeedback, choiceDisabled, beat, state.currentRound, state.isComplete, makeChoice]
+    [isTransitioning, showFeedback, choiceDisabled, state, makeChoice]
   );
 
   const handleTransitionComplete = useCallback(() => {
@@ -100,6 +93,13 @@ const Gameplay = () => {
       router.push("/round-summary");
     }
   }, [router, state.isComplete, state.currentRound]);
+
+  if (!state.currentBeat) {
+    return null;
+  }
+
+  const beat = state.currentBeat;
+  const transitionMessages = isFinalTransition ? finalMessages : beatMessages.slice(0, 3);
 
   return (
     <div className="relative min-h-[100dvh] flex flex-col overflow-hidden">

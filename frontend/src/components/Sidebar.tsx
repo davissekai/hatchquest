@@ -28,8 +28,16 @@ export const Sidebar = () => {
   const router = useRouter();
   const pathname = usePathname();
 
-  // Sync dark mode with html class on mount
+  // Restore theme from localStorage on mount, fall back to DOM state
   useEffect(() => {
+    try {
+      const saved = localStorage.getItem("hq-theme");
+      if (saved === "light") {
+        setDark(false);
+        document.documentElement.classList.remove("dark");
+        return;
+      }
+    } catch {}
     const isDark = document.documentElement.classList.contains("dark");
     setDark(isDark);
   }, []);
@@ -42,17 +50,6 @@ export const Sidebar = () => {
       localStorage.setItem("hq-theme", next ? "dark" : "light");
     } catch {}
   };
-
-  // Restore theme from localStorage on mount
-  useEffect(() => {
-    try {
-      const saved = localStorage.getItem("hq-theme");
-      if (saved === "light") {
-        setDark(false);
-        document.documentElement.classList.remove("dark");
-      }
-    } catch {}
-  }, []);
 
   const handleNav = (href: string) => {
     setOpen(false);
