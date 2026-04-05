@@ -25,29 +25,48 @@ export interface EOPoleDistribution {
   competitive: { aggressive: number; measured: number };
 }
 
-// World state — PLACEHOLDER. Davis defines the actual variables.
-// Replace this stub once the world state model is decided.
+// Business sector — set during Layer 0 classification
+export type BusinessSector = "tech" | "agri" | "retail" | "food" | "services";
+
+// Business formality progression
+export type BusinessFormality = "unregistered" | "soleProprietorship" | "limitedCompany";
+
+// === WORLD STATE ===
+// The brain of the game. All game logic reads from and writes to this.
+// Director AI uses these variables to weight event selection.
 export interface WorldState {
-  // Seed for the JS PRNG — determines procedural market parameters
-  seed: number;
+  // --- Meta ---
+  seed: number; // JS PRNG seed — determines procedural market parameters
+  layer: number; // Current layer (0–5)
+  currentNodeId: string | null; // Which event node the player is on
+  turnsElapsed: number; // Total decisions made
+  isComplete: boolean; // True at layer 5
 
-  // === PLACEHOLDER FIELDS — Davis to define ===
-  // Financial
-  capital: number;
+  // --- Financial (GHS) ---
+  capital: number; // Starting: 10,000 GHS
+  monthlyBurn: number; // Starting: 1,000–2,000 GHS (varies per player)
+  revenue: number; // Monthly revenue, starts at 0
+  debt: number; // Accumulated debt, starts at 0
 
-  // Reputation & social capital — clamped [0, 80]
-  reputation: number;
-  network: number;
+  // --- Business ---
+  sector: BusinessSector; // Set during Layer 0
+  employeeCount: number; // Starts at 0 (solo founder)
+  businessFormality: BusinessFormality; // Starts unregistered
+  hasBackupPower: boolean; // Dumsor resilience
+  hasPremises: boolean; // Home-based vs rented space
 
-  // EO profile tracked throughout gameplay (hidden from client during play)
+  // --- Social Capital ---
+  reputation: number; // [0–100] Trust/credibility in the market. Starts at 0.
+  networkStrength: number; // [0–100] Connections, referrals, access. Starts at 0.
+  susuMember: boolean; // Rotating savings group membership
+  mentorAccess: boolean; // GEA/NEIP/BAC linkage
+
+  // --- Environment (procedural, seeded per session) ---
+  marketDemand: number; // [0–100] Sector demand in Accra
+  infrastructureReliability: number; // [0–100] Power/internet stability
+  regulatoryPressure: number; // [0–100] Compliance burden
+  competitorAggression: number; // [0–100] Informal market pressure
+
+  // --- EO Profile (hidden from client during gameplay) ---
   eoProfile: EOProfile;
-
-  // Current layer (0–5)
-  layer: number;
-
-  // Which event node the player is on
-  currentNodeId: string | null;
-
-  // Completed at layer 5
-  isComplete: boolean;
 }
