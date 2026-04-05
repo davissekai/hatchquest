@@ -33,8 +33,8 @@ export const Sidebar = () => {
     try {
       const saved = localStorage.getItem("hq-theme");
       if (saved === "light") {
-        setDark(false);
         document.documentElement.classList.remove("dark");
+        setDark(false);
         return;
       }
     } catch {}
