@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import {
   Menu,
@@ -22,25 +22,29 @@ const navItems = [
   { label: "Profile", icon: User, href: "/profile" },
 ];
 
+// Reads saved theme on first render — avoids setState-in-effect lint violations.
+// Returns true (dark) if no preference is saved.
+function getInitialDark(): boolean {
+  if (typeof window === "undefined") return true;
+  try {
+    const saved = localStorage.getItem("hq-theme");
+    if (saved === "light") {
+      document.documentElement.classList.remove("dark");
+      return false;
+    }
+    if (saved === "dark") {
+      document.documentElement.classList.add("dark");
+      return true;
+    }
+  } catch {}
+  return document.documentElement.classList.contains("dark");
+}
+
 export const Sidebar = () => {
   const [open, setOpen] = useState(false);
-  const [dark, setDark] = useState(true);
+  const [dark, setDark] = useState(getInitialDark);
   const router = useRouter();
   const pathname = usePathname();
-
-  // Restore theme from localStorage on mount, fall back to DOM state
-  useEffect(() => {
-    try {
-      const saved = localStorage.getItem("hq-theme");
-      if (saved === "light") {
-        document.documentElement.classList.remove("dark");
-        setDark(false);
-        return;
-      }
-    } catch {}
-    const isDark = document.documentElement.classList.contains("dark");
-    setDark(isDark);
-  }, []);
 
   const toggleDark = () => {
     const next = !dark;
