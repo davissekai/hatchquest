@@ -78,7 +78,7 @@ describe("POST /classify", () => {
         payload: { sessionId, response: "Building agri-fintech for smallholders." },
       });
 
-      const session = store.getSession(sessionId);
+      const session = await store.getSession(sessionId);
       expect(session?.worldState.layer).toBe(1);
     });
 
@@ -91,7 +91,7 @@ describe("POST /classify", () => {
         payload: { sessionId, response: "Building agri-fintech for smallholders." },
       });
 
-      const session = store.getSession(sessionId);
+      const session = await store.getSession(sessionId);
       expect(session?.worldState.currentNodeId).toBe("L1-node-1");
     });
   });

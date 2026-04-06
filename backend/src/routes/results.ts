@@ -1,10 +1,10 @@
 import type { FastifyPluginAsync, FastifyReply, FastifyRequest } from "fastify";
-import type { SessionStore } from "../store/session-store.js";
+import type { ISessionStore } from "../store/types.js";
 import { toClientState } from "./helpers.js";
 
 // Options injected when registering this plugin.
 export interface ResultsRouteOptions {
-  store: SessionStore;
+  store: ISessionStore;
 }
 
 // Route params for GET /results/:sessionId.
@@ -24,11 +24,11 @@ const RESULTS_SUMMARY_STUB =
 async function handleGetResults(
   request: FastifyRequest<{ Params: ResultsParams }>,
   reply: FastifyReply,
-  store: SessionStore
+  store: ISessionStore
 ): Promise<void> {
   const { sessionId } = request.params;
 
-  const session = store.getSession(sessionId);
+  const session = await store.getSession(sessionId);
   if (!session) {
     return reply.status(404).send({ error: `Session not found: ${sessionId}` });
   }

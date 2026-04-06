@@ -1,6 +1,6 @@
 import type { FastifyPluginAsync, FastifyReply, FastifyRequest } from "fastify";
 import type { ScenarioNode, WorldState } from "@hatchquest/shared";
-import type { SessionStore } from "../store/session-store.js";
+import type { ISessionStore } from "../store/types.js";
 import type { ChoiceEffect } from "../engine/apply-choice.js";
 import { applyEffect } from "../engine/apply-choice.js";
 import { toClientState } from "./helpers.js";
@@ -15,7 +15,7 @@ export interface ChoiceRegistry {
 
 // Options injected when registering this plugin.
 export interface ChoiceRouteOptions {
-  store: SessionStore;
+  store: ISessionStore;
   getNode: ChoiceRegistry["getNode"];
   getChoiceEffect: ChoiceRegistry["getChoiceEffect"];
   /**
@@ -55,7 +55,7 @@ function isNonEmptyString(v: unknown): v is string {
 async function handleChoice(
   request: FastifyRequest<{ Body: ChoiceBody }>,
   reply: FastifyReply,
-  store: SessionStore,
+  store: ISessionStore,
   getNode: ChoiceRegistry["getNode"],
   getChoiceEffect: ChoiceRegistry["getChoiceEffect"],
   selectNextNodeId: (state: WorldState) => string | null
@@ -71,7 +71,7 @@ async function handleChoice(
   }
 
   // --- Step 2: session lookup ---
-  const session = store.getSession(sessionId);
+  const session = await store.getSession(sessionId);
   if (!session) {
     return reply.status(404).send({ error: `Session not found: ${sessionId}` });
   }
@@ -116,7 +116,7 @@ async function handleChoice(
     newState = { ...newState, isComplete: true };
   }
 
-  store.updateSession(sessionId, {
+  await store.updateSession(sessionId, {
     worldState: newState,
     status: gameOver ? "complete" : "active",
   });

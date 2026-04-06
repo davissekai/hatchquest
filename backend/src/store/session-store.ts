@@ -1,16 +1,11 @@
-// TODO: replace with Drizzle/Supabase persistence before production
 import type { GameSession } from "@hatchquest/shared";
 import { createInitialWorldState } from "../engine/index.js";
+import { SessionNotFoundError, type ISessionStore } from "./types.js";
 
-/** Thrown when an operation targets a session id that does not exist. */
-export class SessionNotFoundError extends Error {
-  constructor(id: string) {
-    super(`Session not found: ${id}`);
-    this.name = "SessionNotFoundError";
-  }
-}
+// Re-export for callers that import SessionNotFoundError from this module (backward compat)
+export { SessionNotFoundError } from "./types.js";
 
-export class SessionStore {
+export class SessionStore implements ISessionStore {
   // Internal map keyed by session id
   private readonly sessions: Map<string, GameSession> = new Map();
 
@@ -18,7 +13,7 @@ export class SessionStore {
    * Creates a new session for a player and stores it.
    * Sector defaults to "tech" — overwritten by /classify once the player's response is classified.
    */
-  createSession(playerName: string, email: string): GameSession {
+  async createSession(playerName: string, email: string): Promise<GameSession> {
     const id = crypto.randomUUID();
     // Integer seed in [0, 999999] — sufficient entropy for procedural market generation
     const seed = (Math.random() * 1_000_000) | 0;
@@ -39,7 +34,7 @@ export class SessionStore {
   }
 
   /** Returns the session for the given id, or undefined if not found. */
-  getSession(id: string): GameSession | undefined {
+  async getSession(id: string): Promise<GameSession | undefined> {
     return this.sessions.get(id);
   }
 
@@ -47,7 +42,7 @@ export class SessionStore {
    * Merges a partial update into the session and bumps updatedAt.
    * Throws SessionNotFoundError if the session does not exist.
    */
-  updateSession(id: string, update: Partial<GameSession>): GameSession {
+  async updateSession(id: string, update: Partial<GameSession>): Promise<GameSession> {
     const existing = this.sessions.get(id);
     if (!existing) throw new SessionNotFoundError(id);
 

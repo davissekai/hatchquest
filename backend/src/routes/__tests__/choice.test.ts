@@ -45,9 +45,9 @@ function buildApp(store: SessionStore): FastifyInstance {
 }
 
 // Seed a session whose currentNodeId is set to "L1-node-1".
-function seedSession(store: SessionStore): string {
-  const session = store.createSession("Kwame", "kwame@example.com");
-  store.updateSession(session.id, {
+async function seedSession(store: SessionStore): Promise<string> {
+  const session = await store.createSession("Kwame", "kwame@example.com");
+  await store.updateSession(session.id, {
     worldState: { ...session.worldState, currentNodeId: "L1-node-1" },
   });
   return session.id;
@@ -66,7 +66,7 @@ describe("POST /choice", () => {
   // --- Happy path ---
 
   it("returns 200 with clientState and nextNode for a valid choice on an active session", async () => {
-    const sessionId = seedSession(store);
+    const sessionId = await seedSession(store);
 
     const res = await app.inject({
       method: "POST",
@@ -85,8 +85,8 @@ describe("POST /choice", () => {
   // --- layer and turnsElapsed advance ---
 
   it("increments layer by 1 after a valid choice", async () => {
-    const sessionId = seedSession(store);
-    const before = store.getSession(sessionId)!.worldState.layer;
+    const sessionId = await seedSession(store);
+    const before = (await store.getSession(sessionId))!.worldState.layer;
 
     const res = await app.inject({
       method: "POST",
@@ -100,8 +100,8 @@ describe("POST /choice", () => {
   });
 
   it("increments turnsElapsed by 1 after a valid choice", async () => {
-    const sessionId = seedSession(store);
-    const before = store.getSession(sessionId)!.worldState.turnsElapsed;
+    const sessionId = await seedSession(store);
+    const before = (await store.getSession(sessionId))!.worldState.turnsElapsed;
 
     const res = await app.inject({
       method: "POST",
@@ -117,7 +117,7 @@ describe("POST /choice", () => {
   // --- clientState does not leak server-only fields ---
 
   it("does not include eoProfile in clientState", async () => {
-    const sessionId = seedSession(store);
+    const sessionId = await seedSession(store);
 
     const res = await app.inject({
       method: "POST",
@@ -130,7 +130,7 @@ describe("POST /choice", () => {
   });
 
   it("does not include seed in clientState", async () => {
-    const sessionId = seedSession(store);
+    const sessionId = await seedSession(store);
 
     const res = await app.inject({
       method: "POST",
@@ -155,7 +155,7 @@ describe("POST /choice", () => {
   });
 
   it("returns 400 when nodeId is missing", async () => {
-    const sessionId = seedSession(store);
+    const sessionId = await seedSession(store);
 
     const res = await app.inject({
       method: "POST",
@@ -167,7 +167,7 @@ describe("POST /choice", () => {
   });
 
   it("returns 400 when choiceIndex is 3 (out of range)", async () => {
-    const sessionId = seedSession(store);
+    const sessionId = await seedSession(store);
 
     const res = await app.inject({
       method: "POST",
@@ -195,9 +195,9 @@ describe("POST /choice", () => {
   });
 
   it("returns 409 when the session is already complete", async () => {
-    const sessionId = seedSession(store);
-    const session = store.getSession(sessionId)!;
-    store.updateSession(sessionId, {
+    const sessionId = await seedSession(store);
+    const session = (await store.getSession(sessionId))!;
+    await store.updateSession(sessionId, {
       worldState: { ...session.worldState, isComplete: true },
     });
 
@@ -211,7 +211,7 @@ describe("POST /choice", () => {
   });
 
   it("returns 400 when nodeId does not match session's currentNodeId (stale client)", async () => {
-    const sessionId = seedSession(store);
+    const sessionId = await seedSession(store);
 
     const res = await app.inject({
       method: "POST",

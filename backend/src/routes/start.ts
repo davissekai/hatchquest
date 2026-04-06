@@ -1,6 +1,6 @@
 import type { FastifyPluginAsync } from "fastify";
 import type { StartRequest, StartResponse } from "@hatchquest/shared";
-import type { SessionStore } from "../store/session-store.js";
+import type { ISessionStore } from "../store/types.js";
 
 // The single open-ended prompt presented to the player at game start.
 // Feeds Layer 0 free-text classification — must not be multiple choice.
@@ -11,7 +11,7 @@ const LAYER_0_QUESTION =
 // Plugin options carry the store so tests can inject a fresh instance
 // rather than relying on the module-level singleton.
 interface StartPluginOptions {
-  store: SessionStore;
+  store: ISessionStore;
 }
 
 /** JSON Schema for POST /start body validation. */
@@ -27,7 +27,7 @@ const startBodySchema = {
   additionalProperties: false,
 } as const;
 
-/** Registers the POST /start route against the injected SessionStore. */
+/** Registers the POST /start route against the injected ISessionStore. */
 export const startRoutes: FastifyPluginAsync<StartPluginOptions> = async (
   fastify,
   opts
@@ -43,7 +43,7 @@ export const startRoutes: FastifyPluginAsync<StartPluginOptions> = async (
       const { playerName, email } = request.body;
       // password is deliberately not used — no auth implementation yet.
 
-      const session = store.createSession(playerName, email);
+      const session = await store.createSession(playerName, email);
 
       return reply.status(200).send({
         sessionId: session.id,

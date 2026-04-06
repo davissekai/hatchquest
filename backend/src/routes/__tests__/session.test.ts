@@ -27,17 +27,17 @@ function buildApp(store: SessionStore): FastifyInstance {
 }
 
 // Create a session and set its currentNodeId to a known node.
-function seedSessionWithNode(store: SessionStore): string {
-  const session = store.createSession("Ama", "ama@example.com");
-  store.updateSession(session.id, {
+async function seedSessionWithNode(store: SessionStore): Promise<string> {
+  const session = await store.createSession("Ama", "ama@example.com");
+  await store.updateSession(session.id, {
     worldState: { ...session.worldState, currentNodeId: "L1-node-1" },
   });
   return session.id;
 }
 
 // Create a session whose currentNodeId is still null (pre-classify state).
-function seedSessionNoNode(store: SessionStore): string {
-  const session = store.createSession("Ama", "ama@example.com");
+async function seedSessionNoNode(store: SessionStore): Promise<string> {
+  const session = await store.createSession("Ama", "ama@example.com");
   // currentNodeId starts as null from createInitialWorldState — no override needed
   return session.id;
 }
@@ -55,7 +55,7 @@ describe("GET /session/:sessionId", () => {
   // --- Happy path ---
 
   it("returns 200 with clientState for a known sessionId", async () => {
-    const sessionId = seedSessionWithNode(store);
+    const sessionId = await seedSessionWithNode(store);
 
     const res = await app.inject({
       method: "GET",
@@ -70,7 +70,7 @@ describe("GET /session/:sessionId", () => {
   });
 
   it("returns currentNode when one exists", async () => {
-    const sessionId = seedSessionWithNode(store);
+    const sessionId = await seedSessionWithNode(store);
 
     const res = await app.inject({
       method: "GET",
@@ -85,7 +85,7 @@ describe("GET /session/:sessionId", () => {
   // --- clientState does not leak server-only fields ---
 
   it("does not include eoProfile in clientState", async () => {
-    const sessionId = seedSessionWithNode(store);
+    const sessionId = await seedSessionWithNode(store);
 
     const res = await app.inject({
       method: "GET",
@@ -99,7 +99,7 @@ describe("GET /session/:sessionId", () => {
   // --- Pre-classify state ---
 
   it("returns currentNode as null when currentNodeId is null (pre-classify)", async () => {
-    const sessionId = seedSessionNoNode(store);
+    const sessionId = await seedSessionNoNode(store);
 
     const res = await app.inject({
       method: "GET",

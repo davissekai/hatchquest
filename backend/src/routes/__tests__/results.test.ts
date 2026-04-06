@@ -12,9 +12,9 @@ function buildApp(store: SessionStore): FastifyInstance {
 }
 
 // Create a session marked as complete so the results route serves it.
-function seedCompleteSession(store: SessionStore): string {
-  const session = store.createSession("Kofi", "kofi@example.com");
-  store.updateSession(session.id, {
+async function seedCompleteSession(store: SessionStore): Promise<string> {
+  const session = await store.createSession("Kofi", "kofi@example.com");
+  await store.updateSession(session.id, {
     status: "complete",
     worldState: { ...session.worldState, isComplete: true },
   });
@@ -22,8 +22,8 @@ function seedCompleteSession(store: SessionStore): string {
 }
 
 // Create an active (incomplete) session.
-function seedIncompleteSession(store: SessionStore): string {
-  const session = store.createSession("Kofi", "kofi@example.com");
+async function seedIncompleteSession(store: SessionStore): Promise<string> {
+  const session = await store.createSession("Kofi", "kofi@example.com");
   return session.id;
 }
 
@@ -40,7 +40,7 @@ describe("GET /results/:sessionId", () => {
   // --- Happy path ---
 
   it("returns 200 with eoProfile for a complete session", async () => {
-    const sessionId = seedCompleteSession(store);
+    const sessionId = await seedCompleteSession(store);
 
     const res = await app.inject({
       method: "GET",
@@ -55,7 +55,7 @@ describe("GET /results/:sessionId", () => {
   });
 
   it("eoProfile contains all 5 EO dimensions", async () => {
-    const sessionId = seedCompleteSession(store);
+    const sessionId = await seedCompleteSession(store);
 
     const res = await app.inject({
       method: "GET",
@@ -71,7 +71,7 @@ describe("GET /results/:sessionId", () => {
   });
 
   it("returns clientState without eoProfile field", async () => {
-    const sessionId = seedCompleteSession(store);
+    const sessionId = await seedCompleteSession(store);
 
     const res = await app.inject({
       method: "GET",
@@ -84,7 +84,7 @@ describe("GET /results/:sessionId", () => {
   });
 
   it("returns a summary string", async () => {
-    const sessionId = seedCompleteSession(store);
+    const sessionId = await seedCompleteSession(store);
 
     const res = await app.inject({
       method: "GET",
@@ -99,7 +99,7 @@ describe("GET /results/:sessionId", () => {
   // --- Error cases ---
 
   it("returns 400 for a session that is not yet complete", async () => {
-    const sessionId = seedIncompleteSession(store);
+    const sessionId = await seedIncompleteSession(store);
 
     const res = await app.inject({
       method: "GET",
