@@ -1,377 +1,253 @@
-# HatchQuest API Contract
+# HatchQuest v2 — API Contract
 
-> **This document is locked.** The frontend team builds against this contract exactly as written.
-> Do not deviate from the request/response shapes. If you believe a change is needed,
-> raise it with the backend lead — do not work around it.
-
----
-
-## Authentication
-
-Authentication is **not yet implemented.** No token is required. All endpoints are currently open.
-
-This section will be updated when Supabase Auth is integrated.
+> This document is the source of truth for all frontend ↔ backend communication.
+> All types are defined in `packages/shared/src/types/api.ts` and exported from `packages/shared`.
+> Frontend imports types directly — do not redefine them.
 
 ---
 
 ## Base URL
 
-```
-https://hatchquest.vercel.app
-```
-
-For local development:
-
-```
-http://localhost:3000
-```
+| Environment | URL |
+|---|---|
+| Local dev | `http://localhost:3001` |
+| Production | Railway (TBD) |
 
 ---
 
-## Base Types
+## Authentication
 
-These types are the shared language between frontend and backend. Do not redefine them inline.
-
-```typescript
-// State returned during gameplay — dimensions are hidden until results
-interface GameplayState {
-  session: {
-    playerId: string;
-    currentNarrativeId: string;   // e.g. "beat_00", "beat_01"
-    isStoryComplete: boolean;
-    history: HistoryEntry[];
-  };
-  resources: {
-    capital: number;              // GHS — starts at 10,000
-    reputation: number;           // Scale: 0–100, starts at 50
-    network: number;              // Scale: 0–100, starts at 10
-    momentumMultiplier: number;   // Starts at 1.0
-  };
-  flags: {
-    hasDebt: boolean;
-    hiredTeam: boolean;
-    [key: string]: boolean;       // Dynamic venture flags e.g. venture_threads
-  };
-}
-
-// Full state — only returned on results page
-interface FinalState extends GameplayState {
-  dimensions: {
-    autonomy: number;
-    innovativeness: number;
-    proactiveness: number;
-    riskTaking: number;
-    competitiveAggressiveness: number;
-  };
-}
-
-interface HistoryEntry {
-  narrativeId: string;
-  choiceId: string;
-}
-
-interface Beat {
-  id: string;               // e.g. "beat_00", "beat_01"
-  round: number;            // 0 = preamble, 1–3 = game rounds
-  title: string;
-  storyText: string;
-  orderIndex: number;
-  choices: Choice[];
-}
-
-interface Choice {
-  id: string;               // e.g. "beat_01_a"
-  beatId: string;
-  label: string;
-  immediateFeedback: string;
-  nextBeatId: string | null; // null = default linear progression
-}
-```
-
-> **Rule:** `FinalState.dimensions` and EO scores are **never displayed during gameplay.**
-> Only reveal them on the results page.
+Auth is not yet implemented. `/start` accepts `password` but does not validate or store it. All requests use `sessionId` for session continuity — no token required for now.
 
 ---
 
 ## Endpoints
 
-### 1. Start a New Game Session
+### POST `/api/game/start`
 
-```
-POST /api/game/start
-```
+Start a new game session. Returns the Layer 0 question for the player to answer.
 
-Creates a new player (or finds existing by email) and starts a fresh game session.
-Call this when the player submits the landing page form.
-
-**Request body:**
-```typescript
+**Request**
+```json
 {
-  email: string;   // player's email — used to upsert the player record
-  name: string;    // display name
+  "playerName": "Ama Owusu",
+  "email": "ama@example.com",
+  "password": "password123"
 }
 ```
 
-**Response `200`:**
-```typescript
+**Response `200`**
+```json
 {
-  sessionId: string;    // UUID — store this, needed for all subsequent calls
-  beat: Beat;           // always beat_00 (the preamble)
-  state: GameplayState; // initial state: capital 10000, reputation 50, network 10
+  "sessionId": "550e8400-e29b-41d4-a716-446655440000",
+  "layer0Question": "Describe the business you want to build and the problem it solves."
 }
 ```
 
-**Error responses:**
-| Status | Meaning |
-|--------|---------|
-| `400` | `email` or `name` missing or not a string |
-| `404` | Preamble beat (beat_00) not found in DB |
-| `500` | Internal server error |
+**Errors**
+| Code | Reason |
+|---|---|
+| 400 | Missing or invalid playerName, email, or password |
 
 ---
 
-### 2. Get Current Session
+### POST `/api/game/classify`
 
-```
-GET /api/game/session?sessionId=<sessionId>
-```
+Submit the player's Layer 0 free-text response. The backend classifies it to determine which Layer 1 scenario the player enters.
 
-Returns the current session state and the beat the player is on.
-Call this on page load or refresh to restore an in-progress session.
+> The EO pole distribution is computed server-side and never sent to the client.
 
-**Query params:**
-| Param | Type | Required |
-|-------|------|----------|
-| `sessionId` | string (UUID) | yes |
-
-**Response `200`:**
-```typescript
+**Request**
+```json
 {
-  beat: Beat;           // the current beat based on state.session.currentNarrativeId
-  state: GameplayState;
+  "sessionId": "550e8400-e29b-41d4-a716-446655440000",
+  "response": "I want to build a logistics platform connecting smallholder farmers to urban markets in Accra..."
 }
 ```
 
-**Error responses:**
-| Status | Meaning |
-|--------|---------|
-| `400` | `sessionId` query param missing |
-| `404` | Session not found |
-| `404` | Narrative beat not found |
-| `500` | Internal server error |
-
----
-
-### 3. Submit a Choice
-
-```
-POST /api/game/choice
-```
-
-The core gameplay endpoint. Submits the player's choice for the current beat.
-The backend applies game logic and returns the updated state and next beat.
-
-**Request body:**
-```typescript
+**Response `200`**
+```json
 {
-  sessionId: string;  // UUID from /start
-  choiceId: string;   // e.g. "beat_01_a" — must be a valid choice ID
+  "sessionId": "550e8400-e29b-41d4-a716-446655440000",
+  "layer1NodeId": "L1-node-1"
 }
 ```
 
-**Response `200`:**
-```typescript
+**Errors**
+| Code | Reason |
+|---|---|
+| 400 | Missing response or sessionId |
+| 404 | Session not found |
+
+---
+
+### POST `/api/game/choice`
+
+Submit a player's choice for the current scenario node.
+
+**Request**
+```json
 {
-  nextBeat: Beat;           // the next beat to render
-  updatedState: GameplayState;
-  feedback: string;         // immediateFeedback text for the chosen option
+  "sessionId": "550e8400-e29b-41d4-a716-446655440000",
+  "nodeId": "L1-node-1",
+  "choiceIndex": 1
 }
 ```
 
-**Error responses:**
-| Status | Meaning |
-|--------|---------|
-| `400` | `sessionId` or `choiceId` missing |
-| `404` | Session not found |
-| `404` | Choice not found |
-| `404` | Next beat not found |
-| `409` | Session is already complete |
-| `500` | Internal server error |
-
-> **UI rule:** Disable choice buttons immediately on click. Re-enable only if you receive
-> a `4xx` response. Never allow double submission.
-
----
-
-### 4. Get Session Results
-
-```
-GET /api/game/results?sessionId=<sessionId>
-```
-
-Returns the final state of a completed session. Only available after all 30 beats are played.
-Use this to populate the results page.
-
-**Query params:**
-| Param | Type | Required |
-|-------|------|----------|
-| `sessionId` | string (UUID) | yes |
-
-**Response `200`:**
-```typescript
+**Response `200`**
+```json
 {
-  finalState: FinalState;     // full state including dimensions — reveal EO scores here
-  acumenScore: number | null; // composite score — may be null if not yet calculated
-}
-```
-
-**Error responses:**
-| Status | Meaning |
-|--------|---------|
-| `400` | `sessionId` missing or session not yet complete |
-| `404` | Session not found |
-| `500` | Internal server error |
-
----
-
-## What the Frontend Never Receives
-
-The following data **never appears in any API response:**
-
-- Raw choice impact values (capital delta, dimension deltas, flag mutations)
-- `GameplayState.dimensions` — stripped from all responses except `/results`
-- Other players' session data
-
----
-
-## Mock Data for Local Development
-
-Use this mock to build and test components before hitting the live API.
-
-```typescript
-// __mocks__/api.ts
-
-export const MOCK_START_RESPONSE = {
-  sessionId: "mock-session-001",
-  beat: {
-    id: "beat_00",
-    round: 0,
-    title: "The GHS 10,000 Moment",
-    storyText: "Your room is small but your screen is bright. GHS 10,000 sits in your mobile money account — every pesewa earned through late nights, odd jobs, and stubborn saving.\n\nThe city outside your window is already moving. Accra doesn't pause for anyone. You've had this dream for a while. Now the money is real, and there are no more excuses.\n\nThe question isn't whether you're ready. The question is: what are you building?",
-    orderIndex: 0,
-    choices: [
-      {
-        id: "beat_01_a",
-        beatId: "beat_00",
-        label: "Urban Threads — The streets need better style. I'm giving it to them.",
-        immediateFeedback: "Fashion and hustle. You're betting on your eye for style and the city's appetite for it.",
-        nextBeatId: "beat_02"
-      },
-      {
-        id: "beat_01_b",
-        beatId: "beat_00",
-        label: "Campus Kitchen — The food situation is a crime. I'm fixing it.",
-        immediateFeedback: "Food is the most honest business there is. People eat every day.",
-        nextBeatId: "beat_02"
-      },
-      {
-        id: "beat_01_c",
-        beatId: "beat_00",
-        label: "Digital Solve — Local businesses are stuck offline. I'm dragging them forward.",
-        immediateFeedback: "You're selling something most people know they need but don't know how to get.",
-        nextBeatId: "beat_02"
-      }
-    ]
+  "sessionId": "550e8400-e29b-41d4-a716-446655440000",
+  "clientState": {
+    "capital": 10000,
+    "monthlyBurn": 1200,
+    "revenue": 1500,
+    "debt": 0,
+    "reputation": 3,
+    "networkStrength": 2,
+    "layer": 2,
+    "turnsElapsed": 1,
+    "isComplete": false,
+    "sector": "tech",
+    "employeeCount": 0,
+    "businessFormality": "unregistered",
+    "hasBackupPower": false,
+    "hasPremises": false,
+    "susuMember": false,
+    "mentorAccess": false
   },
-  state: {
-    session: {
-      playerId: "mock-player-001",
-      currentNarrativeId: "beat_00",
-      isStoryComplete: false,
-      history: []
-    },
-    resources: {
-      capital: 10000,
-      reputation: 50,
-      network: 10,
-      momentumMultiplier: 1.0
-    },
-    flags: { hasDebt: false, hiredTeam: false }
+  "nextNode": {
+    "id": "L2-node-1",
+    "layer": 2,
+    "narrative": "Three months in...",
+    "choices": [
+      { "index": 0, "text": "...", "tensionHint": "..." },
+      { "index": 1, "text": "...", "tensionHint": "..." },
+      { "index": 2, "text": "...", "tensionHint": "..." }
+    ]
   }
-};
+}
+```
 
-export const MOCK_CHOICE_RESPONSE = {
-  nextBeat: {
-    id: "beat_02",
-    round: 1,
-    title: "All In or Play It Safe?",
-    storyText: "You've told two people about your venture. One hyped you up. The other asked if you had a 'backup plan.' Classic.\n\nNow comes your first real test: how do you deploy your capital?",
-    orderIndex: 2,
-    choices: [
-      {
-        id: "beat_02_a",
-        beatId: "beat_02",
-        label: "Go big. Spend GHS 4,000 upfront. Make a statement.",
-        immediateFeedback: "Bold move. You're putting real skin in the game early.",
-        nextBeatId: "beat_03"
-      },
-      {
-        id: "beat_02_b",
-        beatId: "beat_02",
-        label: "Start lean. Spend GHS 1,000, test fast, learn faster.",
-        immediateFeedback: "Smart. You're buying information before you buy inventory.",
-        nextBeatId: "beat_03"
-      }
-    ]
-  },
-  updatedState: {
-    session: {
-      playerId: "mock-player-001",
-      currentNarrativeId: "beat_02",
-      isStoryComplete: false,
-      history: [{ narrativeId: "beat_00", choiceId: "beat_01_a" }]
-    },
-    resources: {
-      capital: 10000,
-      reputation: 50,
-      network: 10,
-      momentumMultiplier: 1.0
-    },
-    flags: { hasDebt: false, hiredTeam: false, venture_threads: true }
-  },
-  feedback: "Fashion and hustle. You're betting on your eye for style and the city's appetite for it."
-};
+> `nextNode` is `null` when `isComplete` is `true`.
 
-export const MOCK_RESULTS_RESPONSE = {
-  finalState: {
-    session: {
-      playerId: "mock-player-001",
-      currentNarrativeId: "beat_30",
-      isStoryComplete: true,
-      history: []
-    },
-    resources: {
-      capital: 12500,
-      reputation: 68,
-      network: 24,
-      momentumMultiplier: 1.3
-    },
-    dimensions: {
-      autonomy: 14,
-      innovativeness: 11,
-      proactiveness: 16,
-      riskTaking: 13,
-      competitiveAggressiveness: 9
-    },
-    flags: { hasDebt: false, hiredTeam: true, venture_threads: true }
+**Errors**
+| Code | Reason |
+|---|---|
+| 400 | Invalid choiceIndex, missing fields, or stale nodeId (double-submit guard) |
+| 404 | Session not found |
+| 409 | Session already complete |
+
+---
+
+### GET `/api/game/session/:sessionId`
+
+Retrieve current session state. Use for reconnects and page refreshes.
+
+**Response `200`**
+```json
+{
+  "sessionId": "550e8400-e29b-41d4-a716-446655440000",
+  "clientState": { "...ClientWorldState fields..." },
+  "currentNode": { "...ScenarioNode..." }
+}
+```
+
+> `currentNode` is `null` before `/classify` is called.
+
+**Errors**
+| Code | Reason |
+|---|---|
+| 404 | Session not found |
+
+---
+
+### GET `/api/game/results/:sessionId`
+
+Retrieve final EO profile and game summary. Only available after `isComplete = true`.
+
+**Response `200`**
+```json
+{
+  "sessionId": "550e8400-e29b-41d4-a716-446655440000",
+  "eoProfile": {
+    "autonomy": 6.5,
+    "innovativeness": 7.0,
+    "riskTaking": 8.0,
+    "proactiveness": 5.5,
+    "competitiveAggressiveness": 4.0
   },
-  acumenScore: 72.4
-};
+  "clientState": { "...ClientWorldState fields..." },
+  "summary": "Your entrepreneurial orientation profile...",
+  "session": { "...GameSession fields..." }
+}
+```
+
+**Errors**
+| Code | Reason |
+|---|---|
+| 400 | Session not yet complete |
+| 404 | Session not found |
+
+---
+
+## Shared Types Reference
+
+Import from `@hatchquest/shared` — do not redefine:
+
+```typescript
+import type {
+  ClientWorldState,
+  StartRequest, StartResponse,
+  ClassifyRequest, ClassifyResponse,
+  ChoiceRequest, ChoiceResponse,
+  SessionResponse,
+  ResultsResponse,
+  ScenarioNode,
+  Choice,
+} from "@hatchquest/shared";
+```
+
+### `ClientWorldState` fields
+
+| Field | Type | Notes |
+|---|---|---|
+| `capital` | number | GHS |
+| `monthlyBurn` | number | GHS/month |
+| `revenue` | number | GHS/month |
+| `debt` | number | GHS |
+| `reputation` | number | 0–100 |
+| `networkStrength` | number | 0–100 |
+| `layer` | number | 0–5 |
+| `turnsElapsed` | number | Total decisions made |
+| `isComplete` | boolean | True at game end |
+| `sector` | BusinessSector | tech, agri, retail, food, services |
+| `employeeCount` | number | |
+| `businessFormality` | BusinessFormality | unregistered, soleProprietorship, limitedCompany |
+| `hasBackupPower` | boolean | |
+| `hasPremises` | boolean | |
+| `susuMember` | boolean | |
+| `mentorAccess` | boolean | |
+
+---
+
+## Game Flow
+
+```
+POST /start
+  → sessionId + layer0Question
+
+POST /classify  (player submits free-text)
+  → layer1NodeId
+
+Loop until isComplete:
+  POST /choice  (0 | 1 | 2)
+    → clientState + nextNode
+
+GET /results  (when isComplete = true)
+  → eoProfile + summary
 ```
 
 ---
 
-## Questions or Discrepancies
-
-If an endpoint behaves differently from this contract during integration, flag it immediately.
-Do not work around it — raise it with the backend lead so both sides stay in sync.
+_v2 contract — April 2026_

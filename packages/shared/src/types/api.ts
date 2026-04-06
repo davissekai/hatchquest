@@ -1,28 +1,51 @@
-import type { EOPoleDistribution, WorldState } from "./game.js";
+import type { EOProfile, BusinessSector, BusinessFormality } from "./game.js";
 import type { GameSession } from "./session.js";
 
-// POST /start
+// Client-safe world state — what the frontend can see during gameplay.
+// Strips eoProfile (revealed only at results) and all environment variables
+// (Director AI internals — marketDemand, infrastructureReliability, etc.).
+export interface ClientWorldState {
+  capital: number;
+  monthlyBurn: number;
+  revenue: number;
+  debt: number;
+  reputation: number;
+  networkStrength: number;
+  layer: number;
+  turnsElapsed: number;
+  isComplete: boolean;
+  sector: BusinessSector;
+  employeeCount: number;
+  businessFormality: BusinessFormality;
+  hasBackupPower: boolean;
+  hasPremises: boolean;
+  susuMember: boolean;
+  mentorAccess: boolean;
+}
+
+// POST /api/game/start
+// password is accepted to satisfy the frontend contract but auth is not yet implemented.
 export interface StartRequest {
-  playerId?: string;
+  playerName: string;
+  email: string;
+  password: string;
 }
 export interface StartResponse {
   sessionId: string;
-  layer0Questions: string[];
+  layer0Question: string; // single open-ended free-text prompt
 }
 
-// POST /classify  (Layer 0 free-text → EO poles)
+// POST /api/game/classify — Layer 0 free-text → EO poles → Layer 1 node
 export interface ClassifyRequest {
   sessionId: string;
-  responses: string[]; // one per layer0Question
+  response: string; // player's free-text answer to the layer0Question
 }
 export interface ClassifyResponse {
   sessionId: string;
-  poleDistribution: EOPoleDistribution;
-  // Which of the 5 Layer 1 nodes the player is routed to
-  layer1NodeId: string;
+  layer1NodeId: string; // which Layer 1 node the player is routed to — poles stay server-side
 }
 
-// POST /choice
+// POST /api/game/choice
 export interface ChoiceRequest {
   sessionId: string;
   nodeId: string;
@@ -30,20 +53,27 @@ export interface ChoiceRequest {
 }
 export interface ChoiceResponse {
   sessionId: string;
-  worldState: Omit<WorldState, "eoProfile">; // EO hidden during play
-  nextNode: ScenarioNode | null; // null = game over
+  clientState: ClientWorldState;
+  nextNode: ScenarioNode | null; // null = game complete
 }
 
-// GET /results/:sessionId
+// GET /api/game/session/:sessionId
+export interface SessionResponse {
+  sessionId: string;
+  clientState: ClientWorldState;
+  currentNode: ScenarioNode | null;
+}
+
+// GET /api/game/results/:sessionId — only available when isComplete = true
 export interface ResultsResponse {
   sessionId: string;
   session: GameSession;
-  // EO profile revealed only at game end
-  eoProfile: WorldState["eoProfile"];
+  eoProfile: EOProfile; // revealed only at game end
+  clientState: ClientWorldState;
   summary: string;
 }
 
-// Scenario node shape returned to the client
+// Scenario node returned to the client for rendering
 export interface ScenarioNode {
   id: string;
   layer: number;
@@ -54,6 +84,5 @@ export interface ScenarioNode {
 export interface Choice {
   index: 0 | 1 | 2;
   text: string;
-  // Preamble hint — describes the tension without revealing EO labels
-  tensionHint: string;
+  tensionHint: string; // describes the EO tension without labelling the dimensions
 }
