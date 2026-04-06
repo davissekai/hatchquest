@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { applyChoice } from "../apply-choice.js";
+import { applyChoice, applyEffect } from "../apply-choice.js";
 import { createInitialWorldState } from "../world-state.js";
 import type { ChoiceEffect } from "../apply-choice.js";
 
@@ -132,6 +132,7 @@ describe("applyChoice", () => {
   });
 
   it("applies boolean flags when present in effect", () => {
+
     const state = makeState();
     const effect: ChoiceEffect = {
       capital: -3000,
@@ -153,5 +154,59 @@ describe("applyChoice", () => {
     // Untouched flags stay false
     expect(next.hasPremises).toBe(false);
     expect(next.mentorAccess).toBe(false);
+  });
+});
+
+describe("applyEffect", () => {
+  it("applies financial effects without advancing turnsElapsed", () => {
+    const state = makeState();
+    const effect: ChoiceEffect = {
+      capital: -2000,
+      revenue: 500,
+      debt: 0,
+      monthlyBurn: 200,
+      reputation: 0,
+      networkStrength: 0,
+      eoDeltas: {},
+    };
+    const next = applyEffect(state, effect);
+
+    expect(next.capital).toBe(state.capital - 2000);
+    expect(next.revenue).toBe(500);
+    expect(next.turnsElapsed).toBe(state.turnsElapsed); // NOT incremented
+  });
+
+  it("does not set currentNodeId", () => {
+    const state = makeState(); // currentNodeId is null
+    const effect: ChoiceEffect = {
+      capital: 0, revenue: 0, debt: 0, monthlyBurn: 0,
+      reputation: 0, networkStrength: 0, eoDeltas: {},
+    };
+    const next = applyEffect(state, effect);
+
+    expect(next.currentNodeId).toBeNull(); // unchanged
+  });
+
+  it("applies EO deltas and clamps to [0, 10]", () => {
+    const state = makeState();
+    const effect: ChoiceEffect = {
+      capital: 0, revenue: 0, debt: 0, monthlyBurn: 0,
+      reputation: 0, networkStrength: 0,
+      eoDeltas: { riskTaking: 3, autonomy: -6 },
+    };
+    const next = applyEffect(state, effect);
+
+    expect(next.eoProfile.riskTaking).toBe(8);
+    expect(next.eoProfile.autonomy).toBe(0);
+  });
+
+  it("does not mutate the original state", () => {
+    const state = makeState();
+    const original = state.capital;
+    applyEffect(state, {
+      capital: -5000, revenue: 0, debt: 0, monthlyBurn: 0,
+      reputation: 0, networkStrength: 0, eoDeltas: {},
+    });
+    expect(state.capital).toBe(original);
   });
 });

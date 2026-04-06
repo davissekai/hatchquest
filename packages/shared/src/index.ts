@@ -11,11 +11,15 @@ export type {
 } from "./types/game.js";
 export type { GameSession, SessionStatus } from "./types/session.js";
 export type {
+  ClientWorldState,
   StartRequest,
   StartResponse,
   ClassifyRequest,
   ClassifyResponse,
   ChoiceRequest,
   ChoiceResponse,
+  SessionResponse,
   ResultsResponse,
+  ScenarioNode,
+  Choice,
 } from "./types/api.js";
