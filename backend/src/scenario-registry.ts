@@ -1,8 +1,31 @@
-import type { ScenarioNode, Choice } from "@hatchquest/shared";
+import type { ScenarioNode, Choice, EODimension } from "@hatchquest/shared";
 import type { ChoiceEffect } from "./engine/apply-choice.js";
 
-// Full scenario node including server-side choice effects.
-// ScenarioNode (from shared) carries only the client-facing fields.
+// Thematic categories — used by the Director AI to match scenarios to world state signals.
+export type NodeTheme =
+  | "financing"
+  | "competition"
+  | "hiring"
+  | "branding"
+  | "operations"
+  | "networking"
+  | "crisis"
+  | "general";
+
+// Hard eligibility gates — all defined conditions must pass for a node to be eligible.
+export interface NodeConditions {
+  capitalMin?: number;
+  capitalMax?: number;
+  reputationMin?: number;
+  reputationMax?: number;
+  debtMin?: number;
+  debtMax?: number;
+  requiresMentorAccess?: boolean;
+  requiresPremises?: boolean;
+  employeeCountMin?: number;
+}
+
+// Full scenario node including server-side choice effects and Director AI metadata.
 export interface ScenarioNodeFull {
   id: string;
   layer: number;
@@ -10,6 +33,11 @@ export interface ScenarioNodeFull {
   choices: Choice[];
   // Parallel array: effects[i] maps to choices[i]
   effects: [ChoiceEffect, ChoiceEffect, ChoiceEffect];
+  // Director AI metadata
+  theme: NodeTheme;
+  baseWeight: number;
+  eoTargetDimensions: EODimension[];
+  conditions?: NodeConditions;
 }
 
 // Converts a full node to the client-safe ScenarioNode shape.
@@ -40,6 +68,9 @@ const ZERO_EFFECT: ChoiceEffect = {
 const L1_NODE_1: ScenarioNodeFull = {
   id: "L1-node-1",
   layer: 1,
+  theme: "competition",
+  baseWeight: 1.0,
+  eoTargetDimensions: ["riskTaking", "competitiveAggressiveness"],
   narrative:
     "It is your third week in business. A distributor in Kumasi offers to stock your product — but only if you can guarantee 500 units by month-end. You have the raw materials but no extra cash for overtime labour. What do you do?",
   choices: [
@@ -97,6 +128,9 @@ const L1_NODE_1: ScenarioNodeFull = {
 const L1_NODE_2: ScenarioNodeFull = {
   id: "L1-node-2",
   layer: 1,
+  theme: "branding",
+  baseWeight: 1.0,
+  eoTargetDimensions: ["proactiveness", "innovativeness"],
   narrative:
     "A popular blogger in your space wants to feature your product in exchange for 10 free units. It is free marketing, but 10 units is a week of your current output. What do you do?",
   choices: [
@@ -151,6 +185,9 @@ const L1_NODE_2: ScenarioNodeFull = {
 const L1_NODE_3: ScenarioNodeFull = {
   id: "L1-node-3",
   layer: 1,
+  theme: "hiring",
+  baseWeight: 1.0,
+  eoTargetDimensions: ["autonomy", "competitiveAggressiveness"],
   narrative:
     "Your first employee — a childhood friend — is underperforming. Sales targets are being missed. Another applicant with no personal connection but strong references is available. What do you do?",
   choices: [
@@ -205,6 +242,9 @@ const L1_NODE_3: ScenarioNodeFull = {
 const L1_NODE_4: ScenarioNodeFull = {
   id: "L1-node-4",
   layer: 1,
+  theme: "competition",
+  baseWeight: 1.0,
+  eoTargetDimensions: ["competitiveAggressiveness", "innovativeness"],
   narrative:
     "A competitor in your market is pricing 15% below your cost of goods. You suspect they are running at a loss to capture market share. How do you respond?",
   choices: [
@@ -259,6 +299,9 @@ const L1_NODE_4: ScenarioNodeFull = {
 const L1_NODE_5: ScenarioNodeFull = {
   id: "L1-node-5",
   layer: 1,
+  theme: "branding",
+  baseWeight: 1.0,
+  eoTargetDimensions: ["innovativeness", "autonomy"],
   narrative:
     "Your product works but the packaging looks cheap compared to rivals. A designer quotes GHS 4,000 for a rebrand. You have the capital but it would cut your runway by two months. What do you do?",
   choices: [
@@ -309,10 +352,13 @@ const L1_NODE_5: ScenarioNodeFull = {
   ],
 };
 
-/** Layer 2 stub node — used by the Director AI stub until the full pool exists */
+/** Layer 2 stub node — used by the Director AI until the full pool exists */
 const L2_NODE_1: ScenarioNodeFull = {
   id: "L2-node-1",
   layer: 2,
+  theme: "financing",
+  baseWeight: 1.0,
+  eoTargetDimensions: ["riskTaking", "autonomy"],
   narrative:
     "Three months in. A GEA advisor offers to connect you to a low-interest GEA loan — GHS 20,000 at 12% — but the paperwork is heavy and approval takes 6 weeks. Meanwhile, your cousin offers the same amount informally, interest-free, repayable 'when you can.' What do you do?",
   choices: [
@@ -373,6 +419,16 @@ const REGISTRY: Map<string, ScenarioNodeFull> = new Map([
   [L1_NODE_5.id, L1_NODE_5],
   [L2_NODE_1.id, L2_NODE_1],
 ]);
+
+/** Returns all nodes across all layers — used by the Director AI candidate pool. */
+export function getAllNodes(): ScenarioNodeFull[] {
+  return Array.from(REGISTRY.values());
+}
+
+/** Returns all nodes for a specific layer — convenience filter over getAllNodes(). */
+export function getNodesForLayer(layer: number): ScenarioNodeFull[] {
+  return getAllNodes().filter((n) => n.layer === layer);
+}
 
 /**
  * Looks up a node by id and returns the client-safe ScenarioNode.
