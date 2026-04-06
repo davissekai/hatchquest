@@ -38,6 +38,8 @@ function buildApp(store: SessionStore): FastifyInstance {
     getNode: (id: string | null) => (id === "L1-node-1" || id === "L2-node-1" ? STUB_NODE : null),
     getChoiceEffect: (nodeId: string, idx: 0 | 1 | 2) =>
       nodeId === "L1-node-1" ? STUB_EFFECT : null,
+    // Stub Director AI — always returns L2-node-1 so route tests stay hermetic
+    selectNextNodeId: () => "L2-node-1",
   });
   return app;
 }

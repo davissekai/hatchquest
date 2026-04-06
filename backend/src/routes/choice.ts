@@ -1,8 +1,8 @@
 import type { FastifyPluginAsync, FastifyReply, FastifyRequest } from "fastify";
-import type { ScenarioNode } from "@hatchquest/shared";
+import type { ScenarioNode, WorldState } from "@hatchquest/shared";
 import type { SessionStore } from "../store/session-store.js";
 import type { ChoiceEffect } from "../engine/apply-choice.js";
-import { applyChoice } from "../engine/apply-choice.js";
+import { applyEffect } from "../engine/apply-choice.js";
 import { toClientState } from "./helpers.js";
 
 // Registry dependency interface — injected by callers so tests can stub it.
@@ -18,6 +18,12 @@ export interface ChoiceRouteOptions {
   store: SessionStore;
   getNode: ChoiceRegistry["getNode"];
   getChoiceEffect: ChoiceRegistry["getChoiceEffect"];
+  /**
+   * Director AI node selector — takes post-effect world state, returns next nodeId.
+   * Optional: defaults to returning null (game over) when not injected.
+   * Tests inject a stub; production injects the real Director AI.
+   */
+  selectNextNodeId?: (state: WorldState) => string | null;
 }
 
 // Expected shape of the POST /choice request body.
@@ -39,9 +45,6 @@ function isNonEmptyString(v: unknown): v is string {
 
 /**
  * Handles POST /choice.
- * Validates the request, looks up the session, applies the player's choice,
- * and returns the updated client state plus the next scenario node.
- *
  * Guard order:
  *   1. Body field presence / type → 400
  *   2. Session existence → 404
@@ -54,7 +57,8 @@ async function handleChoice(
   reply: FastifyReply,
   store: SessionStore,
   getNode: ChoiceRegistry["getNode"],
-  getChoiceEffect: ChoiceRegistry["getChoiceEffect"]
+  getChoiceEffect: ChoiceRegistry["getChoiceEffect"],
+  selectNextNodeId: (state: WorldState) => string | null
 ): Promise<void> {
   const { sessionId, nodeId, choiceIndex } = request.body ?? {};
 
@@ -93,24 +97,27 @@ async function handleChoice(
   }
 
   // --- Apply the choice ---
-  // TODO: replace "L2-node-1" with Director AI weighted selector once implemented.
-  const nextNodeId = "L2-node-1";
-  let newState = applyChoice(worldState, effect, nextNodeId);
+  // applyEffect gives us the post-choice state without committing nextNodeId,
+  // so the Director AI evaluates the updated world before selecting the next node.
+  const intermediateState = applyEffect(worldState, effect);
+  const nextNodeId = selectNextNodeId(intermediateState) ?? "";
+  let newState: WorldState = {
+    ...intermediateState,
+    currentNodeId: nextNodeId,
+    turnsElapsed: worldState.turnsElapsed + 1,
+  };
 
-  // If the player has completed 5 turns the game ends.
-  // applyChoice already incremented turnsElapsed, so we check the new value.
+  // Game ends after 5 turns
   const gameOver = newState.turnsElapsed >= 5;
   if (gameOver) {
     newState = { ...newState, isComplete: true };
   }
 
-  // Persist the updated world state
   store.updateSession(sessionId, {
     worldState: newState,
     status: gameOver ? "complete" : "active",
   });
 
-  // Look up next node — null when game is over
   const nextNode = gameOver ? null : getNode(newState.currentNodeId);
 
   return reply.status(200).send({
@@ -122,15 +129,15 @@ async function handleChoice(
 
 /**
  * Fastify plugin that registers POST /choice.
- * Accepts store and registry functions as options for testability.
+ * Accepts store, registry functions, and optional Director AI selector as options.
  */
 export const choiceRoutes: FastifyPluginAsync<ChoiceRouteOptions> = async (
   fastify,
   options
 ): Promise<void> => {
-  const { store, getNode, getChoiceEffect } = options;
+  const { store, getNode, getChoiceEffect, selectNextNodeId = () => null } = options;
 
   fastify.post<{ Body: ChoiceBody }>("/choice", async (request, reply) => {
-    return handleChoice(request, reply, store, getNode, getChoiceEffect);
+    return handleChoice(request, reply, store, getNode, getChoiceEffect, selectNextNodeId);
   });
 };
