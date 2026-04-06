@@ -65,11 +65,11 @@ jobs:
           NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
           NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
 
-  # Full suite — runs on all PRs to master
+  # Full suite — runs on all PRs to develop or master
   full:
     name: Full Suite · All Checks
     runs-on: ubuntu-latest
-    if: github.base_ref == 'master'
+    if: github.base_ref == 'master' || github.base_ref == 'develop'
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
