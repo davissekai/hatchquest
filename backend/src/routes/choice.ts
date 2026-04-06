@@ -105,6 +105,9 @@ async function handleChoice(
     ...intermediateState,
     currentNodeId: nextNodeId,
     turnsElapsed: worldState.turnsElapsed + 1,
+    // Advance layer so Director AI looks at the correct pool next turn
+    // and EO affinity transitions to challenge mode at layer 3+.
+    layer: worldState.layer + 1,
   };
 
   // Game ends after 5 turns

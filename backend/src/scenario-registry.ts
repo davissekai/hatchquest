@@ -50,9 +50,9 @@ export function toClientNode(full: ScenarioNodeFull): ScenarioNode {
   };
 }
 
-// --- Stub Layer 1 node data (hand-crafted for demo) ---
-// Each node maps to one of the 5 EO pole-distribution combinations from Layer 0 classification.
-// TODO: expand to full 171-node pool once Director AI is in place.
+// --- Layer 1–2 node data (hand-crafted for demo) ---
+// Each L1 node maps to one of the 5 EO pole-distribution combinations from Layer 0 classification.
+// Director AI selects from this pool each turn using theme + EO affinity scoring.
 
 const ZERO_EFFECT: ChoiceEffect = {
   capital: 0,

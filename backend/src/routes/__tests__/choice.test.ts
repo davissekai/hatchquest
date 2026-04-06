@@ -82,7 +82,22 @@ describe("POST /choice", () => {
     expect(body.nextNode).toBeDefined();
   });
 
-  // --- turnsElapsed increments ---
+  // --- layer and turnsElapsed advance ---
+
+  it("increments layer by 1 after a valid choice", async () => {
+    const sessionId = seedSession(store);
+    const before = store.getSession(sessionId)!.worldState.layer;
+
+    const res = await app.inject({
+      method: "POST",
+      url: "/choice",
+      payload: { sessionId, nodeId: "L1-node-1", choiceIndex: 0 },
+    });
+
+    expect(res.statusCode).toBe(200);
+    const body = res.json<ChoiceResponse>();
+    expect(body.clientState.layer).toBe(before + 1);
+  });
 
   it("increments turnsElapsed by 1 after a valid choice", async () => {
     const sessionId = seedSession(store);
