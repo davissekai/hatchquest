@@ -7,6 +7,8 @@ export default defineConfig({
     coverage: {
       provider: "v8",
       include: ["src/engine/**"],
+      // Barrel re-export file — no executable logic, nothing to cover
+      exclude: ["src/engine/index.ts"],
       thresholds: {
         lines: 100,
         functions: 100,

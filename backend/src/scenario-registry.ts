@@ -352,7 +352,7 @@ const L1_NODE_5: ScenarioNodeFull = {
   ],
 };
 
-/** Layer 2 stub node — used by the Director AI until the full pool exists */
+/** L2-node-1: Financing — GEA formal loan vs informal family loan */
 const L2_NODE_1: ScenarioNodeFull = {
   id: "L2-node-1",
   layer: 2,
@@ -465,7 +465,7 @@ const L2_NODE_2: ScenarioNodeFull = {
       monthlyBurn: 100,
       reputation: 6,
       networkStrength: 8,
-      eoDeltas: { proactiveness: 1, innovativeness: 0 },
+      eoDeltas: { proactiveness: 1 },
     },
   ],
 };
@@ -672,9 +672,10 @@ const L3_NODE_1: ScenarioNodeFull = {
   ],
   effects: [
     {
-      capital: 40_000,
+      // Capped at L3 calibration limit (+30,000 capital / +30,000 debt max)
+      capital: 30_000,
       revenue: 3_000,
-      debt: 40_000,
+      debt: 30_000,
       monthlyBurn: 1_200,
       reputation: 10,
       networkStrength: 12,
@@ -754,7 +755,7 @@ const L3_NODE_2: ScenarioNodeFull = {
       monthlyBurn: 0,
       reputation: 8,
       networkStrength: 18,
-      eoDeltas: { proactiveness: 2, autonomy: 0 },
+      eoDeltas: { proactiveness: 2 },
     },
   ],
 };
@@ -965,15 +966,17 @@ const L4_NODE_2: ScenarioNodeFull = {
   ],
   effects: [
     {
+      // Accept: guaranteed licensing income, high network reach, give up brand autonomy
       capital: 0,
-      revenue: 500,
+      revenue: 8_000,
       debt: 0,
       monthlyBurn: 0,
       reputation: 5,
       networkStrength: 20,
-      eoDeltas: { proactiveness: 1, riskTaking: 0 },
+      eoDeltas: { autonomy: -1, proactiveness: 1 },
     },
     {
+      // Co-brand counter: partial deal, moderate revenue, retain some identity
       capital: 0,
       revenue: 5_000,
       debt: 0,
@@ -983,6 +986,7 @@ const L4_NODE_2: ScenarioNodeFull = {
       eoDeltas: { innovativeness: 2, proactiveness: 1 },
     },
     {
+      // Decline: no guaranteed income, build own distribution, full autonomy
       capital: 0,
       revenue: 2_000,
       debt: 0,
