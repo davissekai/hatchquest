@@ -275,7 +275,8 @@ const L1_NODE_4: ScenarioNodeFull = {
       eoDeltas: { competitiveAggressiveness: 3, riskTaking: 2 },
     },
     {
-      capital: 0,
+      // Choice 1: hold price + quality messaging — costs marketing spend
+      capital: -300,
       revenue: 200,
       debt: 0,
       monthlyBurn: 0,
@@ -749,13 +750,14 @@ const L3_NODE_2: ScenarioNodeFull = {
       eoDeltas: { innovativeness: 3, proactiveness: 2 },
     },
     {
+      // Choice 2: partner with competitor — costs autonomy (you cede competitive independence)
       capital: 0,
       revenue: 1_000,
       debt: 0,
       monthlyBurn: 0,
       reputation: 8,
       networkStrength: 18,
-      eoDeltas: { proactiveness: 2 },
+      eoDeltas: { proactiveness: 2, autonomy: -1 },
     },
   ],
 };
@@ -808,7 +810,8 @@ const L3_NODE_3: ScenarioNodeFull = {
       flags: { susuMember: true },
     },
     {
-      capital: 0,
+      // Choice 2: write off debt, acquire new clients — costs capital for acquisition
+      capital: -1_000,
       revenue: 2_000,
       debt: 0,
       monthlyBurn: -200,
@@ -976,11 +979,11 @@ const L4_NODE_2: ScenarioNodeFull = {
       eoDeltas: { autonomy: -1, proactiveness: 1 },
     },
     {
-      // Co-brand counter: partial deal, moderate revenue, retain some identity
+      // Co-brand counter: partial deal, moderate revenue — ongoing coordination cost
       capital: 0,
       revenue: 5_000,
       debt: 0,
-      monthlyBurn: 0,
+      monthlyBurn: 200,
       reputation: 15,
       networkStrength: 15,
       eoDeltas: { innovativeness: 2, proactiveness: 1 },
