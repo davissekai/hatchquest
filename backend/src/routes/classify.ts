@@ -1,6 +1,7 @@
 import type { FastifyPluginAsync } from "fastify";
 import type { ClassifyRequest, ClassifyResponse } from "@hatchquest/shared";
 import type { ISessionStore } from "../store/types.js";
+import { classify } from "../engine/classifier.js";
 
 // Plugin options carry the store so tests can inject a fresh instance
 // rather than relying on the module-level singleton.
@@ -18,16 +19,6 @@ const classifyBodySchema = {
   },
   additionalProperties: false,
 } as const;
-
-/**
- * Stub classifier — returns a fixed Layer 1 node id.
- * TODO: Replace with real LLM classifier (Claude API) that maps free-text
- * response to EOPoleDistribution and selects among the 5 L1 world-states.
- * Fallback to keyword heuristic if the API call times out.
- */
-function classifyResponse(_response: string): string {
-  return "L1-node-1";
-}
 
 // Union reply type: success shape or a plain error message for 404
 type ClassifyReply = ClassifyResponse | { error: string };
@@ -55,7 +46,9 @@ export const classifyRoutes: FastifyPluginAsync<ClassifyPluginOptions> = async (
           .send({ error: `Session not found: ${sessionId}` });
       }
 
-      const layer1NodeId = classifyResponse(response);
+      // Classify free-text response → Layer 1 node id.
+      // Tries LLM (Claude Haiku) first; falls back to keyword heuristic.
+      const layer1NodeId = await classify(response);
 
       // Advance world state into Layer 1 with the classified node
       await store.updateSession(sessionId, {
