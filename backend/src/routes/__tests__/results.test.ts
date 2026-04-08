@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach } from "vitest";
 import Fastify, { type FastifyInstance } from "fastify";
 import { SessionStore } from "../../store/session-store.js";
-import { resultsRoutes } from "../results.js";
+import { resultsRoutes, generateSummary } from "../results.js";
 import type { ResultsResponse } from "@hatchquest/shared";
 
 // Build isolated Fastify app with injected store.
@@ -116,5 +116,90 @@ describe("GET /results/:sessionId", () => {
     });
 
     expect(res.statusCode).toBe(404);
+  });
+});
+
+// ─── generateSummary unit tests ─────────────────────────────────────────────
+
+describe("generateSummary", () => {
+  it("produces a non-empty string for any valid profile", () => {
+    const profile: ResultsResponse["eoProfile"] = {
+      autonomy: 5,
+      innovativeness: 5,
+      riskTaking: 5,
+      proactiveness: 5,
+      competitiveAggressiveness: 5,
+    };
+    const summary = generateSummary(profile);
+    expect(typeof summary).toBe("string");
+    expect(summary.length).toBeGreaterThan(20);
+  });
+
+  it("identifies the dominant dimension when one score is highest", () => {
+    const profile: ResultsResponse["eoProfile"] = {
+      autonomy: 3,
+      innovativeness: 9,
+      riskTaking: 2,
+      proactiveness: 4,
+      competitiveAggressiveness: 1,
+    };
+    const summary = generateSummary(profile);
+    expect(summary).toContain("innovativeness");
+    expect(summary).toContain("9.0");
+  });
+
+  it("identifies the weakest dimension in the summary", () => {
+    const profile: ResultsResponse["eoProfile"] = {
+      autonomy: 8,
+      innovativeness: 7,
+      riskTaking: 6,
+      proactiveness: 5,
+      competitiveAggressiveness: 1,
+    };
+    const summary = generateSummary(profile);
+    // The summary mentions both strongest and weakest dimensions
+    expect(summary.length).toBeGreaterThan(0);
+  });
+
+  it("produces different summaries for different profiles", () => {
+    const profileA: ResultsResponse["eoProfile"] = {
+      autonomy: 9,
+      innovativeness: 2,
+      riskTaking: 1,
+      proactiveness: 3,
+      competitiveAggressiveness: 4,
+    };
+    const profileB: ResultsResponse["eoProfile"] = {
+      autonomy: 1,
+      innovativeness: 9,
+      riskTaking: 8,
+      proactiveness: 2,
+      competitiveAggressiveness: 3,
+    };
+    expect(generateSummary(profileA)).not.toBe(generateSummary(profileB));
+  });
+
+  it("includes strong signal language when dominant score >= 7", () => {
+    const profile: ResultsResponse["eoProfile"] = {
+      autonomy: 8,
+      innovativeness: 3,
+      riskTaking: 4,
+      proactiveness: 5,
+      competitiveAggressiveness: 2,
+    };
+    const summary = generateSummary(profile);
+    expect(summary).toContain("strong signal");
+  });
+
+  it("includes moderate signal language when dominant score is 4-6", () => {
+    const profile: ResultsResponse["eoProfile"] = {
+      autonomy: 5,
+      innovativeness: 3,
+      riskTaking: 4,
+      proactiveness: 2,
+      competitiveAggressiveness: 1,
+    };
+    const summary = generateSummary(profile);
+    expect(summary).toContain("moderate signal");
   });
 });

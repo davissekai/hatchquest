@@ -4,6 +4,7 @@ import type { ISessionStore } from "../store/types.js";
 import type { ChoiceEffect } from "../engine/apply-choice.js";
 import { applyEffect } from "../engine/apply-choice.js";
 import { toClientState } from "./helpers.js";
+import { SessionLock } from "./session-lock.js";
 
 // Registry dependency interface — injected by callers so tests can stub it.
 export interface ChoiceRegistry {
@@ -51,11 +52,15 @@ function isNonEmptyString(v: unknown): v is string {
  *   3. Session already complete → 409
  *   4. nodeId matches session's currentNodeId (double-submit guard) → 400
  *   5. ChoiceEffect existence → 400
+ *
+ * The entire read-modify-write cycle (steps 2–5 + update) is serialized per
+ * sessionId via a SessionLock, preventing TOCTOU races from concurrent requests.
  */
 async function handleChoice(
   request: FastifyRequest<{ Body: ChoiceBody }>,
   reply: FastifyReply,
   store: ISessionStore,
+  lock: SessionLock,
   getNode: ChoiceRegistry["getNode"],
   getChoiceEffect: ChoiceRegistry["getChoiceEffect"],
   selectNextNodeId: (state: WorldState) => string | null
@@ -70,64 +75,70 @@ async function handleChoice(
     return reply.status(400).send({ error: "choiceIndex must be 0, 1, or 2." });
   }
 
-  // --- Step 2: session lookup ---
-  const session = await store.getSession(sessionId);
-  if (!session) {
-    return reply.status(404).send({ error: `Session not found: ${sessionId}` });
+  // --- Acquire per-session lock — serializes concurrent requests for this sessionId ---
+  const release = await lock.acquire(sessionId);
+  try {
+    // --- Step 2: session lookup ---
+    const session = await store.getSession(sessionId);
+    if (!session) {
+      return reply.status(404).send({ error: `Session not found: ${sessionId}` });
+    }
+
+    const { worldState } = session;
+
+    // --- Step 3: completed-session guard ---
+    if (worldState.isComplete) {
+      return reply.status(409).send({ error: "Session is already complete." });
+    }
+
+    // --- Step 4: stale-nodeId guard (prevents double-submit and client/server drift) ---
+    if (nodeId !== worldState.currentNodeId) {
+      return reply
+        .status(400)
+        .send({ error: "nodeId does not match current session node (stale client or double-submit)." });
+    }
+
+    // --- Step 5: choice effect lookup ---
+    const effect = getChoiceEffect(nodeId, choiceIndex);
+    if (!effect) {
+      return reply.status(400).send({ error: `No effect found for node "${nodeId}" choice ${choiceIndex}.` });
+    }
+
+    // --- Apply the choice ---
+    // applyEffect gives us the post-choice state without committing nextNodeId,
+    // so the Director AI evaluates the updated world before selecting the next node.
+    const intermediateState = applyEffect(worldState, effect);
+    const nextNodeId = selectNextNodeId(intermediateState) ?? "";
+    let newState: WorldState = {
+      ...intermediateState,
+      currentNodeId: nextNodeId,
+      turnsElapsed: worldState.turnsElapsed + 1,
+      // Advance layer so Director AI looks at the correct pool next turn
+      // and EO affinity transitions to challenge mode at layer 3+.
+      layer: worldState.layer + 1,
+    };
+
+    // Game ends after 5 turns
+    const gameOver = newState.turnsElapsed >= 5;
+    if (gameOver) {
+      newState = { ...newState, isComplete: true };
+    }
+
+    await store.updateSession(sessionId, {
+      worldState: newState,
+      status: gameOver ? "complete" : "active",
+    });
+
+    const nextNode = gameOver ? null : getNode(newState.currentNodeId);
+
+    return reply.status(200).send({
+      sessionId,
+      clientState: toClientState(newState),
+      nextNode,
+    });
+  } finally {
+    release();
   }
-
-  const { worldState } = session;
-
-  // --- Step 3: completed-session guard ---
-  if (worldState.isComplete) {
-    return reply.status(409).send({ error: "Session is already complete." });
-  }
-
-  // --- Step 4: stale-nodeId guard (prevents double-submit and client/server drift) ---
-  if (nodeId !== worldState.currentNodeId) {
-    return reply
-      .status(400)
-      .send({ error: "nodeId does not match current session node (stale client or double-submit)." });
-  }
-
-  // --- Step 5: choice effect lookup ---
-  const effect = getChoiceEffect(nodeId, choiceIndex);
-  if (!effect) {
-    return reply.status(400).send({ error: `No effect found for node "${nodeId}" choice ${choiceIndex}.` });
-  }
-
-  // --- Apply the choice ---
-  // applyEffect gives us the post-choice state without committing nextNodeId,
-  // so the Director AI evaluates the updated world before selecting the next node.
-  const intermediateState = applyEffect(worldState, effect);
-  const nextNodeId = selectNextNodeId(intermediateState) ?? "";
-  let newState: WorldState = {
-    ...intermediateState,
-    currentNodeId: nextNodeId,
-    turnsElapsed: worldState.turnsElapsed + 1,
-    // Advance layer so Director AI looks at the correct pool next turn
-    // and EO affinity transitions to challenge mode at layer 3+.
-    layer: worldState.layer + 1,
-  };
-
-  // Game ends after 5 turns
-  const gameOver = newState.turnsElapsed >= 5;
-  if (gameOver) {
-    newState = { ...newState, isComplete: true };
-  }
-
-  await store.updateSession(sessionId, {
-    worldState: newState,
-    status: gameOver ? "complete" : "active",
-  });
-
-  const nextNode = gameOver ? null : getNode(newState.currentNodeId);
-
-  return reply.status(200).send({
-    sessionId,
-    clientState: toClientState(newState),
-    nextNode,
-  });
 }
 
 /**
@@ -139,8 +150,9 @@ export const choiceRoutes: FastifyPluginAsync<ChoiceRouteOptions> = async (
   options
 ): Promise<void> => {
   const { store, getNode, getChoiceEffect, selectNextNodeId = () => null } = options;
+  const lock = new SessionLock();
 
   fastify.post<{ Body: ChoiceBody }>("/choice", async (request, reply) => {
-    return handleChoice(request, reply, store, getNode, getChoiceEffect, selectNextNodeId);
+    return handleChoice(request, reply, store, lock, getNode, getChoiceEffect, selectNextNodeId);
   });
 };
