@@ -4,6 +4,8 @@ import { classifyRoutes } from "../classify.js";
 import { startRoutes } from "../start.js";
 import { SessionStore } from "../../store/session-store.js";
 
+const VALID_L1_NODE = /^L1-node-[1-5]$/;
+
 /** Builds a fresh Fastify app with both routes registered against the same store. */
 function buildApp(store: SessionStore): FastifyInstance {
   const app = Fastify({ logger: false });
@@ -52,11 +54,10 @@ describe("POST /classify", () => {
       expect(res.statusCode).toBe(200);
       const body = res.json<{ sessionId: string; layer1NodeId: string }>();
       expect(body.sessionId).toBe(sessionId);
-      expect(typeof body.layer1NodeId).toBe("string");
-      expect(body.layer1NodeId.length).toBeGreaterThan(0);
+      expect(body.layer1NodeId).toMatch(VALID_L1_NODE);
     });
 
-    it("stub classifier always returns L1-node-1", async () => {
+    it("classifier returns a valid L1 node id", async () => {
       const sessionId = await createSession(app);
 
       const res = await app.inject({
@@ -66,7 +67,7 @@ describe("POST /classify", () => {
       });
 
       const body = res.json<{ layer1NodeId: string }>();
-      expect(body.layer1NodeId).toBe("L1-node-1");
+      expect(body.layer1NodeId).toMatch(VALID_L1_NODE);
     });
 
     it("after classify, session layer is 1", async () => {
@@ -82,7 +83,7 @@ describe("POST /classify", () => {
       expect(session?.worldState.layer).toBe(1);
     });
 
-    it("after classify, session currentNodeId is L1-node-1", async () => {
+    it("after classify, session currentNodeId is a valid L1 node", async () => {
       const sessionId = await createSession(app);
 
       await app.inject({
@@ -92,7 +93,7 @@ describe("POST /classify", () => {
       });
 
       const session = await store.getSession(sessionId);
-      expect(session?.worldState.currentNodeId).toBe("L1-node-1");
+      expect(session?.worldState.currentNodeId).toMatch(VALID_L1_NODE);
     });
   });
 

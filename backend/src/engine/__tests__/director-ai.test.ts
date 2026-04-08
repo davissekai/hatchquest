@@ -60,9 +60,42 @@ describe("passesConditions", () => {
     expect(passesConditions(node, makeState())).toBe(false); // capital is 10_000
   });
 
+  it("fails reputationMin when reputation is below threshold", () => {
+    const node = makeNode({ conditions: { reputationMin: 30 } });
+    expect(passesConditions(node, makeState())).toBe(false); // reputation starts at 0
+  });
+
+  it("passes reputationMin when reputation meets threshold", () => {
+    const node = makeNode({ conditions: { reputationMin: 10 } });
+    const state = { ...makeState(), reputation: 20 };
+    expect(passesConditions(node, state)).toBe(true);
+  });
+
+  it("fails reputationMax when reputation exceeds threshold", () => {
+    const node = makeNode({ conditions: { reputationMax: 10 } });
+    const state = { ...makeState(), reputation: 50 };
+    expect(passesConditions(node, state)).toBe(false);
+  });
+
+  it("passes reputationMax when reputation is within threshold", () => {
+    const node = makeNode({ conditions: { reputationMax: 50 } });
+    expect(passesConditions(node, makeState())).toBe(true); // reputation starts at 0
+  });
+
   it("fails debtMin when debt is below threshold", () => {
     const node = makeNode({ conditions: { debtMin: 1_000 } });
     expect(passesConditions(node, makeState())).toBe(false); // debt is 0
+  });
+
+  it("fails debtMax when debt exceeds threshold", () => {
+    const node = makeNode({ conditions: { debtMax: 5_000 } });
+    const state = { ...makeState(), debt: 10_000 };
+    expect(passesConditions(node, state)).toBe(false);
+  });
+
+  it("passes debtMax when debt is within threshold", () => {
+    const node = makeNode({ conditions: { debtMax: 10_000 } });
+    expect(passesConditions(node, makeState())).toBe(true); // debt is 0
   });
 
   it("fails requiresMentorAccess when mentorAccess is false", () => {
@@ -73,6 +106,28 @@ describe("passesConditions", () => {
   it("passes requiresMentorAccess when mentorAccess is true", () => {
     const node = makeNode({ conditions: { requiresMentorAccess: true } });
     const state = { ...makeState(), mentorAccess: true };
+    expect(passesConditions(node, state)).toBe(true);
+  });
+
+  it("fails requiresPremises when hasPremises is false", () => {
+    const node = makeNode({ conditions: { requiresPremises: true } });
+    expect(passesConditions(node, makeState())).toBe(false); // hasPremises is false
+  });
+
+  it("passes requiresPremises when hasPremises is true", () => {
+    const node = makeNode({ conditions: { requiresPremises: true } });
+    const state = { ...makeState(), hasPremises: true };
+    expect(passesConditions(node, state)).toBe(true);
+  });
+
+  it("fails employeeCountMin when employeeCount is below threshold", () => {
+    const node = makeNode({ conditions: { employeeCountMin: 2 } });
+    expect(passesConditions(node, makeState())).toBe(false); // employeeCount is 0
+  });
+
+  it("passes employeeCountMin when employeeCount meets threshold", () => {
+    const node = makeNode({ conditions: { employeeCountMin: 2 } });
+    const state = { ...makeState(), employeeCount: 3 };
     expect(passesConditions(node, state)).toBe(true);
   });
 });
@@ -104,9 +159,18 @@ describe("computeThemeAffinity", () => {
     expect(computeThemeAffinity("competition", state)).toBe(2.0);
   });
 
+  it("returns 1.0 for competition when competitorAggression <= 60", () => {
+    const state = { ...makeState(), competitorAggression: 50 };
+    expect(computeThemeAffinity("competition", state)).toBe(1.0);
+  });
+
   it("returns 2.5 for crisis when debt > 5000", () => {
     const state = { ...makeState(), debt: 6_000 };
     expect(computeThemeAffinity("crisis", state)).toBe(2.5);
+  });
+
+  it("returns 1.0 for crisis when debt <= 5000", () => {
+    expect(computeThemeAffinity("crisis", makeState())).toBe(1.0); // debt is 0
   });
 
   it("returns 1.5 for branding when reputation < 20", () => {
@@ -114,9 +178,43 @@ describe("computeThemeAffinity", () => {
     expect(computeThemeAffinity("branding", state)).toBe(1.5);
   });
 
+  it("returns 1.0 for branding when reputation >= 20", () => {
+    const state = { ...makeState(), reputation: 25 };
+    expect(computeThemeAffinity("branding", state)).toBe(1.0);
+  });
+
   it("returns 2.0 for hiring when revenue > 500 and employeeCount < 2", () => {
     const state = { ...makeState(), revenue: 600, employeeCount: 0 };
     expect(computeThemeAffinity("hiring", state)).toBe(2.0);
+  });
+
+  it("returns 1.0 for hiring when revenue <= 500", () => {
+    const state = { ...makeState(), revenue: 400 };
+    expect(computeThemeAffinity("hiring", state)).toBe(1.0);
+  });
+
+  it("returns 1.0 for hiring when employeeCount >= 2", () => {
+    const state = { ...makeState(), revenue: 600, employeeCount: 2 };
+    expect(computeThemeAffinity("hiring", state)).toBe(1.0);
+  });
+
+  it("returns 1.5 for networking when networkStrength < 20", () => {
+    const state = { ...makeState(), networkStrength: 10 };
+    expect(computeThemeAffinity("networking", state)).toBe(1.5);
+  });
+
+  it("returns 1.0 for networking when networkStrength >= 20", () => {
+    const state = { ...makeState(), networkStrength: 25 };
+    expect(computeThemeAffinity("networking", state)).toBe(1.0);
+  });
+
+  it("returns 1.5 for operations when player has premises", () => {
+    const state = { ...makeState(), hasPremises: true };
+    expect(computeThemeAffinity("operations", state)).toBe(1.5);
+  });
+
+  it("returns 1.0 for operations when player has no premises", () => {
+    expect(computeThemeAffinity("operations", makeState())).toBe(1.0);
   });
 
   it("caps multiplier at 4.0", () => {
@@ -186,6 +284,14 @@ describe("weightedDraw", () => {
     expect(weightedDraw(items, () => 0.05)).toBe("light");
     // With rng = 0.5, cursor = 5.0, light → 5-1=4 > 0, heavy → 4-9=-5 ≤ 0 → "heavy"
     expect(weightedDraw(items, () => 0.5)).toBe("heavy");
+  });
+
+  it("returns last item via rounding fallback when floating-point leaves cursor > 0", () => {
+    // rng slightly above 1.0 means cursor = total + ε — the subtraction loop exhausts
+    // all items but cursor never reaches ≤ 0, triggering the defensive fallback at line 107.
+    const items = [{ item: "a", weight: 0.5 }, { item: "b", weight: 0.5 }];
+    const result = weightedDraw(items, () => 1 + Number.EPSILON);
+    expect(result).toBe("b"); // fallback always returns last item
   });
 });
 

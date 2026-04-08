@@ -226,16 +226,120 @@ No PR merges to `main` if engine tests fail.
 
 ## Verification
 
-Run before declaring any code complete:
+**The gate:** `bash scripts/verify.sh` from the repo root. All 4 checks must pass. No exceptions.
 
-```bash
-# From repo root
-npm run type-check
-npm run lint
-npm run test
+```
+1. TypeScript — npm run type-check (all workspaces)
+2. Lint       — npm run lint --workspace=frontend
+3. Tests      — npm test --workspace=backend (all suites)
+4. Coverage   — engine must be 100% (lines, functions, branches, statements)
 ```
 
-Project-specific: the engine must have 100% test coverage. Run `npm run test:coverage` and check.
+**Code is not complete until the gate passes.** A passing gate means the code is ready for adversarial review — not shipped.
+
+### HatchQuest-Specific Failure Modes
+
+These are bugs that pass TypeScript and lint but destroy the game. Check these manually for any change touching the relevant system.
+
+**Engine (apply-choice.ts, director-ai.ts, world-state.ts):**
+- [ ] EO deltas clamp to [0, 10] — verify applyEffect does not produce values outside this range
+- [ ] World state is never mutated — all state changes return new objects
+- [ ] Director AI weights never go negative — a bug here can crash `weightedDraw()`
+- [ ] `passesConditions` returns false (not throw) on any unexpected null
+- [ ] `selectNextNode` has a fallback when all nodes are filtered out (never returns undefined)
+
+**Scenario Registry (scenario-registry.ts):**
+- [ ] Every `ScenarioNodeFull` constant appears in the REGISTRY map — no orphans
+- [ ] Every node has exactly 3 choices and 3 effects — parallel arrays, same index
+- [ ] All eoDeltas keys are valid EODimension values (not "innovative", not "autonomous")
+- [ ] All numeric effects are within per-layer calibration ranges (see docs/brie-world-conditions.md)
+- [ ] No all-positive effects on L1-L4 choices — every choice has at least one cost
+- [ ] All L5 effects are exactly zero
+- [ ] Non-empty tension hints on all L1-L4 choices
+
+**API Routes (src/routes/):**
+- [ ] All routes validate session existence before reading or writing state
+- [ ] The choice route is race-condition safe — `WHERE NOT is_complete` or equivalent guard
+- [ ] Results route does not expose EO profile until session is complete
+- [ ] No game logic inside route handlers — logic belongs in engine functions
+
+**Shared Types (packages/shared/):**
+- [ ] API response shapes match the types exported from `packages/shared/src/types/api.ts`
+- [ ] No ad-hoc inline types in backend or frontend — all shapes come from shared
+- [ ] Any change to shared types requires cross-workspace type-check pass
+
+**Known risks (do not regress):**
+1. TOCTOU race in `DbSessionStore.updateSession` — acceptable for demo, flag if concurrency is added
+2. `player_id = NULL` in game_sessions — intentional until auth is wired
+3. `DATABASE_URL` must use Transaction mode (port 6543) — Direct mode will exhaust connections
+4. Layer 0 classifier is a stub — returns L1-node-1 always until real LLM call is wired
+
+### High-Risk Change Escalation
+
+In addition to the global escalation rules, these HatchQuest-specific changes require extra verification:
+
+**Any change to `packages/shared/`:**
+- Run `npm run type-check` across ALL workspaces and verify zero errors in backend AND frontend
+- The shared package is the contract — a type drift here can corrupt both sides silently
+
+**Any change to `scenario-registry.ts`:**
+- Run the content validator test suite explicitly: `npm test --workspace=backend`
+- Manually verify affected node's effects against the calibration table
+- Check for orphaned nodes (every const must be in the REGISTRY map)
+
+**Any change to `applyEffect` or `applyChoice`:**
+- Run full engine coverage: `npm run test:coverage --workspace=backend`
+- Trace every WorldState field through the mutation — the state is the brain
+
+**Any change to `director-ai.ts`:**
+- Verify weighted draw cannot produce negative weights
+- Test with a pool where all nodes are filtered — `selectNextNode` must not crash
+- Verify theme and EO affinity calculations still produce values in expected range
+
+---
+
+## Planning Protocol
+
+Before writing a single line of code for any task involving 3+ files or non-trivial logic, a plan is required. Use `superpowers:writing-plans` for the plan document.
+
+### Risk Tiers
+
+Every task in a plan must be classified:
+
+| Tier | Definition | Extra requirement |
+|---|---|---|
+| **Routine** | Single file, no state logic, no type contract changes | Standard gate pass |
+| **Elevated** | Multi-file, touches state or API, changes behavior | Adversarial self-review before commit |
+| **Critical** | Engine logic, shared types, DB schema, auth, EO scoring | Full failure mode enumeration required |
+
+### For Critical Tasks: Failure Mode Enumeration
+
+Before implementing a critical task, enumerate in the plan:
+1. What is the worst thing that can silently go wrong here?
+2. What inputs cause this to produce wrong output without throwing?
+3. What happens to downstream state if this fails mid-execution?
+4. What existing test would catch a regression — and does that test exist?
+
+If question 4 has no answer, write the test before implementing.
+
+### Domain-Specific Verification Hooks
+
+These verification steps must appear in plans for the relevant task types:
+
+| Task type | Required verification step |
+|---|---|
+| New scenario node(s) | "Run content validator: `npm test --workspace=backend`" |
+| Engine function change | "Run engine coverage: `npm run test:coverage --workspace=backend`" |
+| API route change | "Verify response shape matches `packages/shared/src/types/api.ts`" |
+| Shared type change | "Run `npm run type-check` across all workspaces, verify zero errors" |
+| Any DB change | "Describe effect on existing data + rollback path" |
+
+### What a Plan Is Not
+
+- A list of file names — every task needs actual code, not "implement the thing"
+- A description of what to do without showing how — if a step changes code, show the code
+- A sequence of identical steps — if step 3 is the same as step 1, you haven't broken it down enough
+- Complete without a dependency graph for 5+ task plans
 
 ---
 
