@@ -46,6 +46,13 @@ export const classifyRoutes: FastifyPluginAsync<ClassifyPluginOptions> = async (
           .send({ error: `Session not found: ${sessionId}` });
       }
 
+      // Guard: reject double-classification — layer > 0 means /classify already ran.
+      // TOCTOU: known race window — two concurrent classify calls could both pass this guard
+      // before either writes the updated layer value. Acceptable for demo scope.
+      if (session.worldState.layer > 0 || session.worldState.currentNodeId !== null) {
+        return reply.status(409).send({ error: "Session is already classified." });
+      }
+
       // Classify free-text response → Layer 1 node id.
       // Tries LLM (Claude Haiku) first; falls back to keyword heuristic.
       const layer1NodeId = await classify(response);

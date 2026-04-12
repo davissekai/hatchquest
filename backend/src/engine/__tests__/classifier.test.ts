@@ -1,7 +1,7 @@
 /**
  * Classifier unit tests — keyword heuristic paths only.
  *
- * The LLM path (callClaudeClassifier) is excluded from this suite per Davis's
+ * The LLM path (callNvidiaClassifier) is excluded from this suite per Davis's
  * design decision: "keyword heuristic paths — not LLM, that's external."
  *
  * Tested:
@@ -255,16 +255,16 @@ describe("selectLayer1NodeFromDistribution", () => {
 // ─── classify (end-to-end — no API key) ──────────────────────────────────────
 
 describe("classify", () => {
-  const savedApiKey = process.env.ANTHROPIC_API_KEY;
+  const savedApiKey = process.env.NVIDIA_API_KEY;
 
   beforeEach(() => {
     // Force keyword fallback by removing the API key
-    delete process.env.ANTHROPIC_API_KEY;
+    delete process.env.NVIDIA_API_KEY;
   });
 
   afterEach(() => {
     if (savedApiKey !== undefined) {
-      process.env.ANTHROPIC_API_KEY = savedApiKey;
+      process.env.NVIDIA_API_KEY = savedApiKey;
     }
   });
 

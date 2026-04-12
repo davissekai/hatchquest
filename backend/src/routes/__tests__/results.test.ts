@@ -98,7 +98,7 @@ describe("GET /results/:sessionId", () => {
 
   // --- Error cases ---
 
-  it("returns 400 for a session that is not yet complete", async () => {
+  it("returns 409 for a session that is not yet complete", async () => {
     const sessionId = await seedIncompleteSession(store);
 
     const res = await app.inject({
@@ -106,7 +106,7 @@ describe("GET /results/:sessionId", () => {
       url: `/results/${sessionId}`,
     });
 
-    expect(res.statusCode).toBe(400);
+    expect(res.statusCode).toBe(409);
   });
 
   it("returns 404 for an unknown sessionId", async () => {

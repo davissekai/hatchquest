@@ -5,6 +5,8 @@ import { useRouter } from "next/navigation";
 import { useGame } from "@/context/GameContext";
 import BreathingGrid from "@/components/BreathingGrid";
 import RetroTransition from "@/components/RetroTransition";
+import ErrorBanner from "@/components/ErrorBanner";
+import LoadingOverlay from "@/components/LoadingOverlay";
 
 const beatMessages = [
   "PROCESSING DECISION...",
@@ -32,7 +34,7 @@ const formatDelta = (val: number) => {
 
 const Gameplay = () => {
   const router = useRouter();
-  const { state, makeChoice, isLoading } = useGame();
+  const { state, makeChoice, isLoading, error, resetGame } = useGame();
   const [isTransitioning, setIsTransitioning] = useState(false);
   const [isFinalTransition, setIsFinalTransition] = useState(false);
   const [choiceDisabled, setChoiceDisabled] = useState(false);
@@ -94,9 +96,40 @@ const Gameplay = () => {
     }
   }, [router, state.isComplete, state.currentRound]);
 
-  if (!state.currentBeat) {
-    return null;
+  // When there's no beat and not mid-transition, show error or empty state.
+  // If !currentBeat AND isTransitioning (rare — beat lost mid-animation), fall through
+  // to the secondary guard below which returns null so the transition overlay can finish.
+  if (!state.currentBeat && !isTransitioning) {
+    return (
+      <div className="relative min-h-[100dvh] flex flex-col overflow-hidden">
+        <BreathingGrid />
+        <div className="relative z-10 flex flex-1 flex-col items-center justify-center px-6 gap-6">
+          {error ? (
+            <>
+              <p className="font-display text-sm tracking-widest text-destructive uppercase text-center">
+                Something went wrong
+              </p>
+              <ErrorBanner message={error} />
+            </>
+          ) : (
+            <p className="font-display text-sm tracking-widest text-muted-foreground uppercase text-center">
+              No active session
+            </p>
+          )}
+          <button
+            onClick={() => { resetGame(); router.replace("/"); }}
+            className="border-[3px] border-primary bg-accent px-6 py-3 font-display text-sm tracking-wider text-accent-foreground shadow-brutal"
+          >
+            START OVER
+          </button>
+        </div>
+      </div>
+    );
   }
+
+  // Secondary guard: if beat is still null here, we're mid-transition with a lost beat.
+  // Return null so the RetroTransition overlay can finish cleanly.
+  if (!state.currentBeat) return null;
 
   const beat = state.currentBeat;
   const transitionMessages = isFinalTransition ? finalMessages : beatMessages.slice(0, 3);
@@ -104,6 +137,19 @@ const Gameplay = () => {
   return (
     <div className="relative min-h-[100dvh] flex flex-col overflow-hidden">
       <BreathingGrid />
+
+      {/* Loading overlay — shown during non-transition API calls (e.g. session resume) */}
+      {isLoading && !isTransitioning && <LoadingOverlay message="PROCESSING..." />}
+
+      {/* Error banner — shown when makeChoice or another API call fails */}
+      {error && !isTransitioning && (
+        <div className="relative z-20 px-5 pt-4">
+          <ErrorBanner
+            message={error}
+            onRetry={() => router.replace("/resume")}
+          />
+        </div>
+      )}
 
       {isTransitioning && (
         <RetroTransition

@@ -181,7 +181,7 @@ describe("full game loop — start → classify → 5 choices → results", () =
     expect(body.eoProfile).toBeDefined();
   });
 
-  it("GET /results returns 400 before game completes", async () => {
+  it("GET /results returns 409 before game completes", async () => {
     const sessionId = await startSession(app);
     await classifySession(app, sessionId);
     // Only play 2 turns — not complete
@@ -194,7 +194,7 @@ describe("full game loop — start → classify → 5 choices → results", () =
       url: `/results/${sessionId}`,
     });
 
-    expect(res.statusCode).toBe(400);
+    expect(res.statusCode).toBe(409);
   });
 });
 

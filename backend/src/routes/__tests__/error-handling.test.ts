@@ -198,6 +198,73 @@ describe("schema validation failures — normalized to { error: string }", () =>
   });
 });
 
+// ── Double-classification guard ───────────────────────────────────────────────
+
+describe("POST /classify — double-classification guard", () => {
+  it("returns 409 when session is already classified", async () => {
+    const app = await buildApp(new SessionStore(), { routePrefix: "" });
+    await app.ready();
+
+    // Create a session
+    const startRes = await app.inject({
+      method: "POST",
+      url: "/start",
+      payload: { playerName: "Ama", email: "ama@test.com", password: "pass123" },
+    });
+    const { sessionId } = startRes.json<{ sessionId: string }>();
+
+    // First classify — should succeed (keyword heuristic fallback)
+    const first = await app.inject({
+      method: "POST",
+      url: "/classify",
+      payload: { sessionId, response: "I want to build a fintech startup." },
+    });
+    expect(first.statusCode).toBe(200);
+
+    // Second classify on same session — must be rejected
+    const res = await app.inject({
+      method: "POST",
+      url: "/classify",
+      payload: { sessionId, response: "Let me try to classify again." },
+    });
+
+    expect(res.statusCode).toBe(409);
+    const body = res.json<{ error: string }>();
+    expect(body.error).toMatch(/already classified/i);
+
+    await app.close();
+  });
+});
+
+// ── Results on incomplete session ─────────────────────────────────────────────
+
+describe("GET /results/:sessionId — incomplete session", () => {
+  it("returns 409 when session is not yet complete", async () => {
+    const app = await buildApp(new SessionStore(), { routePrefix: "" });
+    await app.ready();
+
+    // Create a fresh session — isComplete is false by default
+    const startRes = await app.inject({
+      method: "POST",
+      url: "/start",
+      payload: { playerName: "Kwame", email: "kwame@test.com", password: "pass123" },
+    });
+    const { sessionId } = startRes.json<{ sessionId: string }>();
+
+    // Attempt to fetch results before game is complete
+    const res = await app.inject({
+      method: "GET",
+      url: `/results/${sessionId}`,
+    });
+
+    expect(res.statusCode).toBe(409);
+    const body = res.json<{ error: string }>();
+    expect(body.error).toMatch(/not available until the game is complete/i);
+
+    await app.close();
+  });
+});
+
 // ── Known 4xx from route logic ────────────────────────────────────────────────
 
 describe("route-generated 4xx — always { error: string }, never Fastify verbose format", () => {

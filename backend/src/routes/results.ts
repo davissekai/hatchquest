@@ -79,7 +79,7 @@ async function handleGetResults(
   // Results are only available once the game has ended.
   if (!worldState.isComplete) {
     return reply
-      .status(400)
+      .status(409)
       .send({ error: "Results are not available until the game is complete." });
   }
 

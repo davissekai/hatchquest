@@ -4,6 +4,7 @@ import { Outfit } from "next/font/google";
 import { Geist_Mono } from "next/font/google";
 import { Providers } from "./providers";
 import { Sidebar } from "@/components/Sidebar";
+import OfflineBanner from "@/components/OfflineBanner";
 import "./globals.css";
 
 const pressStart2P = Press_Start_2P({
@@ -35,6 +36,7 @@ export default function RootLayout({
   return (
     <html lang="en" className={`dark ${pressStart2P.variable} ${outfit.variable} ${geistMono.variable}`}>
       <body>
+        <OfflineBanner />
         <Sidebar />
         <Providers>{children}</Providers>
       </body>

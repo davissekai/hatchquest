@@ -6,6 +6,8 @@ import { useGame } from "@/context/GameContext";
 import BreathingGrid from "@/components/BreathingGrid";
 import AnimatedScore from "@/components/AnimatedScore";
 import RadarChart from "@/components/RadarChart";
+import ErrorBanner from "@/components/ErrorBanner";
+import LoadingOverlay from "@/components/LoadingOverlay";
 
 const getVerdict = (score: number) => {
   if (score >= 85) return { text: "Visionary Founder", desc: "You balance ambition with wisdom. Accra's next big thing." };
@@ -16,12 +18,11 @@ const getVerdict = (score: number) => {
 
 const Results = () => {
   const router = useRouter();
-  const { state, loadResults, resetGame } = useGame();
+  const { state, loadResults, resetGame, isLoading, error } = useGame();
 
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
-    loadResults().catch(() => {});
-  }, []);
+    void loadResults();
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const [copied, setCopied] = useState(false);
 
@@ -50,6 +51,26 @@ const Results = () => {
     <div className="relative min-h-[100dvh] flex flex-col overflow-hidden">
       <BreathingGrid />
 
+      {/* Loading state — while fetching results */}
+      {isLoading && <LoadingOverlay message="CALCULATING RESULTS..." />}
+
+      {/* Error state — surfaces errors from loadResults() instead of swallowing them */}
+      {error && !isLoading && (
+        <div className="relative z-10 flex flex-1 flex-col items-center justify-center px-6 gap-6">
+          <p className="font-display text-sm tracking-widest text-destructive uppercase text-center">
+            Could not load results
+          </p>
+          <ErrorBanner message={error} onRetry={() => void loadResults()} />
+          <button
+            onClick={handlePlayAgain}
+            className="border-[3px] border-primary bg-card px-6 py-3 font-display text-sm tracking-wider text-muted-foreground shadow-brutal"
+          >
+            PLAY AGAIN
+          </button>
+        </div>
+      )}
+
+      {!error && (
       <div className="relative z-10 flex flex-1 flex-col items-center px-6 pt-16 pb-8">
         {/* Header */}
         <span className="mb-2 font-display text-xs tracking-[0.3em] text-muted-foreground uppercase animate-fade-in">
@@ -156,6 +177,7 @@ const Results = () => {
           </button>
         </div>
       </div>
+      )}
     </div>
   );
 };
