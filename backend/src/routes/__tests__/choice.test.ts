@@ -2,6 +2,7 @@ import { describe, it, expect, beforeEach } from "vitest";
 import Fastify, { type FastifyInstance } from "fastify";
 import { SessionStore } from "../../store/session-store.js";
 import { choiceRoutes } from "../choice.js";
+import { SessionLock } from "../session-lock.js";
 import type { ChoiceResponse } from "@hatchquest/shared";
 
 // --- Test-double registry ---
@@ -220,5 +221,77 @@ describe("POST /choice", () => {
     });
 
     expect(res.statusCode).toBe(400);
+  });
+
+  // --- Concurrency guard — TOCTOU race prevention ---
+
+  it("serializes concurrent choices on the same session — second request sees advanced state", async () => {
+    const sessionId = await seedSession(store);
+
+    // Fire two concurrent requests with the same nodeId (both valid at the time of dispatch)
+    const [res1, res2] = await Promise.all([
+      app.inject({
+        method: "POST",
+        url: "/choice",
+        payload: { sessionId, nodeId: "L1-node-1", choiceIndex: 0 },
+      }),
+      app.inject({
+        method: "POST",
+        url: "/choice",
+        payload: { sessionId, nodeId: "L1-node-1", choiceIndex: 0 },
+      }),
+    ]);
+
+    // One should succeed (first to acquire the lock)
+    // The other should fail because the nodeId is now stale
+    const results = [res1.statusCode, res2.statusCode].sort();
+    // One 200 (first acquires lock), one 400 (stale nodeId after first advanced)
+    expect(results).toContain(200);
+    expect(results).toContain(400);
+  });
+});
+
+// ─── SessionLock unit tests ──────────────────────────────────────────────────
+
+describe("SessionLock", () => {
+  it("serializes access — second acquire waits for first release", async () => {
+    const lock = new SessionLock();
+    const order: string[] = [];
+
+    const release1 = await lock.acquire("session-1");
+    const p2 = lock.acquire("session-1").then((release2) => {
+      order.push("acquired-2");
+      release2();
+    });
+
+    order.push("acquired-1");
+    release1();
+    await p2;
+
+    expect(order).toEqual(["acquired-1", "acquired-2"]);
+  });
+
+  it("different sessionIds do not block each other", async () => {
+    const lock = new SessionLock();
+    const order: string[] = [];
+
+    const release1 = await lock.acquire("session-a");
+    const release2 = await lock.acquire("session-b");
+
+    order.push("got-both");
+    release1();
+    release2();
+
+    expect(order).toEqual(["got-both"]);
+  });
+
+  it("releases clean up — subsequent acquire on same id is not blocked", async () => {
+    const lock = new SessionLock();
+    const release1 = await lock.acquire("session-x");
+    release1();
+    const release2 = await lock.acquire("session-x");
+    release2();
+    // If we reach here without hanging, the lock cleaned up correctly
+    expect(true).toBe(true);
   });
 });

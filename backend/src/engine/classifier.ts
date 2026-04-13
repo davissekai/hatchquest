@@ -3,7 +3,8 @@
  *
  * Pipeline:
  *   classify(response)
- *     → callClaudeClassifier(response)  — LLM call, 8 s timeout, returns null on any failure
+ *     → callNvidiaClassifier(response)  — LLM call via NVIDIA inference API (MiniMax M2.7),
+ *                                          8 s timeout, returns null on any failure
  *     → keywordClassify(response)       — pure fallback, always returns a valid distribution
  *     → selectLayer1NodeFromDistribution(dist) — maps poles to one of 5 L1 node ids
  *
@@ -14,17 +15,16 @@
  *   L1-node-4: values.profitFocused + competitive.aggressive (profit + competitive)
  *   L1-node-5: agency.autonomous                        (autonomous, no strong other pole)
  *
- * Coverage note: callClaudeClassifier makes an external API call and is excluded
+ * Coverage note: callNvidiaClassifier makes an external API call and is excluded
  * from the engine coverage threshold (see vitest.config.ts). The pure logic
  * functions — keywordClassify, selectLayer1NodeFromDistribution, scorePoles —
  * are fully covered by unit tests in classifier.test.ts.
  */
-import Anthropic from "@anthropic-ai/sdk";
 import type { EOPoleDistribution } from "@hatchquest/shared";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
-const CLASSIFIER_TIMEOUT_MS = 8_000;
+const CLASSIFIER_TIMEOUT_MS = 30_000; // MiniMax M2.7 is a reasoning model — needs ~19s on average
 
 const SYSTEM_PROMPT = `You are an entrepreneurial orientation classifier. Given a player's statement about their business idea, return a JSON object with exactly this shape:
 {
@@ -43,44 +43,67 @@ Rules:
 
 // ─── LLM Classifier ──────────────────────────────────────────────────────────
 
+const NVIDIA_ENDPOINT = "https://integrate.api.nvidia.com/v1/chat/completions";
+const NVIDIA_MODEL = "minimaxai/minimax-m2.7";
+
 /**
- * Calls Claude Haiku to classify free-text into EO pole distributions.
- * Returns null if: ANTHROPIC_API_KEY is unset, the call times out (8 s),
- * the response is malformed, or any error is thrown.
+ * Calls NVIDIA inference (MiniMax M2.7) to classify free-text into EO pole distributions.
+ * Returns null if: NVIDIA_API_KEY is unset, the call times out (8 s),
+ * the response is non-200, the JSON is malformed, or any error is thrown.
+ * The keyword heuristic in classify() always fires as fallback.
  */
-export async function callClaudeClassifier(
+export async function callNvidiaClassifier(
   response: string
 ): Promise<EOPoleDistribution | null> {
-  const apiKey = process.env.ANTHROPIC_API_KEY;
+  const apiKey = process.env.NVIDIA_API_KEY;
   if (!apiKey) return null;
 
-  try {
-    const client = new Anthropic({ apiKey });
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), CLASSIFIER_TIMEOUT_MS);
 
-    const messagePromise = client.messages.create({
-      model: "claude-haiku-4-5-20251001",
-      max_tokens: 256,
-      system: SYSTEM_PROMPT,
-      messages: [{ role: "user", content: response }],
+  try {
+    const res = await fetch(NVIDIA_ENDPOINT, {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${apiKey}`,
+        "Content-Type": "application/json",
+        "Accept": "application/json",
+      },
+      body: JSON.stringify({
+        model: NVIDIA_MODEL,
+        messages: [
+          { role: "system", content: SYSTEM_PROMPT },
+          { role: "user", content: response },
+        ],
+        temperature: 0.7,
+        top_p: 0.95,
+        max_tokens: 1024,
+        stream: false,
+      }),
+      signal: controller.signal,
     });
 
-    // Race the API call against a fixed timeout so a slow response
-    // never blocks gameplay.
-    const timeoutPromise = new Promise<null>((resolve) =>
-      setTimeout(() => resolve(null), CLASSIFIER_TIMEOUT_MS)
-    );
+    clearTimeout(timeoutId);
 
-    const result = await Promise.race([messagePromise, timeoutPromise]);
-    if (!result) return null;
+    if (!res.ok) return null;
 
-    const text =
-      result.content[0]?.type === "text" ? result.content[0].text : null;
+    const data = await res.json() as {
+      choices?: Array<{ message?: { content?: string } }>;
+    };
+
+    const raw = data.choices?.[0]?.message?.content ?? null;
+    if (!raw) return null;
+
+    // Strip <think>...</think> reasoning blocks (present when token budget is very tight)
+    // and trim surrounding whitespace before attempting JSON parse.
+    const text = raw.replace(/<think>[\s\S]*?<\/think>/g, "").trim();
     if (!text) return null;
 
     const parsed = JSON.parse(text) as EOPoleDistribution;
     return isValidDistribution(parsed) ? parsed : null;
   } catch {
-    // Network error, JSON parse failure, unexpected SDK error — fall through
+    // AbortError (timeout), network failure, JSON parse error — fall through to keyword heuristic
+    clearTimeout(timeoutId);
     return null;
   }
 }
@@ -218,6 +241,6 @@ export function selectLayer1NodeFromDistribution(
  */
 export async function classify(response: string): Promise<string> {
   const dist =
-    (await callClaudeClassifier(response)) ?? keywordClassify(response);
+    (await callNvidiaClassifier(response)) ?? keywordClassify(response);
   return selectLayer1NodeFromDistribution(dist);
 }

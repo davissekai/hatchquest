@@ -12,18 +12,10 @@
  */
 
 import { describe, it, expect, beforeEach } from "vitest";
-import Fastify, { type FastifyInstance } from "fastify";
+import type { FastifyInstance } from "fastify";
+import { buildApp } from "../../app.js";
 import { SessionStore } from "../../store/session-store.js";
-import { startRoutes } from "../start.js";
-import { classifyRoutes } from "../classify.js";
-import { choiceRoutes } from "../choice.js";
-import { sessionRoutes } from "../session.js";
-import { resultsRoutes } from "../results.js";
-import {
-  getNode,
-  getChoiceEffect,
-  getNodesForLayer,
-} from "../../scenario-registry.js";
+import { getNodesForLayer } from "../../scenario-registry.js";
 import type { WorldState, ChoiceResponse, ResultsResponse } from "@hatchquest/shared";
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
@@ -38,22 +30,12 @@ function deterministicSelector(state: WorldState): string | null {
   return pool[0]?.id ?? null;
 }
 
-/** Builds a Fastify app with all routes and the real registry wired up. */
-function buildFullApp(store: SessionStore): FastifyInstance {
-  const app = Fastify({ logger: false });
-  // Health check — mirrors the inline route in index.ts
-  app.get("/health", async () => ({ status: "ok", service: "hatchquest-backend" }));
-  app.register(startRoutes, { store });
-  app.register(classifyRoutes, { store });
-  app.register(choiceRoutes, {
-    store,
-    getNode,
-    getChoiceEffect,
+/** Builds a Fastify app with all routes, deterministic selector, and no route prefix. */
+async function buildTestApp(store: SessionStore): Promise<FastifyInstance> {
+  return buildApp(store, {
+    routePrefix: "",
     selectNextNodeId: deterministicSelector,
   });
-  app.register(sessionRoutes, { store, getNode });
-  app.register(resultsRoutes, { store });
-  return app;
 }
 
 /** Creates a session and returns its sessionId. */
@@ -130,7 +112,7 @@ let app: FastifyInstance;
 
 beforeEach(async () => {
   store = new SessionStore();
-  app = buildFullApp(store);
+  app = await buildTestApp(store);
   await app.ready();
 });
 
@@ -199,7 +181,7 @@ describe("full game loop — start → classify → 5 choices → results", () =
     expect(body.eoProfile).toBeDefined();
   });
 
-  it("GET /results returns 400 before game completes", async () => {
+  it("GET /results returns 409 before game completes", async () => {
     const sessionId = await startSession(app);
     await classifySession(app, sessionId);
     // Only play 2 turns — not complete
@@ -212,7 +194,7 @@ describe("full game loop — start → classify → 5 choices → results", () =
       url: `/results/${sessionId}`,
     });
 
-    expect(res.statusCode).toBe(400);
+    expect(res.statusCode).toBe(409);
   });
 });
 
