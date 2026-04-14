@@ -8,7 +8,7 @@ interface ErrorBannerProps {
 }
 
 /**
- * Displays a retro-styled error banner.
+ * Stitch-style error banner using tertiary (terracotta) color.
  * Renders null when message is null — safe to unconditionally mount.
  */
 export default function ErrorBanner({ message, onRetry }: ErrorBannerProps) {
@@ -17,16 +17,19 @@ export default function ErrorBanner({ message, onRetry }: ErrorBannerProps) {
   return (
     <div
       role="alert"
-      className="w-full border-[3px] border-destructive bg-card px-4 py-3 shadow-brutal-sm"
+      className="w-full rounded-xl bg-error-container/10 border border-error/20 px-5 py-4"
     >
-      <div className="flex items-center justify-between gap-3">
-        <p className="font-body text-sm text-destructive leading-snug">{message}</p>
+      <div className="flex items-center justify-between gap-4">
+        <div className="flex items-center gap-3">
+          <span className="material-symbols-outlined text-error text-xl">error</span>
+          <p className="font-body text-sm text-on-error-container leading-snug">{message}</p>
+        </div>
         {onRetry && (
           <button
             onClick={onRetry}
-            className="flex-shrink-0 border-[2px] border-destructive px-3 py-1 font-display text-xs tracking-wider text-destructive transition-colors hover:bg-destructive hover:text-destructive-foreground"
+            className="flex-shrink-0 px-4 py-2 rounded-full bg-error text-on-error font-label text-xs font-bold hover:bg-error-dim transition-colors"
           >
-            RETRY
+            Retry
           </button>
         )}
       </div>

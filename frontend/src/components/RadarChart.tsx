@@ -13,10 +13,10 @@ interface RadarChartProps {
 
 const labels = ["Autonomy", "Innovative", "Proactiveness", "Risk-Taking", "Comp.\nAggressive"];
 
-const primary = "var(--color-primary)";
-const primaryFill = "color-mix(in srgb, var(--color-primary) 35%, transparent)";
-const cardBg = "var(--color-card)";
-const fgColor = "var(--color-foreground)";
+const primary = "var(--primary)";
+const primaryFill = "color-mix(in srgb, var(--primary) 35%, transparent)";
+const cardBg = "var(--surface-container-lowest)";
+const fgColor = "var(--on-surface)";
 
 const RadarChart = ({ dimensions, maxValue }: RadarChartProps) => {
   const cx = 200, cy = 190, r = 110;
@@ -87,7 +87,7 @@ const RadarChart = ({ dimensions, maxValue }: RadarChartProps) => {
             dominantBaseline="middle"
             fill={fgColor}
             fontSize="9"
-            fontFamily="var(--font-press-start), cursive"
+            fontFamily="var(--font-plus-jakarta), 'Plus Jakarta Sans', sans-serif"
           >
             {labels[i].split("\n").map((line, li) => (
               <tspan key={li} x={p.x} dy={li === 0 ? 0 : 11}>

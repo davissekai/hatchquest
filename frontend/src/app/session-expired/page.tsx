@@ -2,47 +2,64 @@
 
 import { useRouter } from "next/navigation";
 import { useGame } from "@/context/GameContext";
-import BreathingGrid from "@/components/BreathingGrid";
 
 const SessionExpired = () => {
   const router = useRouter();
-  const { clearSession } = useGame();
-
-  const handleNewGame = () => {
-    clearSession();
-    router.push("/");
-  };
+  const { resetGame } = useGame();
 
   return (
-    <div className="relative min-h-[100dvh] flex flex-col overflow-hidden">
-      <BreathingGrid />
+    <div className="min-h-[100dvh] flex flex-col" style={{ background: "var(--c-canvas)" }}>
 
-      <div className="relative z-10 flex flex-1 flex-col items-center justify-center px-6 text-center">
-        <div className="mb-6 animate-fade-in border-[3px] border-primary bg-card px-5 py-2 shadow-brutal-sm">
-          <span className="font-display text-xs tracking-[0.3em] text-muted-foreground uppercase">
-            Session Lost
-          </span>
-        </div>
-
-        <h1 className="font-display text-3xl sm:text-4xl leading-none tracking-tight text-primary animate-slide-up mb-4">
-          SESSION
+      {/* Zone 1 — laterite crisis */}
+      <div
+        style={{ background: "var(--c-laterite)" }}
+        className="flex flex-col justify-end px-6 pt-14 pb-10 flex-[0_0_45%]"
+      >
+        <span
+          className="font-display uppercase mb-4"
+          style={{ fontSize: "9px", letterSpacing: "0.3em", color: "rgba(255,255,255,0.6)" }}
+        >
+          SESSION TERMINATED
+        </span>
+        <h1
+          className="font-body italic"
+          style={{ fontSize: "clamp(2.4rem, 10vw, 4rem)", color: "#fff", lineHeight: 1.0 }}
+        >
+          The market
           <br />
-          <span className="text-accent">EXPIRED</span>
+          didn&apos;t wait.
         </h1>
-
-        <p className="mt-2 mb-10 max-w-xs text-base font-body text-muted-foreground animate-fade-in" style={{ animationDelay: "0.2s" }}>
-          Your previous session expired. Every empire has its setbacks — time to build a new one.
+        <p
+          className="font-body mt-3"
+          style={{ fontSize: "13px", color: "rgba(255,255,255,0.6)", lineHeight: 1.6, maxWidth: "34ch" }}
+        >
+          Your session expired. Every founder faces setbacks — the question is
+          what you do next.
         </p>
-
-        <div className="w-full max-w-xs animate-slide-up" style={{ animationDelay: "0.4s" }}>
-          <button
-            onClick={handleNewGame}
-            className="w-full border-[3px] border-primary bg-accent py-4 font-display text-xl tracking-wider text-accent-foreground shadow-brutal transition-transform hover:-translate-y-[1px] active:translate-y-[2px] active:shadow-brutal-sm"
-          >
-            START NEW GAME &#8594;
-          </button>
-        </div>
       </div>
+
+      {/* Curve */}
+      <div className="hud-curve" />
+
+      {/* Zone 2 */}
+      <div className="flex-1 flex flex-col justify-end px-6 pb-10">
+        <button
+          onClick={() => { resetGame(); router.push("/"); }}
+          className="font-display uppercase w-full"
+          style={{
+            background: "var(--c-navy)",
+            color: "var(--c-amber)",
+            fontSize: "12px",
+            letterSpacing: "0.2em",
+            padding: "16px",
+            border: "none",
+            cursor: "pointer",
+          }}
+        >
+          START NEW GAME →
+        </button>
+      </div>
+
     </div>
   );
 };

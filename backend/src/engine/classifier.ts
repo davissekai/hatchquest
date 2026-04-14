@@ -20,13 +20,16 @@
  * functions — keywordClassify, selectLayer1NodeFromDistribution, scorePoles —
  * are fully covered by unit tests in classifier.test.ts.
  */
+import Anthropic from "@anthropic-ai/sdk";
 import type { EOPoleDistribution } from "@hatchquest/shared";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
-const CLASSIFIER_TIMEOUT_MS = 30_000; // MiniMax M2.7 is a reasoning model — needs ~19s on average
+const CLASSIFIER_TIMEOUT_MS = 10_000;
+const ANTHROPIC_MODEL = process.env.ANTHROPIC_MODEL ?? "claude-haiku-4-5";
 
-const SYSTEM_PROMPT = `You are an entrepreneurial orientation classifier. Given a player's statement about their business idea, return a JSON object with exactly this shape:
+const SYSTEM_PROMPT = `You are an entrepreneurial orientation classifier.
+Return ONLY valid JSON with exactly this shape:
 {
   "values": { "peopleFocused": <0-1>, "profitFocused": <0-1> },
   "risk": { "tolerant": <0-1>, "averse": <0-1> },
@@ -36,74 +39,61 @@ const SYSTEM_PROMPT = `You are an entrepreneurial orientation classifier. Given 
 }
 
 Rules:
-- Each pair must sum to exactly 1.0
-- Use the full range [0.0, 1.0] — avoid defaulting to 0.5/0.5 unless truly ambiguous
-- Infer from language, word choice, and framing — not from sector or geography
-- Return ONLY the JSON object, no preamble or explanation`;
+- Each pair must sum to 1.0
+- Use decimals
+- No markdown
+- No explanation
+- No preamble
+- No code fence
+- Output JSON only`;
 
-// ─── LLM Classifier ──────────────────────────────────────────────────────────
-
-const NVIDIA_ENDPOINT = "https://integrate.api.nvidia.com/v1/chat/completions";
-const NVIDIA_MODEL = "minimaxai/minimax-m2.7";
-
-/**
- * Calls NVIDIA inference (MiniMax M2.7) to classify free-text into EO pole distributions.
- * Returns null if: NVIDIA_API_KEY is unset, the call times out (8 s),
- * the response is non-200, the JSON is malformed, or any error is thrown.
- * The keyword heuristic in classify() always fires as fallback.
- */
-export async function callNvidiaClassifier(
-  response: string
-): Promise<EOPoleDistribution | null> {
-  const apiKey = process.env.NVIDIA_API_KEY;
+function getAnthropicClient() {
+  const apiKey = process.env.ANTHROPIC_API_KEY;
   if (!apiKey) return null;
 
-  const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), CLASSIFIER_TIMEOUT_MS);
+  return new Anthropic({
+    apiKey,
+    timeout: CLASSIFIER_TIMEOUT_MS,
+    maxRetries: 0,
+  });
+}
+
+/**
+ * Calls Anthropic to classify free-text into EO pole distributions.
+ */
+export async function callAnthropicClassifier(
+  response: string
+): Promise<EOPoleDistribution | null> {
+  const client = getAnthropicClient();
+  if (!client) return null;
 
   try {
-    const res = await fetch(NVIDIA_ENDPOINT, {
-      method: "POST",
-      headers: {
-        "Authorization": `Bearer ${apiKey}`,
-        "Content-Type": "application/json",
-        "Accept": "application/json",
-      },
-      body: JSON.stringify({
-        model: NVIDIA_MODEL,
-        messages: [
-          { role: "system", content: SYSTEM_PROMPT },
-          { role: "user", content: response },
-        ],
-        temperature: 0.7,
-        top_p: 0.95,
-        max_tokens: 1024,
-        stream: false,
-      }),
-      signal: controller.signal,
+    const msg = await client.messages.create({
+      model: ANTHROPIC_MODEL,
+      max_tokens: 180,
+      system: SYSTEM_PROMPT,
+      messages: [
+        {
+          role: "user",
+          content: response,
+        },
+      ],
     });
 
-    clearTimeout(timeoutId);
+    const raw = msg.content
+      .map((block) => (block.type === "text" ? block.text : ""))
+      .join("")
+      .trim();
 
-    if (!res.ok) return null;
-
-    const data = await res.json() as {
-      choices?: Array<{ message?: { content?: string } }>;
-    };
-
-    const raw = data.choices?.[0]?.message?.content ?? null;
     if (!raw) return null;
 
-    // Strip <think>...</think> reasoning blocks (present when token budget is very tight)
-    // and trim surrounding whitespace before attempting JSON parse.
-    const text = raw.replace(/<think>[\s\S]*?<\/think>/g, "").trim();
-    if (!text) return null;
+    // Defensive parsing: find the first { ... } block
+    const match = raw.match(/\{[\s\S]*\}/);
+    if (!match) return null;
 
-    const parsed = JSON.parse(text) as EOPoleDistribution;
+    const parsed = JSON.parse(match[0]) as EOPoleDistribution;
     return isValidDistribution(parsed) ? parsed : null;
   } catch {
-    // AbortError (timeout), network failure, JSON parse error — fall through to keyword heuristic
-    clearTimeout(timeoutId);
     return null;
   }
 }
@@ -241,6 +231,6 @@ export function selectLayer1NodeFromDistribution(
  */
 export async function classify(response: string): Promise<string> {
   const dist =
-    (await callNvidiaClassifier(response)) ?? keywordClassify(response);
+    (await callAnthropicClassifier(response)) ?? keywordClassify(response);
   return selectLayer1NodeFromDistribution(dist);
 }

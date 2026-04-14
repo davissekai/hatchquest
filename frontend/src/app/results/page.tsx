@@ -3,8 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useGame } from "@/context/GameContext";
-import BreathingGrid from "@/components/BreathingGrid";
-import AnimatedScore from "@/components/AnimatedScore";
+import { TopAppBar } from "@/components/stitch/TopAppBar";
 import RadarChart from "@/components/RadarChart";
 import ErrorBanner from "@/components/ErrorBanner";
 import LoadingOverlay from "@/components/LoadingOverlay";
@@ -19,16 +18,25 @@ const getVerdict = (score: number) => {
 const Results = () => {
   const router = useRouter();
   const { state, loadResults, resetGame, isLoading, error } = useGame();
-
-  useEffect(() => {
-    void loadResults();
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
-
   const [copied, setCopied] = useState(false);
+  const sessionId = state.sessionId;
+  const results = state.results;
+  const clientState = results?.clientState;
 
-  const score = state.score;
+  /* Load results on mount if not already loaded */
+  useEffect(() => {
+    if (!results && sessionId) {
+      void loadResults(sessionId);
+    } else if (!results && !sessionId) {
+      router.replace("/");
+    }
+  }, [results, sessionId, loadResults, router]);
+
+  const score = results?.eoProfile
+    ? (Object.values(results.eoProfile).reduce((a, b) => a + b, 0) / 5) * 10
+    : 0;
   const verdict = getVerdict(score);
-  const capitalBarWidth = Math.min(100, (state.resources.capital / 50000) * 100);
+  const capitalBarWidth = clientState ? Math.min(100, (clientState.capital / 50000) * 100) : 0;
 
   const handlePlayAgain = () => {
     resetGame();
@@ -36,9 +44,9 @@ const Results = () => {
   };
 
   const handleShare = () => {
-    const text = `I scored ${score.toFixed(1)} on HatchQuest! I'm a "${verdict.text}". Can you beat me?`;
+    const text = `I scored ${score.toFixed(1)} on HatchQuest! I'm a "${verdict.text}". Can you beat me? 🇬🇭`;
     if (navigator.share) {
-      navigator.share({ title: "HatchQuest Results", text });
+      void navigator.share({ title: "HatchQuest Results", text });
     } else {
       navigator.clipboard?.writeText(text).then(() => {
         setCopied(true);
@@ -48,135 +56,146 @@ const Results = () => {
   };
 
   return (
-    <div className="relative min-h-[100dvh] flex flex-col overflow-hidden">
-      <BreathingGrid />
+    <div className="bg-background text-on-surface min-h-screen">
+      <TopAppBar />
 
-      {/* Loading state — while fetching results */}
-      {isLoading && <LoadingOverlay message="CALCULATING RESULTS..." />}
+      {isLoading && <LoadingOverlay message="Calculating your results..." />}
 
-      {/* Error state — surfaces errors from loadResults() instead of swallowing them */}
       {error && !isLoading && (
-        <div className="relative z-10 flex flex-1 flex-col items-center justify-center px-6 gap-6">
-          <p className="font-display text-sm tracking-widest text-destructive uppercase text-center">
-            Could not load results
-          </p>
-          <ErrorBanner message={error} onRetry={() => void loadResults()} />
+        <div className="min-h-screen flex flex-col items-center justify-center px-6 gap-6">
+          <ErrorBanner
+            message={error}
+            onRetry={() => sessionId ? void loadResults(sessionId) : undefined}
+          />
           <button
             onClick={handlePlayAgain}
-            className="border-[3px] border-primary bg-card px-6 py-3 font-display text-sm tracking-wider text-muted-foreground shadow-brutal"
+            className="px-8 py-4 bg-surface-container-low text-on-surface rounded-xl font-headline font-bold hover:bg-surface-container transition-colors"
           >
-            PLAY AGAIN
+            Play Again
           </button>
         </div>
       )}
 
-      {!error && (
-      <div className="relative z-10 flex flex-1 flex-col items-center px-6 pt-16 pb-8">
-        {/* Header */}
-        <span className="mb-2 font-display text-xs tracking-[0.3em] text-muted-foreground uppercase animate-fade-in">
-          Your Results
-        </span>
-
-        {/* Score */}
-        <div className="mb-2 animate-count-up">
-          <AnimatedScore target={score} />
-        </div>
-        <span className="font-display text-sm tracking-widest text-primary uppercase">
-          Acumen Score
-        </span>
-
-        {/* Verdict */}
-        <div
-          className="mt-5 mb-8 border-[3px] border-primary bg-card px-6 py-4 shadow-brutal text-center animate-slide-up"
-          style={{ animationDelay: "0.4s" }}
-        >
-          <h2 className="font-display text-2xl text-accent mb-1">{verdict.text}</h2>
-          <p className="font-body text-sm text-muted-foreground">{verdict.desc}</p>
-        </div>
-
-        {/* Radar + Resources: stack on mobile, side-by-side on sm+ */}
-        <div className="w-full max-w-xs sm:max-w-2xl sm:grid sm:grid-cols-2 sm:gap-8 sm:items-start mb-8">
-
-        {/* Radar Chart */}
-        <div className="mb-6 sm:mb-0 animate-fade-in" style={{ animationDelay: "0.6s" }}>
-          <h3 className="font-display text-xs tracking-[0.2em] text-primary text-center uppercase mb-3">
-            Entrepreneurial Profile
-          </h3>
-          <div className="border-[3px] border-primary bg-card p-4 shadow-brutal-sm">
-            <RadarChart dimensions={state.dimensions} />
-          </div>
-        </div>
-
-        {/* Resources */}
-        <div className="sm:mb-0 animate-fade-in" style={{ animationDelay: "0.8s" }}>
-          <h3 className="font-display text-xs tracking-[0.2em] text-primary text-center uppercase mb-3">
-            Final Resources
-          </h3>
-          <div className="space-y-3">
-            {/* Capital */}
-            <div className="border-[3px] border-primary bg-card px-4 py-3 shadow-brutal-sm">
-              <div className="flex items-center justify-between mb-1.5">
-                <span className="font-display text-sm text-primary uppercase">Capital</span>
-                <span className="font-display text-lg text-accent whitespace-nowrap">
-                  GHS {state.resources.capital.toLocaleString()}
-                </span>
+      {!error && results && (
+        <div className="pt-20">
+          {/* ── Hero gradient header — score + verdict ──────────────────── */}
+          <div className="hero-gradient relative overflow-hidden py-20 px-6 text-center">
+            <div className="absolute inset-0 kente-pattern opacity-10" />
+            <div className="relative z-10 max-w-xl mx-auto space-y-4">
+              <p className="font-label text-sm font-bold text-on-primary/70 tracking-widest uppercase">
+                Your Results
+              </p>
+              <div className="text-8xl font-headline font-extrabold text-secondary-fixed leading-none">
+                {score.toFixed(1)}
               </div>
-              <div className="h-2 w-full border-[2px] border-primary bg-muted overflow-hidden">
-                <div
-                  className="h-full bg-accent transition-all duration-1000"
-                  style={{ width: `${capitalBarWidth}%` }}
-                />
-              </div>
-            </div>
-
-            {/* Reputation */}
-            <div className="border-[3px] border-primary bg-card px-4 py-3 shadow-brutal-sm">
-              <div className="flex items-center justify-between mb-1.5">
-                <span className="font-display text-sm text-primary uppercase">Reputation</span>
-                <span className="font-display text-lg text-accent">{state.resources.reputation}</span>
-              </div>
-              <div className="h-2 w-full border-[2px] border-primary bg-muted overflow-hidden">
-                <div
-                  className="h-full bg-accent transition-all duration-1000"
-                  style={{ width: `${Math.min(100, (state.resources.reputation / 80) * 100)}%` }}
-                />
-              </div>
-            </div>
-
-            {/* Network */}
-            <div className="border-[3px] border-primary bg-card px-4 py-3 shadow-brutal-sm">
-              <div className="flex items-center justify-between mb-1.5">
-                <span className="font-display text-sm text-primary uppercase">Network</span>
-                <span className="font-display text-lg text-accent">{state.resources.network}</span>
-              </div>
-              <div className="h-2 w-full border-[2px] border-primary bg-muted overflow-hidden">
-                <div
-                  className="h-full bg-accent transition-all duration-1000"
-                  style={{ width: `${Math.min(100, (state.resources.network / 80) * 100)}%` }}
-                />
+              <p className="font-label text-sm font-bold text-on-primary/70 tracking-widest uppercase">
+                Acumen Score
+              </p>
+              <div className="pt-4">
+                <h2 className="font-headline text-3xl font-extrabold text-on-primary italic">
+                  {verdict.text}
+                </h2>
+                <p className="font-body text-lg text-on-primary/80 mt-2 italic">
+                  {verdict.desc}
+                </p>
               </div>
             </div>
           </div>
-        </div>
 
-        </div>{/* end radar+resources grid */}
+          {/* ── Body — cards on bg-background ──────────────────────────── */}
+          <div className="max-w-2xl mx-auto px-6 py-12 space-y-6">
 
-        {/* Actions */}
-        <div className="w-full max-w-xs sm:max-w-sm space-y-3 pb-8 animate-slide-up" style={{ animationDelay: "1s" }}>
-          <button
-            onClick={handlePlayAgain}
-            className="w-full border-[3px] border-primary bg-accent py-3.5 font-display text-base tracking-wider text-accent-foreground shadow-brutal transition-transform hover:-translate-y-[1px] active:translate-y-[2px] active:shadow-brutal-sm"
-          >
-            PLAY AGAIN
-          </button>
-          <button
-            onClick={handleShare}
-            className="w-full border-[3px] border-primary bg-card py-3 font-display text-sm tracking-wider text-muted-foreground transition-transform hover:border-accent hover:text-foreground active:translate-y-[2px]"
-          >
-            {copied ? "COPIED!" : "SHARE RESULTS"}
-          </button>
+            {/* EO Radar chart */}
+            <div className="bg-surface-container-lowest rounded-xl p-6 shadow-[0_12px_40px_rgba(21,5,120,0.06)]">
+              <h3 className="font-headline font-bold text-lg text-primary uppercase tracking-widest mb-4 text-center">
+                Entrepreneurial Profile
+              </h3>
+              <RadarChart
+                dimensions={
+                  results.eoProfile ?? {
+                    autonomy: 0,
+                    innovativeness: 0,
+                    proactiveness: 0,
+                    riskTaking: 0,
+                    competitiveAggressiveness: 0,
+                  }
+                }
+              />
+            </div>
+
+            {/* Final Resources */}
+            <div className="bg-surface-container-lowest rounded-xl p-6 shadow-[0_12px_40px_rgba(21,5,120,0.06)]">
+              <h3 className="font-headline font-bold text-lg text-primary uppercase tracking-widest mb-4">
+                Final Resources
+              </h3>
+              <div className="space-y-4">
+                {/* Capital */}
+                <div>
+                  <div className="flex justify-between items-center mb-2">
+                    <span className="font-label font-semibold text-on-surface-variant text-sm">Capital</span>
+                    <span className="font-headline font-bold text-xl text-secondary">
+                      GHS {(clientState?.capital ?? 0).toLocaleString()}
+                    </span>
+                  </div>
+                  <div className="h-2.5 w-full rounded-full bg-surface-container-high overflow-hidden">
+                    <div
+                      className="h-full bg-primary rounded-full transition-all duration-1000"
+                      style={{ width: `${capitalBarWidth}%` }}
+                    />
+                  </div>
+                </div>
+
+                {/* Reputation */}
+                <div>
+                  <div className="flex justify-between items-center mb-2">
+                    <span className="font-label font-semibold text-on-surface-variant text-sm">Reputation</span>
+                    <span className="font-headline font-bold text-xl text-secondary">
+                      {clientState?.reputation ?? 0}
+                    </span>
+                  </div>
+                  <div className="h-2.5 w-full rounded-full bg-surface-container-high overflow-hidden">
+                    <div
+                      className="h-full bg-tertiary-container rounded-full transition-all duration-1000"
+                      style={{ width: `${Math.min(100, ((clientState?.reputation ?? 0) / 80) * 100)}%` }}
+                    />
+                  </div>
+                </div>
+
+                {/* Network */}
+                <div>
+                  <div className="flex justify-between items-center mb-2">
+                    <span className="font-label font-semibold text-on-surface-variant text-sm">Network</span>
+                    <span className="font-headline font-bold text-xl text-secondary">
+                      {clientState?.networkStrength ?? 0}
+                    </span>
+                  </div>
+                  <div className="h-2.5 w-full rounded-full bg-surface-container-high overflow-hidden">
+                    <div
+                      className="h-full bg-secondary-container rounded-full transition-all duration-1000"
+                      style={{ width: `${Math.min(100, ((clientState?.networkStrength ?? 0) / 80) * 100)}%` }}
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Actions */}
+            <div className="flex flex-col gap-3 pb-8">
+              <button
+                onClick={handlePlayAgain}
+                className="w-full py-5 bg-primary text-on-primary rounded-xl font-headline font-extrabold text-lg shadow-[0_8px_30px_rgba(82,79,178,0.3)] hover:scale-[1.02] active:scale-95 transition-all"
+              >
+                Play Again
+              </button>
+              <button
+                onClick={handleShare}
+                className="w-full py-4 bg-surface-container-low text-on-surface-variant rounded-xl font-headline font-bold text-base hover:bg-surface-container transition-colors"
+              >
+                {copied ? "Copied to clipboard!" : "Share Results"}
+              </button>
+            </div>
+          </div>
         </div>
-      </div>
       )}
     </div>
   );

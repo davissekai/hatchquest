@@ -1,0 +1,321 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>HatchQuest | Accra Pulse</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&amp;family=Newsreader:ital,wght@0,400;0,500;0,600;1,400;1,500&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                    "inverse-primary": "#9592fa",
+                    "error-dim": "#a70138",
+                    "surface-container-high": "#e2e2e1",
+                    "inverse-on-surface": "#9d9d9c",
+                    "on-secondary-fixed-variant": "#635100",
+                    "background": "#f7f6f5",
+                    "on-secondary": "#fff2cf",
+                    "inverse-surface": "#0d0e0e",
+                    "on-primary-fixed": "#000000",
+                    "secondary": "#6d5a00",
+                    "tertiary-dim": "#972500",
+                    "surface-container-lowest": "#ffffff",
+                    "surface-container": "#e8e8e7",
+                    "secondary-fixed": "#fad11b",
+                    "surface-tint": "#524fb2",
+                    "on-tertiary-fixed": "#350700",
+                    "outline": "#767776",
+                    "on-primary-fixed-variant": "#201881",
+                    "on-error": "#ffefef",
+                    "surface-variant": "#dcdddc",
+                    "on-error-container": "#510017",
+                    "primary-fixed": "#9895fd",
+                    "surface-container-low": "#f1f1f0",
+                    "on-secondary-container": "#584800",
+                    "on-primary": "#f4f1ff",
+                    "on-background": "#2e2f2f",
+                    "on-tertiary": "#ffefec",
+                    "tertiary-fixed": "#ff9476",
+                    "secondary-dim": "#5f4e00",
+                    "surface": "#f7f6f5",
+                    "tertiary-fixed-dim": "#ff7d58",
+                    "secondary-container": "#fad11b",
+                    "primary-dim": "#4642a5",
+                    "error-container": "#f74b6d",
+                    "primary": "#524fb2",
+                    "surface-container-highest": "#dcdddc",
+                    "on-tertiary-fixed-variant": "#701900",
+                    "surface-dim": "#d4d4d4",
+                    "secondary-fixed-dim": "#ebc300",
+                    "surface-bright": "#f7f6f5",
+                    "on-tertiary-container": "#601400",
+                    "on-surface": "#2e2f2f",
+                    "tertiary-container": "#ff9476",
+                    "error": "#b41340",
+                    "on-primary-container": "#150678",
+                    "on-surface-variant": "#5b5c5b",
+                    "on-secondary-fixed": "#423500",
+                    "primary-fixed-dim": "#8b88ef",
+                    "tertiary": "#ac2c00",
+                    "outline-variant": "#adadac",
+                    "primary-container": "#9895fd"
+            },
+            "borderRadius": {
+                    "DEFAULT": "1rem",
+                    "lg": "2rem",
+                    "xl": "3rem",
+                    "full": "9999px"
+            },
+            "fontFamily": {
+                    "headline": ["Plus Jakarta Sans"],
+                    "body": ["Newsreader"],
+                    "label": ["Plus Jakarta Sans"]
+            }
+          },
+        },
+      }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .kente-pattern {
+            background-image: url("data:image/svg+xml,%3Csvg width='40' height='40' viewBox='0 0 40 40' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M0 0h20v20H0V0zm20 20h20v20H20V20zM0 20h20v20H0V20zm20-20h20v20H20V0z' fill='%236d5a00' fill-opacity='0.05'/%3E%3C/svg%3E");
+        }
+        .hero-gradient {
+            background: linear-gradient(135deg, #524fb2 0%, #4642a5 100%);
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background text-on-surface font-body selection:bg-primary-container selection:text-on-primary-container">
+<!-- TopAppBar -->
+<header class="fixed top-0 w-full z-50 rounded-b-[3rem] bg-stone-50/80 backdrop-blur-xl shadow-[0_12px_40px_rgba(21,5,120,0.08)]">
+<div class="flex justify-between items-center px-8 py-6 w-full max-w-screen-2xl mx-auto">
+<div class="flex items-center gap-4">
+<div class="w-12 h-12 rounded-full overflow-hidden bg-surface-container-high">
+<img alt="Scholar Entrepreneur Portrait" class="w-full h-full object-cover" data-alt="portrait of a confident young Ghanaian scholar entrepreneur with a warm smile in an academic setting" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDz7SozyCcYB1URavwIsKrtpx65iO1Gp4HcXuOjXZUJfuplzJgvZC917J2IR4l6shwt4qO-9CWdpFxgkXaD6uNQmKVJ7wFtXSWu2GDC1nnfhtaHoLeEQSav_LY-7uIaMkDxBgGF2JjAsigUAdMYIUWBq07yc3YC0vUXjoEpPHc08Z5-Xn-UZt8gEKnEfb-58DUaDLGJbb7I_mNfFP5eziWY-EH2ie7EQ89IBbH019pXb4Gnv5XND1Jlaa3G34WvyYqndRcWWjWCnBE"/>
+</div>
+<h1 class="text-2xl font-black text-[#524fb2] italic font-headline tracking-tight">HatchQuest</h1>
+</div>
+<nav class="hidden md:flex items-center gap-8 font-label">
+<a class="text-[#524fb2] font-bold transition-transform active:scale-95 duration-200 ease-in-out" href="#">The Great Hall</a>
+<a class="text-stone-600 hover:bg-stone-200/50 transition-colors px-4 py-2 rounded-full" href="#">Makola Market</a>
+<a class="text-stone-600 hover:bg-stone-200/50 transition-colors px-4 py-2 rounded-full" href="#">Venture Lab</a>
+<a class="text-stone-600 hover:bg-stone-200/50 transition-colors px-4 py-2 rounded-full" href="#">Global Network</a>
+</nav>
+<button class="w-12 h-12 flex items-center justify-center rounded-full bg-surface-container-low text-[#524fb2] hover:bg-stone-200/50 transition-all active:scale-95">
+<span class="material-symbols-outlined">account_balance_wallet</span>
+</button>
+</div>
+</header>
+<main class="pt-24">
+<!-- Hero Section -->
+<section class="relative min-h-[795px] flex items-center px-6 lg:px-12 overflow-hidden mb-16">
+<div class="absolute inset-0 z-0">
+<img alt="University of Ghana" class="w-full h-full object-cover opacity-30 mix-blend-overlay scale-110" data-alt="Stunning architectural view of University of Ghana's Great Hall with red roofs and palm trees under a clear blue sky" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCQK_xgVPeYKAZqj8coima4Cf-2cAMHmNMOqURIB9X7JaymxG-SQoIdqqBDmb_petKDyJ-xsCWhxfxBNmklkAgUsIFwFwTGvhGRfkbfANakP4tfzUTrj61ObDiCopvOR2IGJE2uOOA-IvPQWBiTVwBxOMOT3AVQjHxCu4Y5Dn1HsfZKPjMN4c4XAtSwXxVLAiWMhDb-vO7TM4Q__txIeZp2jV7Bm8i_Kt5i_VCzsDADI4M-5yjZMRwR6gwd_qLTL_AFABfe1k90saU"/>
+<div class="absolute inset-0 bg-gradient-to-r from-background via-background/90 to-transparent"></div>
+</div>
+<div class="relative z-10 w-full max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-12 items-center">
+<div class="lg:col-span-7 space-y-8">
+<div class="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-tertiary-container/20 text-tertiary font-label font-bold text-sm">
+<span class="w-2 h-2 rounded-full bg-tertiary animate-pulse"></span>
+                        New District Opening: Accra Central
+                    </div>
+<h2 class="text-6xl md:text-8xl font-headline font-extrabold text-on-surface tracking-tighter leading-[0.9]">
+                        Your Legacy Awaits in the <span class="text-primary italic">Heart</span> of Accra.
+                    </h2>
+<p class="text-xl md:text-2xl text-on-surface-variant max-w-2xl leading-relaxed">
+                        HatchQuest bridges the prestigious halls of Legon with the electric rhythm of Makola. Build your venture where tradition meets the street.
+                    </p>
+<div class="flex flex-col sm:flex-row gap-4 pt-4">
+<button class="px-10 py-5 bg-secondary-container text-on-secondary-container rounded-xl font-headline font-bold text-xl shadow-[0_12px_40px_rgba(109,90,0,0.15)] hover:scale-105 transition-transform active:scale-95">
+                            Start Your Quest
+                        </button>
+<button class="px-10 py-5 bg-surface-container-low text-primary rounded-xl font-headline font-bold text-xl hover:bg-surface-container transition-colors active:scale-95">
+                            Explore Districts
+                        </button>
+</div>
+</div>
+<div class="lg:col-span-5 relative">
+<div class="aspect-square rounded-xl overflow-hidden shadow-2xl rotate-3 relative z-20 border-8 border-white">
+<img alt="Accra Street Scene" class="w-full h-full object-cover" data-alt="Vibrant street market in Accra with colorful textiles, bustling energy, and warm golden sunlight filtering through stalls" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBVoPSxjuXsAv2GOdC0JSMEyYpUwo2j4HS_UZRMDv_UBeyzLi_cKyU-4-1CgRMKxnD7TRhnwElWIlIH-sgYazSEJkB8hx4xGt21AHqN8X_FMNHImQKGtcdV5JL59PZRDi4QSnkjRVncTYRJsdEc3SyPOl8BnnQCEqP7zZewGM-xE8UhyL1gidzhYt2BIVSQx6oLC8MANvgLWO_J4JQDpFY831jA_amt5H5_g39rwRmwQYk2UMu4UcAAMNe-3vI7iKQbG2pgUdpXee4"/>
+</div>
+<div class="absolute -top-8 -right-8 w-48 h-48 rounded-xl bg-primary-container/30 backdrop-blur-xl z-10 rotate-12 flex items-center justify-center p-6 text-center">
+<p class="font-body italic text-primary-dim text-lg">"The soul of entrepreneurship is on the street."</p>
+</div>
+<div class="absolute -bottom-12 -left-12 w-64 h-64 kente-pattern rounded-full opacity-40 -z-10"></div>
+</div>
+</div>
+</section>
+<!-- Bento Grid Districts -->
+<section class="px-6 lg:px-12 py-16 max-w-screen-2xl mx-auto space-y-12">
+<div class="flex flex-col md:flex-row justify-between items-end gap-6">
+<div class="space-y-4">
+<h3 class="text-primary font-headline font-bold text-lg tracking-widest uppercase">The Map</h3>
+<p class="text-4xl md:text-5xl font-headline font-extrabold tracking-tight">Active Districts</p>
+</div>
+<p class="font-body text-xl text-on-surface-variant max-w-md italic">
+                    Each district offers unique quests, networking nodes, and capital pools.
+                </p>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-4 gap-6 h-auto md:h-[600px]">
+<!-- The Great Hall -->
+<div class="md:col-span-2 bg-surface-container-low rounded-xl p-8 flex flex-col justify-between group overflow-hidden relative">
+<div class="absolute top-0 right-0 p-8 opacity-10 group-hover:opacity-20 transition-opacity">
+<span class="material-symbols-outlined text-[120px]">school</span>
+</div>
+<div class="relative z-10 space-y-4">
+<span class="material-symbols-outlined text-4xl text-primary">school</span>
+<h4 class="text-3xl font-headline font-bold">The Great Hall</h4>
+<p class="text-lg text-on-surface-variant max-w-xs">Master the fundamental theories of market expansion in the halls of prestige.</p>
+</div>
+<div class="relative z-10 pt-8">
+<span class="inline-block px-4 py-2 bg-white rounded-full text-sm font-bold shadow-sm">Level 1 - 5 REQUIRED</span>
+</div>
+</div>
+<!-- Makola Market -->
+<div class="md:col-span-2 bg-secondary-container rounded-xl p-8 flex flex-col justify-between text-on-secondary-container group overflow-hidden relative">
+<div class="absolute bottom-0 right-0 p-4 w-1/2 h-full opacity-40 mix-blend-multiply group-hover:scale-110 transition-transform">
+<img alt="Market Texture" class="w-full h-full object-cover rounded-xl" data-alt="close up of vibrant yellow and orange Ghanaian kente cloth with intricate geometric patterns" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDGdLjPACvW2L3lZyWuW4_Q2cJQoX7TtZb4xkZBqRSnyVymOfVcwxn9ICagCf2j4vYy99baVvvfY2cmhiuNoy0SV6Bu1HXv78bNoPD5IT9WSXyoexvgmWIvq8pxSUtvgqcTEVExCs09r0ctY7pflJD0OIP3EoEfOwJ8iZxoXFYSYipCF1MZbJsGUIO3JCjOGuJSS9QyQ3CQ7-5qYfc0sc0oCI0RGdeeQZl0-T2wPBYLWqdriN-d4awRWZTHvgyjVHQxDFEoEECaCSU"/>
+</div>
+<div class="relative z-10 space-y-4">
+<span class="material-symbols-outlined text-4xl">storefront</span>
+<h4 class="text-3xl font-headline font-bold">Makola Market</h4>
+<p class="text-lg text-on-secondary-container/80 max-w-xs">Real-world hustle. Test your product-market fit against the busiest pulse in West Africa.</p>
+</div>
+<button class="relative z-10 w-fit px-6 py-3 bg-on-secondary-container text-white rounded-full font-bold">Enter Market</button>
+</div>
+<!-- Venture Lab -->
+<div class="bg-primary text-on-primary rounded-xl p-8 flex flex-col items-center justify-center text-center gap-4 group">
+<span class="material-symbols-outlined text-5xl transition-transform group-hover:scale-110">rocket_launch</span>
+<h4 class="text-xl font-headline font-bold">Venture Lab</h4>
+<p class="text-sm opacity-80">Incubate your ideas with tech pioneers.</p>
+</div>
+<!-- Global Network -->
+<div class="bg-surface-container-highest rounded-xl p-8 flex flex-col items-center justify-center text-center gap-4 group">
+<span class="material-symbols-outlined text-5xl text-primary transition-transform group-hover:rotate-12">public</span>
+<h4 class="text-xl font-headline font-bold">Global Network</h4>
+<p class="text-sm text-on-surface-variant">Connect your Accra legacy to the world.</p>
+</div>
+</div>
+</section>
+<!-- Academic Quote Section -->
+<section class="py-24 bg-surface-container-lowest">
+<div class="max-w-4xl mx-auto px-6 text-center space-y-8">
+<span class="material-symbols-outlined text-6xl text-primary-container">format_quote</span>
+<blockquote class="text-4xl md:text-5xl font-body italic leading-tight text-on-surface">
+                    "Intelligence is not found only in books, but in the sweat of the trader and the vision of the founder."
+                </blockquote>
+<cite class="block font-headline font-bold text-xl text-primary">— Nana Kwesi, Level 12 Entrepreneur</cite>
+</div>
+</section>
+<!-- Experience Layers -->
+<section class="px-6 lg:px-12 py-24 max-w-screen-2xl mx-auto">
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
+<div class="relative">
+<div class="w-full aspect-[4/5] rounded-xl overflow-hidden bg-stone-200">
+<img alt="Entrepreneurship Team" class="w-full h-full object-cover" data-alt="diverse team of young African professionals collaborating in a high-tech modern office space with large windows and lush greenery" src="https://lh3.googleusercontent.com/aida-public/AB6AXuB1BfF3H8ziFf8VVVqFp8glKmI0rWLfnkjYMaQxThExsht2fGAtaGZ5gO6_pqXoBOvDjaiqAcJHg7_JFCuNhiOHxCvXhP3UAeXK5tDEaPs8-GPjjVoRXUPGV7ZWrDhCwBkEGrIPsEizoPrqgMt42T6SH1sTM9suLudNiNftpczvRuvQY4N_5voSfA75cyV7U-8wtQNZACuU-An1lHplqE_TkDcRZrXQfVAcbBOyWRlzEgTo1XwBFMtqHLpig1IdQ0gIsQPtV5aAWy0"/>
+</div>
+<div class="absolute -bottom-10 -right-10 w-2/3 p-8 bg-background shadow-2xl rounded-xl border-l-8 border-primary space-y-4">
+<h5 class="text-2xl font-headline font-bold">Earn While You Learn</h5>
+<p class="font-body text-on-surface-variant">Complete street-based challenges to earn "Cedis tokens" redeemable for venture capital.</p>
+</div>
+</div>
+<div class="space-y-8">
+<h3 class="text-primary font-headline font-bold text-lg tracking-widest uppercase">The Methodology</h3>
+<h4 class="text-5xl font-headline font-extrabold leading-[1.1]">Precision of the University, Energy of the Street.</h4>
+<ul class="space-y-6">
+<li class="flex gap-4 p-6 bg-surface-container-low rounded-xl transition-colors hover:bg-surface-container">
+<div class="w-12 h-12 flex-shrink-0 bg-primary-container/30 text-primary rounded-full flex items-center justify-center">
+<span class="material-symbols-outlined">menu_book</span>
+</div>
+<div>
+<h6 class="font-headline font-bold text-xl">Curated Curriculum</h6>
+<p class="text-on-surface-variant font-body text-lg">Peer-reviewed growth strategies adapted for emerging African markets.</p>
+</div>
+</li>
+<li class="flex gap-4 p-6 bg-surface-container-low rounded-xl transition-colors hover:bg-surface-container">
+<div class="w-12 h-12 flex-shrink-0 bg-tertiary-container/30 text-tertiary rounded-full flex items-center justify-center">
+<span class="material-symbols-outlined">groups</span>
+</div>
+<div>
+<h6 class="font-headline font-bold text-xl">Pulse Networking</h6>
+<p class="text-on-surface-variant font-body text-lg">Direct access to Accra's top 1% business mentors and street pioneers.</p>
+</div>
+</li>
+<li class="flex gap-4 p-6 bg-surface-container-low rounded-xl transition-colors hover:bg-surface-container">
+<div class="w-12 h-12 flex-shrink-0 bg-secondary-container/30 text-secondary rounded-full flex items-center justify-center">
+<span class="material-symbols-outlined">payments</span>
+</div>
+<div>
+<h6 class="font-headline font-bold text-xl">Venture Funding</h6>
+<p class="text-on-surface-variant font-body text-lg">Secure up to $50k in seed funding through quest completion.</p>
+</div>
+</li>
+</ul>
+</div>
+</div>
+</section>
+<!-- Final CTA -->
+<section class="m-6 lg:m-12 rounded-xl hero-gradient py-24 px-6 text-center relative overflow-hidden">
+<div class="absolute inset-0 kente-pattern opacity-10"></div>
+<div class="relative z-10 space-y-8 max-w-3xl mx-auto">
+<h3 class="text-4xl md:text-6xl font-headline font-extrabold text-on-primary">Ready to write your Accra story?</h3>
+<p class="text-xl text-on-primary/80 font-body">Join 5,000+ Founders questing across the districts today.</p>
+<div class="pt-4">
+<button class="px-12 py-6 bg-secondary-container text-on-secondary-container rounded-full font-headline font-extrabold text-2xl shadow-2xl hover:scale-105 transition-transform active:scale-95">
+                        Start Your Quest
+                    </button>
+</div>
+</div>
+</section>
+</main>
+<!-- Footer -->
+<footer class="bg-surface-container-lowest pt-24 pb-12 px-6 lg:px-12">
+<div class="max-w-screen-2xl mx-auto">
+<div class="grid grid-cols-1 md:grid-cols-4 gap-12 mb-16">
+<div class="md:col-span-2 space-y-6">
+<h2 class="text-3xl font-black text-primary italic font-headline">HatchQuest</h2>
+<p class="max-w-md text-on-surface-variant text-lg">Empowering the next generation of West African founders through an immersive, scholarly, and street-wise experience.</p>
+</div>
+<div class="space-y-6">
+<h5 class="font-headline font-bold text-lg">Ecosystem</h5>
+<ul class="space-y-4 text-on-surface-variant">
+<li><a class="hover:text-primary" href="#">The Great Hall</a></li>
+<li><a class="hover:text-primary" href="#">Makola Market</a></li>
+<li><a class="hover:text-primary" href="#">Venture Lab</a></li>
+<li><a class="hover:text-primary" href="#">Global Network</a></li>
+</ul>
+</div>
+<div class="space-y-6">
+<h5 class="font-headline font-bold text-lg">Company</h5>
+<ul class="space-y-4 text-on-surface-variant">
+<li><a class="hover:text-primary" href="#">Our Legacy</a></li>
+<li><a class="hover:text-primary" href="#">Districts</a></li>
+<li><a class="hover:text-primary" href="#">Tokenomics</a></li>
+<li><a class="hover:text-primary" href="#">Privacy</a></li>
+</ul>
+</div>
+</div>
+<div class="pt-12 border-t border-outline-variant/20 flex flex-col md:flex-row justify-between items-center gap-6">
+<p class="text-on-surface-variant">© 2024 HatchQuest. Built with soul in Accra.</p>
+<div class="flex gap-6">
+<a class="text-primary hover:scale-110 transition-transform" href="#"><span class="material-symbols-outlined">public</span></a>
+<a class="text-primary hover:scale-110 transition-transform" href="#"><span class="material-symbols-outlined">share</span></a>
+<a class="text-primary hover:scale-110 transition-transform" href="#"><span class="material-symbols-outlined">school</span></a>
+</div>
+</div>
+</div>
+</footer>
+</body></html>

@@ -1,98 +1,194 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useGame } from "@/context/GameContext";
-import BreathingGrid from "@/components/BreathingGrid";
 
+// Resume — hydrates an in-progress session from localStorage.
 const ResumeSession = () => {
   const router = useRouter();
-  const { state, clearSession } = useGame();
+  const { resumeSession, resetGame, state, isLoading } = useGame();
+  const [resumeAttempted, setResumeAttempted] = useState(false);
+  const [canResume, setCanResume] = useState(false);
 
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
-    const sessionId = localStorage.getItem("sessionId");
-    if (!sessionId) {
-      router.replace("/create");
-    }
-  }, []);
+    const sessionId = localStorage.getItem("hq-session-id");
+    if (!sessionId) { router.replace("/create"); return; }
+    resumeSession(sessionId).then((ok) => {
+      setResumeAttempted(true);
+      setCanResume(ok);
+    });
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const playerName = state.player?.name || "Entrepreneur";
-  const beat = state.currentScene;
-  const round = state.currentRound;
+  const capital = state.clientState?.capital ?? 0;
+  const layer = state.clientState?.layer ?? 1;
+  const turns = state.clientState?.turnsElapsed ?? 0;
 
-  const handleContinue = () => router.push("/play");
-
-  const handleStartFresh = () => {
-    clearSession();
-    router.push("/create");
-  };
-
-  return (
-    <div className="relative min-h-[100dvh] flex flex-col overflow-hidden">
-      <BreathingGrid />
-
-      <div className="relative z-10 flex flex-1 flex-col items-center justify-center px-6 text-center">
-        <div className="mb-6 animate-fade-in border-[3px] border-primary bg-card px-5 py-2 shadow-brutal-sm">
-          <span className="font-display text-xs tracking-[0.3em] text-muted-foreground uppercase">
-            Journey In Progress
-          </span>
-        </div>
-
-        <h1 className="font-display text-4xl sm:text-5xl leading-none tracking-tight text-primary animate-slide-up mb-4">
-          WELCOME
-          <br />
-          <span className="text-accent">BACK</span>
-        </h1>
-
-        <p
-          className="mt-2 mb-8 max-w-xs text-lg font-body text-muted-foreground animate-fade-in"
-          style={{ animationDelay: "0.2s" }}
+  // ── Loading ─────────────────────────────────────────────────────────────────
+  if (isLoading || !resumeAttempted) {
+    return (
+      <div
+        className="min-h-[100dvh] flex items-center justify-center"
+        style={{ background: "var(--c-navy)" }}
+      >
+        <span
+          className="font-display uppercase animate-pulse"
+          style={{ fontSize: "10px", letterSpacing: "0.3em", color: "var(--c-amber)" }}
         >
-          <strong className="text-primary">{playerName}</strong>, your empire is waiting.
-        </p>
+          RECONNECTING...
+        </span>
+      </div>
+    );
+  }
 
-        {/* Progress card */}
+  // ── Expired ──────────────────────────────────────────────────────────────────
+  if (!canResume) {
+    return (
+      <div className="min-h-[100dvh] flex flex-col" style={{ background: "var(--c-canvas)" }}>
         <div
-          className="mb-10 w-full max-w-xs sm:max-w-sm border-[3px] border-primary bg-card shadow-brutal-sm animate-fade-in"
-          style={{ animationDelay: "0.4s" }}
+          style={{ background: "var(--c-laterite)" }}
+          className="flex flex-col justify-end px-6 pt-14 pb-10 flex-[0_0_42%]"
         >
-          <div className="flex divide-x-[2px] divide-primary">
-            {[
-              { label: "Scene", value: beat },
-              { label: "Round", value: round },
-              { label: "Moves", value: state.choices.length },
-            ].map((item) => (
-              <div key={item.label} className="flex-1 py-4 flex flex-col items-center">
-                <span className="font-display text-[10px] tracking-[0.2em] text-muted-foreground uppercase mb-1">
-                  {item.label}
-                </span>
-                <span className="font-display text-2xl text-accent font-bold">{item.value}</span>
-              </div>
-            ))}
-          </div>
-          <div className="border-t-[2px] border-primary px-4 py-3 flex justify-between text-[10px] font-display tracking-wider text-muted-foreground uppercase">
-            <span>GHS {state.resources.capital.toLocaleString()}</span>
-            <span>Rep {state.resources.reputation}</span>
-            <span>Network {state.resources.network}</span>
-          </div>
+          <span
+            className="font-display uppercase mb-4"
+            style={{ fontSize: "9px", letterSpacing: "0.3em", color: "rgba(255,255,255,0.6)" }}
+          >
+            SESSION EXPIRED
+          </span>
+          <h1
+            className="font-body italic"
+            style={{ fontSize: "clamp(2.2rem, 9vw, 3.5rem)", color: "#fff", lineHeight: 1.05 }}
+          >
+            Your journey
+            <br />
+            was lost.
+          </h1>
+          <p
+            className="font-body mt-3"
+            style={{ fontSize: "13px", color: "rgba(255,255,255,0.6)", lineHeight: 1.6 }}
+          >
+            Every founder faces setbacks. The question is whether you rebuild.
+          </p>
+        </div>
+        <div className="hud-curve" style={{ background: "var(--c-canvas)" }} />
+        <div className="flex-1 flex flex-col justify-end px-6 pb-10">
+          <button
+            onClick={() => { resetGame(); router.push("/create"); }}
+            className="font-display uppercase w-full"
+            style={{
+              background: "var(--c-navy)",
+              color: "var(--c-amber)",
+              fontSize: "12px",
+              letterSpacing: "0.2em",
+              padding: "16px",
+              border: "none",
+              cursor: "pointer",
+            }}
+          >
+            START FRESH →
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  // ── Active session ────────────────────────────────────────────────────────────
+  return (
+    <div className="min-h-[100dvh] flex flex-col" style={{ background: "var(--c-canvas)" }}>
+
+      {/* Zone 1 — navy */}
+      <div
+        style={{ background: "var(--c-navy)" }}
+        className="flex flex-col justify-end px-6 pt-14 pb-10 flex-[0_0_42%]"
+      >
+        <span
+          className="font-display uppercase mb-4"
+          style={{ fontSize: "9px", letterSpacing: "0.3em", color: "var(--c-amber)" }}
+        >
+          JOURNEY IN PROGRESS
+        </span>
+        <h1
+          className="font-body italic"
+          style={{ fontSize: "clamp(2.2rem, 9vw, 3.5rem)", color: "#fff", lineHeight: 1.05 }}
+        >
+          Still in the
+          <br />
+          game.
+        </h1>
+      </div>
+
+      {/* Curve */}
+      <div className="hud-curve" />
+
+      {/* Zone 2 — stats + actions */}
+      <div className="flex-1 flex flex-col px-6 pt-6 pb-10">
+
+        {/* Stats strip */}
+        <div
+          className="grid grid-cols-3 mb-8"
+          style={{ borderTop: "1px solid rgba(21,5,120,0.15)", borderBottom: "1px solid rgba(21,5,120,0.15)" }}
+        >
+          {[
+            { label: "LAYER", value: layer },
+            { label: "DECISIONS", value: turns },
+            { label: "CAPITAL", value: `₵${(capital / 1000).toFixed(1)}k` },
+          ].map((s, i) => (
+            <div
+              key={s.label}
+              className="flex flex-col items-center py-5"
+              style={{ borderRight: i < 2 ? "1px solid rgba(21,5,120,0.15)" : "none" }}
+            >
+              <span
+                className="font-display uppercase mb-1"
+                style={{ fontSize: "8px", letterSpacing: "0.2em", color: "rgba(21,5,120,0.45)" }}
+              >
+                {s.label}
+              </span>
+              <span
+                className="font-body"
+                style={{ fontSize: "22px", color: "var(--c-navy)", fontWeight: 500 }}
+              >
+                {s.value}
+              </span>
+            </div>
+          ))}
         </div>
 
-        <div className="w-full max-w-xs sm:max-w-sm space-y-3 animate-slide-up" style={{ animationDelay: "0.6s" }}>
+        <div className="space-y-3 mt-auto">
           <button
-            onClick={handleContinue}
-            className="w-full border-[3px] border-primary bg-accent py-4 font-display text-xl tracking-wider text-accent-foreground shadow-brutal transition-transform hover:-translate-y-[1px] active:translate-y-[2px] active:shadow-brutal-sm"
+            onClick={() => router.push("/play")}
+            className="font-display uppercase w-full"
+            style={{
+              background: "var(--c-navy)",
+              color: "var(--c-amber)",
+              fontSize: "12px",
+              letterSpacing: "0.2em",
+              padding: "16px",
+              border: "none",
+              cursor: "pointer",
+            }}
           >
-            CONTINUE JOURNEY &#8594;
+            CONTINUE JOURNEY →
           </button>
           <button
-            onClick={handleStartFresh}
-            className="w-full border-[3px] border-primary bg-card py-3.5 font-display text-base tracking-wider text-primary shadow-brutal-sm transition-transform hover:border-accent hover:text-foreground active:translate-y-[2px] active:shadow-none"
+            onClick={() => { resetGame(); router.push("/create"); }}
+            className="font-display uppercase w-full"
+            style={{
+              background: "transparent",
+              color: "var(--c-navy)",
+              fontSize: "11px",
+              letterSpacing: "0.2em",
+              padding: "14px",
+              border: "1.5px solid rgba(21,5,120,0.25)",
+              cursor: "pointer",
+              opacity: 0.7,
+            }}
           >
             START FRESH
           </button>
         </div>
       </div>
+
     </div>
   );
 };

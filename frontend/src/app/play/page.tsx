@@ -1,276 +1,233 @@
 "use client";
 
-import { useState, useCallback, useEffect, useRef } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useGame } from "@/context/GameContext";
-import BreathingGrid from "@/components/BreathingGrid";
+import { TopAppBar } from "@/components/stitch/TopAppBar";
 import RetroTransition from "@/components/RetroTransition";
 import ErrorBanner from "@/components/ErrorBanner";
 import LoadingOverlay from "@/components/LoadingOverlay";
 
-const beatMessages = [
-  "PROCESSING DECISION...",
-  "UPDATING MARKET...",
-  "RIVALS ARE WATCHING...",
-  "DEAL IN PROGRESS...",
-  "SHIFTING ALLIANCES...",
-  "RECALCULATING ODDS...",
-  "SUPPLY CHAIN ALERT...",
-  "PIVOTING STRATEGY...",
-  "ENDGAME APPROACHING...",
+const transitionMessages = [
+  "Processing your decision...",
+  "Updating the market...",
+  "Rivals are watching...",
+  "Deal in progress...",
+  "Shifting alliances...",
 ];
 
 const finalMessages = [
-  "CALCULATING YOUR ACUMEN...",
-  "TALLYING RESULTS...",
-  "MEASURING YOUR EMPIRE...",
-  "FINAL VERDICT INCOMING...",
+  "Calculating your acumen...",
+  "Tallying your results...",
+  "Measuring your empire...",
+  "Final verdict incoming...",
 ];
 
-const formatDelta = (val: number) => {
-  if (val > 0) return `+${val.toLocaleString()}`;
-  return `${val.toLocaleString()}`;
-};
-
+/** Core game loop — dark cinematic hero + glass narrative + rounded pill choices. */
 const Gameplay = () => {
   const router = useRouter();
-  const { state, makeChoice, isLoading, error, resetGame } = useGame();
+  const { state, makeChoice, isLoading, error, resetGame, resumeSession } = useGame();
+  const currentNode = state.currentNode;
+  const clientState = state.clientState;
+
+  const capital = clientState?.capital ?? 0;
+  const reputation = clientState?.reputation ?? 0;
+  const network = clientState?.networkStrength ?? 0;
+  const layer = clientState?.layer ?? 0;
+  const turns = clientState?.turnsElapsed ?? 0;
+
   const [isTransitioning, setIsTransitioning] = useState(false);
   const [isFinalTransition, setIsFinalTransition] = useState(false);
   const [choiceDisabled, setChoiceDisabled] = useState(false);
-  const [showFeedback, setShowFeedback] = useState(false);
-  const [feedbackData, setFeedbackData] = useState<{
-    text: string;
-    deltas: { capital: number; reputation: number; network: number };
-  } | null>(null);
-
-  const previousRoundRef = useRef<number>(state.currentRound);
-  const wasCompleteRef = useRef<boolean>(state.isComplete);
 
   useEffect(() => {
-    if (!state.currentBeat && !isLoading) {
-      router.replace("/session-expired");
+    if (!currentNode && !isLoading) {
+      if (!state.sessionId) {
+        router.replace("/create");
+      } else {
+        void resumeSession();
+      }
     }
-  }, [state.currentBeat, isLoading, router]);
+  }, [currentNode, isLoading, state.sessionId, resumeSession, router]);
 
   const handleChoice = useCallback(
     async (index: number) => {
-      if (isTransitioning || showFeedback || choiceDisabled) return;
-
-      const choice = state.currentBeat?.choices[index];
+      if (isTransitioning || choiceDisabled || !currentNode) return;
+      const choice = currentNode.choices[index];
       if (!choice) return;
 
       setChoiceDisabled(true);
-      previousRoundRef.current = state.currentRound;
-      wasCompleteRef.current = state.isComplete;
       setIsTransitioning(true);
 
       try {
-        const result = await makeChoice(choice.id);
-        setFeedbackData({ text: result.feedback, deltas: result.deltas });
-        if (state.isComplete || wasCompleteRef.current) {
-          setIsFinalTransition(true);
-        }
+        await makeChoice(currentNode.id, index as 0 | 1 | 2);
+        setIsFinalTransition(state.isComplete);
       } catch {
         setChoiceDisabled(false);
         setIsTransitioning(false);
       }
     },
-    [isTransitioning, showFeedback, choiceDisabled, state, makeChoice]
+    [isTransitioning, choiceDisabled, currentNode, makeChoice, state.isComplete]
   );
 
   const handleTransitionComplete = useCallback(() => {
     setIsTransitioning(false);
-    setShowFeedback(true);
-  }, []);
-
-  const handleFeedbackContinue = useCallback(() => {
-    setShowFeedback(false);
-    setFeedbackData(null);
     setChoiceDisabled(false);
-
     if (state.isComplete) {
       router.push("/results");
-    } else if (previousRoundRef.current > 0 && state.currentRound > previousRoundRef.current) {
-      router.push("/round-summary");
     }
-  }, [router, state.isComplete, state.currentRound]);
+  }, [router, state.isComplete]);
 
-  // When there's no beat and not mid-transition, show error or empty state.
-  // If !currentBeat AND isTransitioning (rare — beat lost mid-animation), fall through
-  // to the secondary guard below which returns null so the transition overlay can finish.
-  if (!state.currentBeat && !isTransitioning) {
+  // No session + not transitioning — show empty state
+  if (!currentNode && !isTransitioning) {
     return (
-      <div className="relative min-h-[100dvh] flex flex-col overflow-hidden">
-        <BreathingGrid />
-        <div className="relative z-10 flex flex-1 flex-col items-center justify-center px-6 gap-6">
+      <div className="min-h-screen bg-background flex items-center justify-center px-6">
+        <div className="flex flex-col items-center gap-6 max-w-sm text-center">
           {error ? (
-            <>
-              <p className="font-display text-sm tracking-widest text-destructive uppercase text-center">
-                Something went wrong
-              </p>
-              <ErrorBanner message={error} />
-            </>
+            <ErrorBanner message={error} onRetry={() => router.replace("/resume")} />
           ) : (
-            <p className="font-display text-sm tracking-widest text-muted-foreground uppercase text-center">
-              No active session
+            <p className="font-body italic text-xl text-on-surface-variant">
+              No active session found.
             </p>
           )}
           <button
             onClick={() => { resetGame(); router.replace("/"); }}
-            className="border-[3px] border-primary bg-accent px-6 py-3 font-display text-sm tracking-wider text-accent-foreground shadow-brutal"
+            className="px-8 py-4 bg-primary text-on-primary rounded-xl font-headline font-bold hover:bg-primary-dim transition-colors"
           >
-            START OVER
+            Return Home
           </button>
         </div>
       </div>
     );
   }
 
-  // Secondary guard: if beat is still null here, we're mid-transition with a lost beat.
-  // Return null so the RetroTransition overlay can finish cleanly.
-  if (!state.currentBeat) return null;
-
-  const beat = state.currentBeat;
-  const transitionMessages = isFinalTransition ? finalMessages : beatMessages.slice(0, 3);
+  if (!currentNode) return null;
 
   return (
-    <div className="relative min-h-[100dvh] flex flex-col overflow-hidden">
-      <BreathingGrid />
+    <div className="bg-background text-on-surface min-h-screen relative overflow-hidden">
+      {/* ── Dark cinematic hero background ─────────────────────────────── */}
+      <div className="fixed inset-0 z-0">
+        <div className="w-full h-full bg-gradient-to-br from-primary/90 via-primary-dim/85 to-on-surface/95" />
+        <div className="absolute inset-0 bg-gradient-to-tr from-primary/30 via-transparent to-tertiary/15 mix-blend-multiply" />
+        <div className="absolute inset-0 kente-pattern opacity-5" />
+      </div>
 
-      {/* Loading overlay — shown during non-transition API calls (e.g. session resume) */}
-      {isLoading && !isTransitioning && <LoadingOverlay message="PROCESSING..." />}
+      {/* ── TopAppBar with game HUD ─────────────────────────────────────── */}
+      <TopAppBar
+        walletBalance={capital}
+        gameInfo={{ layer, turn: turns }}
+      />
 
-      {/* Error banner — shown when makeChoice or another API call fails */}
-      {error && !isTransitioning && (
-        <div className="relative z-20 px-5 pt-4">
-          <ErrorBanner
-            message={error}
-            onRetry={() => router.replace("/resume")}
-          />
-        </div>
-      )}
+      {/* ── Overlays ───────────────────────────────────────────────────── */}
+      {isLoading && !isTransitioning && <LoadingOverlay message="Loading..." />}
 
       {isTransitioning && (
         <RetroTransition
-          messages={transitionMessages}
+          messages={isFinalTransition ? finalMessages : transitionMessages}
           duration={isFinalTransition ? 2500 : 1500}
           onComplete={handleTransitionComplete}
         />
       )}
 
-      {/* Feedback overlay */}
-      {showFeedback && feedbackData && (
-        <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-background/95">
-          <div className="scanlines pointer-events-none" />
-          <div className="relative z-10 flex flex-col items-center gap-6 px-6 max-w-sm w-full">
-            <div className="border-[3px] border-primary bg-card px-5 py-2 shadow-brutal-sm animate-fade-in">
-              <span className="font-display text-xs tracking-[0.3em] text-muted-foreground uppercase">
-                Consequence
-              </span>
-            </div>
-
-            <p
-              className="font-body text-base text-foreground/90 text-center leading-relaxed animate-fade-in"
-              style={{ animationDelay: "0.1s" }}
-            >
-              {feedbackData.text}
-            </p>
-
-            <div
-              className="w-full border-[3px] border-primary bg-card shadow-brutal-sm animate-fade-in"
-              style={{ animationDelay: "0.2s" }}
-            >
-              <div className="flex divide-x-[2px] divide-primary">
-                {[
-                  { label: "Capital", delta: feedbackData.deltas.capital },
-                  { label: "Rep", delta: feedbackData.deltas.reputation },
-                  { label: "Network", delta: feedbackData.deltas.network },
-                ].map((item) => (
-                  <div key={item.label} className="flex-1 py-4 flex flex-col items-center">
-                    <span className="font-display text-[9px] tracking-[0.15em] text-muted-foreground uppercase mb-1">
-                      {item.label}
-                    </span>
-                    <span
-                      className={`font-display text-sm font-bold ${
-                        item.delta >= 0 ? "text-accent" : "text-destructive"
-                      }`}
-                    >
-                      {formatDelta(item.delta)}
-                    </span>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            <button
-              onClick={handleFeedbackContinue}
-              className="w-full border-[3px] border-primary bg-accent py-3.5 font-display text-base tracking-wider text-accent-foreground shadow-brutal transition-transform hover:-translate-y-[1px] active:translate-y-[2px] active:shadow-brutal-sm animate-slide-up"
-              style={{ animationDelay: "0.4s" }}
-            >
-              CONTINUE &#8594;
-            </button>
-          </div>
+      {/* Error banner */}
+      {error && !isTransitioning && (
+        <div className="fixed top-24 left-1/2 -translate-x-1/2 z-30 w-full max-w-lg px-6">
+          <ErrorBanner message={error} onRetry={() => router.replace("/resume")} />
         </div>
       )}
 
-      <div className="relative z-10 flex flex-1 flex-col px-5 py-6 max-w-2xl mx-auto w-full">
-        {/* Beat / Round indicator */}
-        <div className="mb-3 flex items-center justify-center">
-          <span className="font-display text-xs tracking-[0.3em] text-muted-foreground uppercase">
-            Decision {state.choices.length + 1} &middot; Round {beat.round}/3
-          </span>
-        </div>
+      {/* ── Main content ───────────────────────────────────────────────── */}
+      <main className="relative z-10 flex flex-col items-center justify-center min-h-screen px-6 pt-28 pb-12">
+        <div className="max-w-2xl w-full flex flex-col gap-6">
 
-        {/* Resource HUD */}
-        <div className="mt-2 mb-4 flex border-[3px] border-primary bg-card shadow-brutal-sm">
-          {[
-            { label: "Capital", value: `GHS ${state.resources.capital.toLocaleString()}` },
-            { label: "Rep", value: `${state.resources.reputation}` },
-            { label: "Network", value: `${state.resources.network}` },
-            { label: "Momentum", value: `x${state.resources.momentumMultiplier.toFixed(1)}` },
-          ].map((stat, i) => (
-            <div
-              key={stat.label}
-              className={`flex flex-1 flex-col items-center justify-center text-center py-2.5 ${
-                i < 3 ? "border-r-[2px] border-primary" : ""
-              }`}
-            >
-              <span className="font-display text-[8px] tracking-[0.2em] text-muted-foreground uppercase mb-1">
-                {stat.label}
-              </span>
-              <span className="font-display text-[10px] text-accent font-bold">{stat.value}</span>
-            </div>
-          ))}
-        </div>
-
-        {/* Narrative */}
-        <div className="mb-6 flex-1 flex flex-col justify-center">
-          <h3 className="mb-3 font-display text-xl text-primary">{beat.title}</h3>
-          <p className="font-body text-base leading-relaxed text-foreground/90">{beat.storyText}</p>
-        </div>
-
-        {/* Choices */}
-        <div className="space-y-3 pb-4">
-          {beat.choices.map((choice, i) => {
-            const label = String.fromCharCode(65 + i);
-            return (
-              <button
-                key={choice.id}
-                onClick={() => handleChoice(i)}
-                disabled={isTransitioning || showFeedback || choiceDisabled}
-                className="flex w-full items-start gap-3 border-[3px] border-primary bg-card px-4 py-3.5 text-left shadow-brutal-sm transition-all active:translate-y-[2px] active:shadow-none hover:border-accent group disabled:opacity-50"
+          {/* Chapter badge */}
+          <div className="flex items-center justify-between">
+            <div className="inline-flex items-center px-4 py-2 bg-tertiary/20 text-tertiary-container rounded-full border border-tertiary/30">
+              <span
+                className="material-symbols-outlined text-sm mr-2"
+                style={{ fontVariationSettings: "'FILL' 1" }}
               >
-                <span className="flex h-8 w-8 flex-shrink-0 items-center justify-center border-[2px] border-primary bg-accent font-display text-sm text-accent-foreground group-hover:bg-primary group-hover:text-primary-foreground transition-colors">
-                  {label}
-                </span>
-                <span className="font-body text-sm leading-snug text-foreground/90 pt-1">
-                  {choice.label}
-                </span>
-              </button>
-            );
-          })}
+                emergency
+              </span>
+              <span className="font-label text-xs font-bold tracking-widest uppercase">
+                Layer {layer} · Turn {turns}
+              </span>
+            </div>
+
+            {/* Reputation + Network pills */}
+            <div className="flex gap-2">
+              <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/10 backdrop-blur-sm">
+                <span className="material-symbols-outlined text-secondary-fixed text-sm">star</span>
+                <span className="font-label text-xs font-bold text-stone-200">{reputation}</span>
+              </div>
+              <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/10 backdrop-blur-sm">
+                <span className="material-symbols-outlined text-secondary-fixed text-sm">group</span>
+                <span className="font-label text-xs font-bold text-stone-200">{network}</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Narrative glass card */}
+          <div className="glass-panel-dark rounded-xl p-8 shadow-2xl border border-white/10">
+            <p className="font-body italic text-xl md:text-2xl text-stone-100 leading-relaxed">
+              {currentNode.narrative}
+            </p>
+          </div>
+
+          {/* Choices */}
+          <div className="flex flex-col gap-3">
+            {currentNode.choices.map((choice, i: number) => {
+              const letterLabel = String.fromCharCode(65 + i);
+              // A = primary (bold/energy), B = secondary-container (measured), C = surface (cautious)
+              const variants = [
+                "bg-primary text-on-primary hover:bg-primary-dim shadow-[0_8px_30px_rgba(82,79,178,0.3)]",
+                "bg-secondary-container text-on-secondary-container hover:opacity-90",
+                "bg-white/15 text-white hover:bg-white/25 backdrop-blur-sm border border-white/20",
+              ] as const;
+
+              return (
+                <button
+                  key={choice.index}
+                  onClick={() => handleChoice(i)}
+                  disabled={isTransitioning || choiceDisabled}
+                  className={`flex items-center gap-4 w-full px-6 py-5 rounded-xl font-headline font-bold text-base text-left transition-all hover:scale-[1.01] active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed ${variants[i]}`}
+                >
+                  <span className="flex-shrink-0 w-8 h-8 rounded-full bg-white/20 flex items-center justify-center text-sm font-extrabold">
+                    {letterLabel}
+                  </span>
+                  <span className="flex-1">{choice.text}</span>
+                  <span className="material-symbols-outlined text-lg opacity-60">arrow_forward</span>
+                </button>
+              );
+            })}
+          </div>
+
+          {/* Bottom market tension indicator */}
+          <div className="flex items-center gap-4 bg-surface-container-lowest/10 backdrop-blur-md p-4 rounded-full border border-white/5 self-start">
+            <div className="w-8 h-8 rounded-full bg-secondary-container flex items-center justify-center text-on-secondary-container flex-shrink-0">
+              <span
+                className="material-symbols-outlined text-sm"
+                style={{ fontVariationSettings: "'FILL' 1" }}
+              >
+                trending_up
+              </span>
+            </div>
+            <div>
+              <p className="text-white font-headline font-bold text-xs tracking-wide uppercase">
+                Market Tension
+              </p>
+              <p className="text-secondary-fixed text-xs font-bold">Active · Accra Central</p>
+            </div>
+          </div>
         </div>
+      </main>
+
+      {/* Decorative corner glows */}
+      <div className="fixed top-0 right-0 w-64 h-64 opacity-20 pointer-events-none z-0">
+        <div className="absolute inset-0 bg-gradient-to-bl from-tertiary to-transparent rounded-full blur-[100px]" />
+      </div>
+      <div className="fixed bottom-0 left-0 w-48 h-48 opacity-15 pointer-events-none z-0">
+        <div className="absolute inset-0 bg-gradient-to-tr from-secondary-container to-transparent rounded-full blur-[80px]" />
       </div>
     </div>
   );
