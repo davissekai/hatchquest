@@ -17,20 +17,27 @@ const getVerdict = (score: number) => {
 
 const Results = () => {
   const router = useRouter();
-  const { state, loadResults, resetGame, isLoading, error } = useGame();
+  const { state, phase, hasActiveSession, resumeSession, loadResults, resetGame, isLoading, error } = useGame();
   const [copied, setCopied] = useState(false);
   const sessionId = state.sessionId;
   const results = state.results;
   const clientState = results?.clientState;
 
-  /* Load results on mount if not already loaded */
   useEffect(() => {
-    if (!results && sessionId) {
+    if (phase === "idle" && !isLoading) {
+      if (hasActiveSession()) {
+        void resumeSession();
+      } else {
+        router.replace("/");
+      }
+    } else if (phase === "layer0") {
+      router.replace("/layer0");
+    } else if (phase === "active") {
+      router.replace("/play");
+    } else if (phase === "complete" && !results && sessionId && !isLoading) {
       void loadResults(sessionId);
-    } else if (!results && !sessionId) {
-      router.replace("/");
     }
-  }, [results, sessionId, loadResults, router]);
+  }, [phase, isLoading, hasActiveSession, resumeSession, loadResults, results, sessionId, router]);
 
   const score = results?.eoProfile
     ? (Object.values(results.eoProfile).reduce((a, b) => a + b, 0) / 5) * 10
@@ -110,7 +117,13 @@ const Results = () => {
               <h3 className="font-headline font-bold text-lg text-primary uppercase tracking-widest mb-4 text-center">
                 Entrepreneurial Profile
               </h3>
+              {results.summary && (
+                <p className="font-body text-base text-on-surface-variant mb-6 leading-relaxed italic text-center">
+                  &ldquo;{results.summary}&rdquo;
+                </p>
+              )}
               <RadarChart
+                maxValue={10}
                 dimensions={
                   results.eoProfile ?? {
                     autonomy: 0,

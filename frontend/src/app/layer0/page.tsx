@@ -8,12 +8,22 @@ import { TopAppBar } from "@/components/stitch/TopAppBar";
 /** Layer 0 — free-text path-defining moment. Matches the layer_0_pulse mockup. */
 const Layer0Page = () => {
   const router = useRouter();
-  const { state, isLoading, error, classifyLayer0 } = useGame();
+  const { state, phase, hasActiveSession, resumeSession, isLoading, error, classifyLayer0 } = useGame();
   const [response, setResponse] = useState("");
 
   useEffect(() => {
-    if (!state.layer0Question && !isLoading) router.replace("/create");
-  }, [state.layer0Question, isLoading, router]);
+    if (phase === "idle" && !isLoading) {
+      if (hasActiveSession()) {
+        void resumeSession();
+      } else {
+        router.replace("/create");
+      }
+    } else if (phase === "active") {
+      router.replace("/play");
+    } else if (phase === "complete") {
+      router.replace("/results");
+    }
+  }, [phase, isLoading, hasActiveSession, resumeSession, router]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -26,7 +36,7 @@ const Layer0Page = () => {
   };
 
   const charCount = response.length;
-  const canSubmit = response.trim().length >= 50 && !isLoading;
+  const canSubmit = response.trim().length > 0 && !isLoading;
 
   return (
     <div className="bg-background text-on-surface min-h-screen relative overflow-hidden">
@@ -104,7 +114,7 @@ const Layer0Page = () => {
                   <textarea
                     id="layer0-response"
                     value={response}
-                    onChange={(e) => setResponse(e.target.value.slice(0, 500))}
+                    onChange={(e) => setResponse(e.target.value)}
                     placeholder="Write freely — there are no right answers. Your instinct is the data."
                     disabled={isLoading}
                     rows={5}
@@ -112,12 +122,12 @@ const Layer0Page = () => {
                   />
                   <div className="flex justify-between items-center px-1">
                     <span className="font-label text-xs text-stone-400">
-                      {charCount < 50
-                        ? `${50 - charCount} more characters to unlock`
+                      {charCount === 0
+                        ? "Start typing to proceed"
                         : "✓ Ready to submit"}
                     </span>
                     <span className="font-label text-xs text-stone-500">
-                      {charCount} / 500
+                      {charCount} chars
                     </span>
                   </div>
                 </div>

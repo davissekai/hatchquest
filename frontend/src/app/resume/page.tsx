@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { useGame } from "@/context/GameContext";
+import { useGame, SessionPhase } from "@/context/GameContext";
 
 // Resume — hydrates an in-progress session from localStorage.
 const ResumeSession = () => {
@@ -10,13 +10,16 @@ const ResumeSession = () => {
   const { resumeSession, resetGame, state, isLoading } = useGame();
   const [resumeAttempted, setResumeAttempted] = useState(false);
   const [canResume, setCanResume] = useState(false);
+  const [phase, setPhase] = useState<SessionPhase>("idle");
 
   useEffect(() => {
-    const sessionId = localStorage.getItem("hq-session-id");
-    if (!sessionId) { router.replace("/create"); return; }
-    resumeSession(sessionId).then((ok) => {
+    resumeSession().then((phase) => {
       setResumeAttempted(true);
-      setCanResume(ok);
+      setCanResume(phase !== "idle");
+      setPhase(phase);
+      if (phase === "idle") {
+        router.replace("/create");
+      }
     });
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -156,7 +159,11 @@ const ResumeSession = () => {
 
         <div className="space-y-3 mt-auto">
           <button
-            onClick={() => router.push("/play")}
+            onClick={() => {
+              if (phase === "layer0") router.push("/layer0");
+              else if (phase === "complete") router.push("/results");
+              else router.push("/play");
+            }}
             className="font-display uppercase w-full"
             style={{
               background: "var(--c-navy)",
