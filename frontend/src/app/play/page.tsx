@@ -41,6 +41,7 @@ const Gameplay = () => {
   const [choiceDisabled, setChoiceDisabled] = useState(false);
 
   useEffect(() => {
+    if (isTransitioning) return;
     if (phase === "idle" && !isLoading) {
       if (hasActiveSession()) {
         void resumeSession();
@@ -52,7 +53,7 @@ const Gameplay = () => {
     } else if (phase === "complete") {
       router.replace("/results");
     }
-  }, [phase, isLoading, hasActiveSession, resumeSession, router]);
+  }, [phase, isLoading, hasActiveSession, resumeSession, router, isTransitioning]);
 
   const handleChoice = useCallback(
     async (index: number) => {
@@ -83,7 +84,7 @@ const Gameplay = () => {
   }, [router, isFinalTransition]);
 
   // No session + not transitioning — show empty state
-  if (!currentNode && !isTransitioning) {
+  if (!currentNode && !isTransitioning && phase !== "complete") {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center px-6">
         <div className="flex flex-col items-center gap-6 max-w-sm text-center">
@@ -104,8 +105,6 @@ const Gameplay = () => {
       </div>
     );
   }
-
-  if (!currentNode) return null;
 
   return (
     <div className="bg-background text-on-surface min-h-screen relative overflow-hidden">
@@ -142,6 +141,7 @@ const Gameplay = () => {
 
       {/* ── Main content ───────────────────────────────────────────────── */}
       <main className="relative z-10 flex flex-col items-center justify-center min-h-screen px-6 pt-28 pb-12">
+        {currentNode && (
         <div className="max-w-2xl w-full flex flex-col gap-6">
 
           {/* Chapter badge */}
@@ -229,6 +229,7 @@ const Gameplay = () => {
             </div>
           </div>
         </div>
+        )}
       </main>
 
       {/* Decorative corner glows */}
