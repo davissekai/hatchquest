@@ -1,6 +1,6 @@
 "use client";
 
-import React, { createContext, useContext, useState, ReactNode } from "react";
+import React, { createContext, useContext, useState, ReactNode, useMemo } from "react";
 import { api } from "@/lib/api";
 import type {
   ClientWorldState,
@@ -8,6 +8,8 @@ import type {
   EOProfile,
   ResultsResponse,
 } from "@hatchquest/shared";
+
+export type SessionPhase = 'idle' | 'layer0' | 'active' | 'complete';
 
 // ── State shape ───────────────────────────────────────────────────────────────
 
@@ -24,16 +26,17 @@ interface GameState {
 
 interface GameContextType {
   state: GameState;
+  phase: SessionPhase;
   isLoading: boolean;
   error: string | null;
-  /** Create a new session. Stores sessionId in localStorage, sets layer0Question. */
+  /** Create a new session. Stores session meta in localStorage, sets layer0Question. */
   startGame: (playerName: string, email: string, password: string) => Promise<void>;
   /** Submit the Layer 0 free-text response. Updates state; caller handles navigation. */
   classifyLayer0: (response: string) => Promise<void>;
-  /** Submit a choice by index. Returns clientState + nextNode. */
-  makeChoice: (nodeId: string, choiceIndex: 0 | 1 | 2) => Promise<void>;
-  /** Hydrate state from an existing sessionId (resume flow). */
-  resumeSession: (sessionId?: string) => Promise<boolean>;
+  /** Submit a choice by index. Returns isComplete flag. */
+  makeChoice: (nodeId: string, choiceIndex: 0 | 1 | 2) => Promise<boolean>;
+  /** Hydrate state from an existing sessionId (resume flow). Returns the phase. */
+  resumeSession: (explicitId?: string) => Promise<SessionPhase>;
   /** Fetch and store results for a completed session. */
   loadResults: (sessionId: string) => Promise<ResultsResponse>;
   resetGame: () => void;
@@ -42,7 +45,12 @@ interface GameContextType {
 
 // ── Storage ───────────────────────────────────────────────────────────────────
 
-const SESSION_ID_KEY = "hq-session-id";
+const SESSION_META_KEY = "hq-session-meta";
+
+interface SessionMeta {
+  sessionId: string;
+  layer0Question?: string | null;
+}
 
 const initialState: GameState = {
   playerName: null,
@@ -64,6 +72,13 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const phase: SessionPhase = useMemo(() => {
+    if (!state.sessionId) return "idle";
+    if (state.isComplete) return "complete";
+    if (!state.currentNode && (!state.clientState || state.clientState.layer <= 0)) return "layer0";
+    return "active";
+  }, [state]);
+
   const patch = (updates: Partial<GameState>) =>
     setState((prev) => ({ ...prev, ...updates }));
 
@@ -74,7 +89,13 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
     setError(null);
     try {
       const res = await api.start({ playerName, email, password });
-      localStorage.setItem(SESSION_ID_KEY, res.sessionId);
+      
+      const meta: SessionMeta = {
+        sessionId: res.sessionId,
+        layer0Question: res.layer0Question,
+      };
+      localStorage.setItem(SESSION_META_KEY, JSON.stringify(meta));
+      
       patch({
         playerName,
         sessionId: res.sessionId,
@@ -101,9 +122,6 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
     setIsLoading(true);
     setError(null);
     try {
-      // classify() returns { sessionId, layer1NodeId } — the next node is fetched
-      // by the play page on mount via resumeSession, so we just stash the sessionId
-      // (already stored). The caller navigates to /layer0/loading → /play.
       await api.classify({ sessionId: state.sessionId, response });
     } catch (err) {
       const msg = err instanceof Error ? err.message : "Classification failed";
@@ -119,7 +137,7 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
   const makeChoice = async (
     nodeId: string,
     choiceIndex: 0 | 1 | 2
-  ): Promise<void> => {
+  ): Promise<boolean> => {
     if (!state.sessionId) throw new Error("No active session");
     setIsLoading(true);
     setError(null);
@@ -134,6 +152,7 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
         currentNode: res.nextNode,
         isComplete: res.clientState.isComplete,
       });
+      return res.clientState.isComplete;
     } catch (err) {
       const msg = err instanceof Error ? err.message : "Failed to submit choice";
       setError(msg);
@@ -145,27 +164,56 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
 
   // ── resumeSession ──────────────────────────────────────────────────────────────
 
-  const resumeSession = async (explicitId?: string): Promise<boolean> => {
-    const sessionId = explicitId ?? localStorage.getItem(SESSION_ID_KEY);
-    if (!sessionId) return false;
+  const resumeSession = async (explicitId?: string): Promise<SessionPhase> => {
+    let sessionId = explicitId;
+    let layer0Question = null;
+    
+    if (!sessionId) {
+      const metaStr = localStorage.getItem(SESSION_META_KEY);
+      if (metaStr) {
+        try {
+          const meta: SessionMeta = JSON.parse(metaStr);
+          sessionId = meta.sessionId;
+          layer0Question = meta.layer0Question || null;
+        } catch {
+          // invalid json
+        }
+      }
+    }
+    // Fallback for migration
+    if (!sessionId) {
+      sessionId = localStorage.getItem("hq-session-id") || undefined;
+    }
+
+    if (!sessionId) return "idle";
 
     setIsLoading(true);
     setError(null);
     try {
       const res = await api.session(sessionId);
-      localStorage.setItem(SESSION_ID_KEY, sessionId);
+      
+      const meta: SessionMeta = { sessionId, layer0Question };
+      localStorage.setItem(SESSION_META_KEY, JSON.stringify(meta));
+      
+      const isComplete = res.clientState.isComplete;
+      const isLayer0 = !res.currentNode && (!res.clientState || res.clientState.layer <= 0) && !isComplete;
+      
       patch({
         sessionId,
+        layer0Question,
         clientState: res.clientState,
         currentNode: res.currentNode,
-        isComplete: res.clientState.isComplete,
+        isComplete,
       });
-      return true;
+      
+      if (isComplete) return "complete";
+      if (isLayer0) return "layer0";
+      return "active";
     } catch {
-      // Session not found or expired — clean up
-      localStorage.removeItem(SESSION_ID_KEY);
+      localStorage.removeItem(SESSION_META_KEY);
+      localStorage.removeItem("hq-session-id");
       setState(initialState);
-      return false;
+      return "idle";
     } finally {
       setIsLoading(false);
     }
@@ -197,19 +245,21 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
   // ── resetGame ─────────────────────────────────────────────────────────────────
 
   const resetGame = () => {
-    localStorage.removeItem(SESSION_ID_KEY);
+    localStorage.removeItem(SESSION_META_KEY);
+    localStorage.removeItem("hq-session-id");
     setState(initialState);
   };
 
   const hasActiveSession = (): boolean => {
     if (typeof window === "undefined") return false;
-    return !!localStorage.getItem(SESSION_ID_KEY);
+    return !!localStorage.getItem(SESSION_META_KEY) || !!localStorage.getItem("hq-session-id");
   };
 
   return (
     <GameContext.Provider
       value={{
         state,
+        phase,
         isLoading,
         error,
         startGame,

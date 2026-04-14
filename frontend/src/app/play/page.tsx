@@ -26,7 +26,7 @@ const finalMessages = [
 /** Core game loop — dark cinematic hero + glass narrative + rounded pill choices. */
 const Gameplay = () => {
   const router = useRouter();
-  const { state, makeChoice, isLoading, error, resetGame, resumeSession } = useGame();
+  const { state, phase, hasActiveSession, makeChoice, isLoading, error, resetGame, resumeSession } = useGame();
   const currentNode = state.currentNode;
   const clientState = state.clientState;
 
@@ -41,42 +41,46 @@ const Gameplay = () => {
   const [choiceDisabled, setChoiceDisabled] = useState(false);
 
   useEffect(() => {
-    if (!currentNode && !isLoading) {
-      if (!state.sessionId) {
-        router.replace("/create");
-      } else {
+    if (phase === "idle" && !isLoading) {
+      if (hasActiveSession()) {
         void resumeSession();
+      } else {
+        router.replace("/create");
       }
+    } else if (phase === "layer0") {
+      router.replace("/layer0");
+    } else if (phase === "complete") {
+      router.replace("/results");
     }
-  }, [currentNode, isLoading, state.sessionId, resumeSession, router]);
+  }, [phase, isLoading, hasActiveSession, resumeSession, router]);
 
   const handleChoice = useCallback(
     async (index: number) => {
       if (isTransitioning || choiceDisabled || !currentNode) return;
-      const choice = currentNode.choices[index];
+      const choice = currentNode.choices.find(c => c.index === index);
       if (!choice) return;
 
       setChoiceDisabled(true);
       setIsTransitioning(true);
 
       try {
-        await makeChoice(currentNode.id, index as 0 | 1 | 2);
-        setIsFinalTransition(state.isComplete);
+        const complete = await makeChoice(currentNode.id, index as 0 | 1 | 2);
+        setIsFinalTransition(complete);
       } catch {
         setChoiceDisabled(false);
         setIsTransitioning(false);
       }
     },
-    [isTransitioning, choiceDisabled, currentNode, makeChoice, state.isComplete]
+    [isTransitioning, choiceDisabled, currentNode, makeChoice]
   );
 
   const handleTransitionComplete = useCallback(() => {
     setIsTransitioning(false);
     setChoiceDisabled(false);
-    if (state.isComplete) {
+    if (isFinalTransition) {
       router.push("/results");
     }
-  }, [router, state.isComplete]);
+  }, [router, isFinalTransition]);
 
   // No session + not transitioning — show empty state
   if (!currentNode && !isTransitioning) {
@@ -188,14 +192,19 @@ const Gameplay = () => {
               return (
                 <button
                   key={choice.index}
-                  onClick={() => handleChoice(i)}
+                  onClick={() => handleChoice(choice.index)}
                   disabled={isTransitioning || choiceDisabled}
                   className={`flex items-center gap-4 w-full px-6 py-5 rounded-xl font-headline font-bold text-base text-left transition-all hover:scale-[1.01] active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed ${variants[i]}`}
                 >
                   <span className="flex-shrink-0 w-8 h-8 rounded-full bg-white/20 flex items-center justify-center text-sm font-extrabold">
                     {letterLabel}
                   </span>
-                  <span className="flex-1">{choice.text}</span>
+                  <span className="flex-1 flex flex-col">
+                    <span>{choice.text}</span>
+                    {choice.tensionHint && (
+                      <span className="text-xs font-normal opacity-70 mt-1">{choice.tensionHint}</span>
+                    )}
+                  </span>
                   <span className="material-symbols-outlined text-lg opacity-60">arrow_forward</span>
                 </button>
               );
