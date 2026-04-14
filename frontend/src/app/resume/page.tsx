@@ -96,6 +96,8 @@ const ResumeSession = () => {
   }
 
   // ── Active session ────────────────────────────────────────────────────────────
+  const isCompleted = phase === "complete";
+  
   return (
     <div className="min-h-[100dvh] flex flex-col" style={{ background: "var(--c-canvas)" }}>
 
@@ -108,15 +110,25 @@ const ResumeSession = () => {
           className="font-display uppercase mb-4"
           style={{ fontSize: "9px", letterSpacing: "0.3em", color: "var(--c-amber)" }}
         >
-          JOURNEY IN PROGRESS
+          {isCompleted ? "JOURNEY COMPLETE" : "JOURNEY IN PROGRESS"}
         </span>
         <h1
           className="font-body italic"
           style={{ fontSize: "clamp(2.2rem, 9vw, 3.5rem)", color: "#fff", lineHeight: 1.05 }}
         >
-          Still in the
-          <br />
-          game.
+          {isCompleted ? (
+            <>
+              The results
+              <br />
+              are in.
+            </>
+          ) : (
+            <>
+              Still in the
+              <br />
+              game.
+            </>
+          )}
         </h1>
       </div>
 
@@ -175,7 +187,7 @@ const ResumeSession = () => {
               cursor: "pointer",
             }}
           >
-            CONTINUE JOURNEY →
+            {isCompleted ? "VIEW RESULTS →" : "CONTINUE JOURNEY →"}
           </button>
           <button
             onClick={() => { resetGame(); router.push("/create"); }}
