@@ -17,6 +17,8 @@ import {
   scorePoles,
   selectLayer1NodeFromDistribution,
   classify,
+  generateQ2,
+  extractPlayerContext,
 } from "../classifier.js";
 import type { EOPoleDistribution } from "@hatchquest/shared";
 
@@ -296,5 +298,38 @@ describe("classify", () => {
       "I will independently help the community, empower people through social impact and inclusion."
     );
     expect(result).toBe("L1-node-3");
+  });
+});
+
+describe("generateQ2", () => {
+  it("returns fallback Q2 when ANTHROPIC_API_KEY is not set", async () => {
+    const saved = process.env.ANTHROPIC_API_KEY;
+    delete process.env.ANTHROPIC_API_KEY;
+
+    const result = await generateQ2("I want to build a mobile tailoring business in Kumasi.");
+    expect(result.length).toBeGreaterThan(20);
+
+    if (saved !== undefined) process.env.ANTHROPIC_API_KEY = saved;
+  });
+});
+
+describe("extractPlayerContext", () => {
+  it("splits Q1 into businessDescription and motivation", () => {
+    const ctx = extractPlayerContext(
+      "I want to build a solar panel installation company. My goal is to make clean energy affordable.",
+      "I would call my vendors immediately and negotiate.",
+      "Your supplier cancelled. What do you do?"
+    );
+    expect(ctx.businessDescription).toBe("I want to build a solar panel installation company");
+    expect(ctx.motivation).toBe("My goal is to make clean energy affordable");
+    expect(ctx.rawQ1Response).toContain("solar");
+    expect(ctx.rawQ2Response).toContain("vendors");
+    expect(ctx.q2Prompt).toContain("supplier");
+  });
+
+  it("uses full Q1 as businessDescription when only one sentence", () => {
+    const ctx = extractPlayerContext("Mobile food delivery", "I would improvise", "Test Q2");
+    expect(ctx.businessDescription).toBe("Mobile food delivery");
+    expect(ctx.motivation).toBe("To build something meaningful in Accra.");
   });
 });

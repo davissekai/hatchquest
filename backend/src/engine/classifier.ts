@@ -21,7 +21,7 @@
  * are fully covered by unit tests in classifier.test.ts.
  */
 import Anthropic from "@anthropic-ai/sdk";
-import type { EOPoleDistribution } from "@hatchquest/shared";
+import type { EOPoleDistribution, PlayerContext } from "@hatchquest/shared";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -223,6 +223,80 @@ export function selectLayer1NodeFromDistribution(
   return scores.reduce((best, curr) => (curr[1] > best[1] ? curr : best))[0];
 }
 
+// ─── Q2 Generator ────────────────────────────────────────────────────────────
+
+const Q2_GENERATOR_PROMPT = `You are a business simulation game master set in Accra, Ghana, 2026.
+
+The player just described their business idea. Based on what they said, generate ONE specific follow-up question that:
+1. References their specific business (use details they mentioned)
+2. Presents a realistic Week 1 challenge they would actually face
+3. Forces them to reveal how they handle adversity (risk tolerance, independence vs collaboration)
+4. Is phrased as a direct scenario, not an abstract question
+
+Format: Return ONLY the question text. No preamble, no quotes, no explanation.
+
+Example — if they said "mobile food delivery":
+"Your mobile food delivery service has been live for five days. Your main cook just told you she has a family emergency and cannot work for the next two weeks. Your first corporate lunch order — forty plates for a bank on the Ring Road — is due Monday. What do you do?"`;
+
+const FALLBACK_Q2 =
+  "Your business has been live for one week. A key part of your plan just fell through — " +
+  "your main supplier cannot deliver for another two weeks, and a potential customer is waiting. What do you do?";
+
+/**
+ * Generates a personalised Q2 question from the player's Q1 response.
+ * Falls back to a generic scenario if the LLM call fails or API key is missing.
+ */
+export async function generateQ2(q1Response: string): Promise<string> {
+  const client = getAnthropicClient();
+  if (!client) return FALLBACK_Q2;
+
+  try {
+    const msg = await client.messages.create({
+      model: ANTHROPIC_MODEL,
+      max_tokens: 300,
+      system: Q2_GENERATOR_PROMPT,
+      messages: [{ role: "user", content: q1Response }],
+    });
+
+    const text = msg.content
+      .map((block) => (block.type === "text" ? block.text : ""))
+      .join("")
+      .trim();
+
+    return text.length > 20 ? text : FALLBACK_Q2;
+  } catch {
+    return FALLBACK_Q2;
+  }
+}
+
+// ─── PlayerContext Extractor ──────────────────────────────────────────────────
+
+/**
+ * Extracts a PlayerContext from the player's Q1 and Q2 responses.
+ * Splits Q1 into businessDescription (first sentence) and motivation (remainder).
+ * Raw responses are preserved so the Narrator AI can reference the player's exact words.
+ */
+export function extractPlayerContext(
+  q1Response: string,
+  q2Response: string,
+  q2Prompt: string
+): PlayerContext {
+  const sentences = q1Response.split(/[.!?]+/).filter((s) => s.trim().length > 0);
+  const businessDescription = sentences[0]?.trim() ?? q1Response.trim();
+  const motivation =
+    sentences.length > 1
+      ? sentences.slice(1).join(". ").trim()
+      : "To build something meaningful in Accra.";
+
+  return {
+    businessDescription,
+    motivation,
+    rawQ1Response: q1Response,
+    rawQ2Response: q2Response,
+    q2Prompt,
+  };
+}
+
 // ─── Public API ───────────────────────────────────────────────────────────────
 
 /**
@@ -232,5 +306,19 @@ export function selectLayer1NodeFromDistribution(
 export async function classify(response: string): Promise<string> {
   const dist =
     (await callAnthropicClassifier(response)) ?? keywordClassify(response);
+  return selectLayer1NodeFromDistribution(dist);
+}
+
+/**
+ * Two-step classify: combines Q1 + Q2 for a richer EO signal.
+ * Q2 reveals adversity response which Q1 alone cannot capture.
+ */
+export async function classifyFromBothResponses(
+  q1Response: string,
+  q2Response: string
+): Promise<string> {
+  const combinedText = `Business idea: ${q1Response}\n\nResponse to challenge: ${q2Response}`;
+  const dist =
+    (await callAnthropicClassifier(combinedText)) ?? keywordClassify(combinedText);
   return selectLayer1NodeFromDistribution(dist);
 }

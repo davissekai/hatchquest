@@ -1,68 +1,169 @@
 import type { FastifyPluginAsync } from "fastify";
-import type { ClassifyRequest, ClassifyResponse } from "@hatchquest/shared";
+import type {
+  ClassifyRequest,
+  ClassifyResponse,
+  ClassifyQ1Request,
+  ClassifyQ1Response,
+  ClassifyQ2Request,
+  ClassifyQ2Response,
+} from "@hatchquest/shared";
 import type { ISessionStore } from "../store/types.js";
-import { classify } from "../engine/classifier.js";
+import {
+  classify,
+  classifyFromBothResponses,
+  generateQ2,
+  extractPlayerContext,
+} from "../engine/classifier.js";
 
-// Plugin options carry the store so tests can inject a fresh instance
-// rather than relying on the module-level singleton.
 interface ClassifyPluginOptions {
   store: ISessionStore;
 }
 
-/** JSON Schema for POST /classify body validation. */
-const classifyBodySchema = {
-  type: "object",
-  required: ["sessionId", "response"],
-  properties: {
-    sessionId: { type: "string", minLength: 1 },
-    response: { type: "string", minLength: 1 },
-  },
-  additionalProperties: false,
-} as const;
-
-// Union reply type: success shape or a plain error message for 404
-type ClassifyReply = ClassifyResponse | { error: string };
-
-/** Registers the POST /classify route against the injected ISessionStore. */
+/** Registers all Layer 0 classify routes against the injected ISessionStore. */
 export const classifyRoutes: FastifyPluginAsync<ClassifyPluginOptions> = async (
   fastify,
   opts
 ) => {
   const { store } = opts;
 
-  fastify.post<{ Body: ClassifyRequest; Reply: ClassifyReply }>(
+  // ─── Legacy: POST /classify (single-step, kept for backward compat) ──────────
+
+  fastify.post<{ Body: ClassifyRequest; Reply: ClassifyResponse | { error: string } }>(
     "/classify",
     {
-      schema: { body: classifyBodySchema },
+      schema: {
+        body: {
+          type: "object",
+          required: ["sessionId", "response"],
+          properties: {
+            sessionId: { type: "string", minLength: 1 },
+            response: { type: "string", minLength: 1 },
+          },
+          additionalProperties: false,
+        },
+      },
     },
     async (request, reply) => {
       const { sessionId, response } = request.body;
 
-      // Resolve session — surface 404 instead of throwing internally
       const session = await store.getSession(sessionId);
       if (!session) {
-        return reply
-          .status(404)
-          .send({ error: `Session not found: ${sessionId}` });
+        return reply.status(404).send({ error: `Session not found: ${sessionId}` });
       }
 
-      // Guard: reject double-classification — layer > 0 means /classify already ran.
-      // TOCTOU: known race window — two concurrent classify calls could both pass this guard
-      // before either writes the updated layer value. Acceptable for demo scope.
       if (session.worldState.layer > 0 || session.worldState.currentNodeId !== null) {
         return reply.status(409).send({ error: "Session is already classified." });
       }
 
-      // Classify free-text response → Layer 1 node id.
-      // Tries LLM (Claude Haiku) first; falls back to keyword heuristic.
       const layer1NodeId = await classify(response);
 
-      // Advance world state into Layer 1 with the classified node
+      await store.updateSession(sessionId, {
+        worldState: { ...session.worldState, layer: 1, currentNodeId: layer1NodeId },
+      });
+
+      return reply.status(200).send({ sessionId, layer1NodeId });
+    }
+  );
+
+  // ─── Two-step: POST /classify-q1 ─────────────────────────────────────────────
+  // Player submits Q1 answer. Backend stores it in playerContext and returns Q2.
+
+  fastify.post<{ Body: ClassifyQ1Request; Reply: ClassifyQ1Response | { error: string } }>(
+    "/classify-q1",
+    {
+      schema: {
+        body: {
+          type: "object",
+          required: ["sessionId", "q1Response"],
+          properties: {
+            sessionId: { type: "string", minLength: 1 },
+            q1Response: { type: "string", minLength: 1 },
+          },
+          additionalProperties: false,
+        },
+      },
+    },
+    async (request, reply) => {
+      const { sessionId, q1Response } = request.body;
+
+      const session = await store.getSession(sessionId);
+      if (!session) {
+        return reply.status(404).send({ error: `Session not found: ${sessionId}` });
+      }
+
+      if (session.worldState.layer > 0) {
+        return reply.status(409).send({ error: "Session is already classified." });
+      }
+
+      // Generate personalised Q2 from Q1 response
+      const q2Prompt = await generateQ2(q1Response);
+
+      // Temporarily store Q1 in playerContext so it survives session resume
+      await store.updateSession(sessionId, {
+        worldState: {
+          ...session.worldState,
+          playerContext: {
+            businessDescription: q1Response,
+            motivation: "",
+            rawQ1Response: q1Response,
+            rawQ2Response: "",
+            q2Prompt,
+          },
+        },
+      });
+
+      return reply.status(200).send({ sessionId, q2Prompt });
+    }
+  );
+
+  // ─── Two-step: POST /classify-q2 ─────────────────────────────────────────────
+  // Player submits Q2 answer. Backend classifies both responses → Layer 1 node.
+
+  fastify.post<{ Body: ClassifyQ2Request; Reply: ClassifyQ2Response | { error: string } }>(
+    "/classify-q2",
+    {
+      schema: {
+        body: {
+          type: "object",
+          required: ["sessionId", "q2Response"],
+          properties: {
+            sessionId: { type: "string", minLength: 1 },
+            q2Response: { type: "string", minLength: 1 },
+          },
+          additionalProperties: false,
+        },
+      },
+    },
+    async (request, reply) => {
+      const { sessionId, q2Response } = request.body;
+
+      const session = await store.getSession(sessionId);
+      if (!session) {
+        return reply.status(404).send({ error: `Session not found: ${sessionId}` });
+      }
+
+      if (session.worldState.layer > 0) {
+        return reply.status(409).send({ error: "Session is already classified." });
+      }
+
+      const pc = session.worldState.playerContext;
+      if (!pc?.rawQ1Response) {
+        return reply.status(400).send({ error: "Q1 must be submitted before Q2." });
+      }
+
+      // Classify using both responses for richer EO signal
+      const layer1NodeId = await classifyFromBothResponses(pc.rawQ1Response, q2Response);
+
+      // Build the final PlayerContext with full extraction
+      const playerContext = extractPlayerContext(pc.rawQ1Response, q2Response, pc.q2Prompt);
+
+      // Advance to Layer 1
       await store.updateSession(sessionId, {
         worldState: {
           ...session.worldState,
           layer: 1,
           currentNodeId: layer1NodeId,
+          playerContext,
         },
       });
 
