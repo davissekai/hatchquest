@@ -10,6 +10,7 @@ export type {
   BusinessFormality,
 } from "./types/game.js";
 export type { GameSession, SessionStatus } from "./types/session.js";
+export type { PlayerContext } from "./types/context.js";
 export type {
   ClientWorldState,
   StartRequest,

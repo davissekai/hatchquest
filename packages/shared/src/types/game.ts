@@ -1,3 +1,5 @@
+import type { PlayerContext } from "./context.js";
+
 // EO framework dimensions (Lumpkin & Dess, 1996)
 export type EODimension =
   | "autonomy"
@@ -54,6 +56,9 @@ export interface WorldState {
   businessFormality: BusinessFormality; // Starts unregistered
   hasBackupPower: boolean; // Dumsor resilience
   hasPremises: boolean; // Home-based vs rented space
+
+  /** Player's business identity — set during Layer 0 classification */
+  playerContext: PlayerContext | null;
 
   // --- Social Capital ---
   reputation: number; // [0–100] Trust/credibility in the market. Starts at 0.
