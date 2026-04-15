@@ -9,14 +9,21 @@
  *
  * They do NOT mock the registry — real nodes mean real effect application,
  * catching calibration bugs that pure route unit tests cannot reach.
+ *
+ * Migration note: These tests use the old scenario-registry while the skeleton
+ * registry is being populated (Tasks 11–12). The adapter functions below bridge
+ * old ScenarioNodeFull entries into RegisteredSkeleton shape so the choice route
+ * can skin them. This adapter is removed in Task 13 when migration is complete.
  */
 
 import { describe, it, expect, beforeEach } from "vitest";
 import type { FastifyInstance } from "fastify";
 import { buildApp } from "../../app.js";
 import { SessionStore } from "../../store/session-store.js";
-import { getNodesForLayer } from "../../scenario-registry.js";
+import { getNode, getChoiceEffect, getNodesForLayer } from "../../scenario-registry.js";
+import { buildFallbackSkin } from "../../engine/narrator-ai.js";
 import type { WorldState, ChoiceResponse, ResultsResponse } from "@hatchquest/shared";
+import type { RegisteredSkeleton } from "../../skeletons/registry.js";
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -30,11 +37,43 @@ function deterministicSelector(state: WorldState): string | null {
   return pool[0]?.id ?? null;
 }
 
+/**
+ * Adapter — wraps an old ScenarioNodeFull as a RegisteredSkeleton so the
+ * choice route can use the skeleton path with old registry content.
+ * Removed in Task 13 when the skeleton registry is fully populated.
+ */
+function skeletonFromOldNode(id: string): RegisteredSkeleton | null {
+  const node = getNode(id);
+  if (!node) return null;
+  const e0 = getChoiceEffect(node.id, 0);
+  const e1 = getChoiceEffect(node.id, 1);
+  const e2 = getChoiceEffect(node.id, 2);
+  if (!e0 || !e1 || !e2) return null;
+  return {
+    skeleton: {
+      id: node.id,
+      layer: node.layer,
+      theme: "general",
+      baseWeight: 1.0,
+      eoTargetDimensions: [],
+      situationSeed: node.narrative,
+      choiceArchetypes: [
+        { eoPoleSignal: "", archetypeDescription: node.choices[0].text, tensionAxis: node.choices[0].tensionHint },
+        { eoPoleSignal: "", archetypeDescription: node.choices[1].text, tensionAxis: node.choices[1].tensionHint },
+        { eoPoleSignal: "", archetypeDescription: node.choices[2].text, tensionAxis: node.choices[2].tensionHint },
+      ],
+    },
+    effects: [e0, e1, e2],
+  };
+}
+
 /** Builds a Fastify app with all routes, deterministic selector, and no route prefix. */
 async function buildTestApp(store: SessionStore): Promise<FastifyInstance> {
   return buildApp(store, {
     routePrefix: "",
     selectNextNodeId: deterministicSelector,
+    getSkeleton: skeletonFromOldNode,
+    generateSkin: (skeleton, context) => Promise.resolve(buildFallbackSkin(skeleton, context)),
   });
 }
 

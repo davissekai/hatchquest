@@ -1,8 +1,10 @@
 import Fastify from "fastify";
 import type { FastifyInstance, FastifyError } from "fastify";
-import type { WorldState } from "@hatchquest/shared";
-import { getNode, getChoiceEffect, getAllNodes } from "./scenario-registry.js";
-import { selectNextNode } from "./engine/director-ai.js";
+import type { WorldState, PlayerContext, ScenarioSkeleton, NarrativeSkin } from "@hatchquest/shared";
+import { getNode } from "./scenario-registry.js";
+import { getSkeleton, getAllSkeletons } from "./skeletons/registry.js";
+import { selectNextSkeleton } from "./engine/director-ai.js";
+import { generateNarrativeSkin } from "./engine/narrator-ai.js";
 import { createPRNG } from "./engine/prng.js";
 import { startRoutes } from "./routes/start.js";
 import { classifyRoutes } from "./routes/classify.js";
@@ -10,6 +12,7 @@ import { choiceRoutes } from "./routes/choice.js";
 import { sessionRoutes } from "./routes/session.js";
 import { resultsRoutes } from "./routes/results.js";
 import type { ISessionStore } from "./store/types.js";
+import type { RegisteredSkeleton } from "./skeletons/registry.js";
 
 export interface BuildAppOptions {
   /** Enable Fastify's built-in logger. Default: false (tests stay quiet). */
@@ -25,16 +28,29 @@ export interface BuildAppOptions {
    * stub without coupling to the PRNG. Default: production weighted selector.
    */
   selectNextNodeId?: (state: WorldState) => string | null;
+  /**
+   * Skeleton getter override for integration tests.
+   * Default: real skeleton registry (getSkeleton from skeletons/registry.ts).
+   * Tests that use old scenario-registry node IDs inject an adapter here.
+   */
+  getSkeleton?: (id: string) => RegisteredSkeleton | null;
+  /**
+   * Narrator AI override for integration tests.
+   * Default: generateNarrativeSkin (calls Anthropic API, falls back to deterministic skin).
+   * Tests inject a synchronous buildFallbackSkin wrapper to avoid any API dependency.
+   */
+  generateSkin?: (skeleton: ScenarioSkeleton, context: PlayerContext) => Promise<NarrativeSkin>;
 }
 
 /**
- * Production Director AI — seeded PRNG derived from session seed XOR turnsElapsed.
- * XOR adds cheap entropy so each turn draws from a different position in the sequence.
+ * Production Director AI — uses selectNextSkeleton with a seeded PRNG.
+ * XOR of seed and turnsElapsed adds cheap entropy so each turn draws from
+ * a different position in the sequence.
  */
 function productionSelectNextNodeId(state: WorldState): string | null {
   const rng = createPRNG(state.seed ^ state.turnsElapsed);
-  const next = selectNextNode(state, getAllNodes(), rng);
-  return next?.id ?? null;
+  const next = selectNextSkeleton(state, getAllSkeletons(), rng);
+  return next?.skeleton.id ?? null;
 }
 
 /**
@@ -55,8 +71,9 @@ export async function buildApp(
   const app = Fastify({ logger: opts?.logger ?? false });
   const prefix = opts?.routePrefix ?? "/api/game";
 
-  const selectNextNodeId =
-    opts?.selectNextNodeId ?? productionSelectNextNodeId;
+  const selectNextNodeId = opts?.selectNextNodeId ?? productionSelectNextNodeId;
+  const effectiveGetSkeleton = opts?.getSkeleton ?? getSkeleton;
+  const effectiveGenerateSkin = opts?.generateSkin ?? generateNarrativeSkin;
 
   // ── Global error handler ────────────────────────────────────────────────────
   // Catches: (1) errors thrown from route handlers, (2) Fastify schema
@@ -94,10 +111,11 @@ export async function buildApp(
   app.register(choiceRoutes, {
     prefix,
     store,
-    getNode,
-    getChoiceEffect,
+    getSkeleton: effectiveGetSkeleton,
+    generateSkin: effectiveGenerateSkin,
     selectNextNodeId,
   });
+  // sessionRoutes still uses getNode from old scenario-registry until Task 13 migration
   app.register(sessionRoutes, { prefix, store, getNode });
   app.register(resultsRoutes, { prefix, store });
 

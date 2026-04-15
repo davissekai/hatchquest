@@ -3,11 +3,12 @@ import Fastify, { type FastifyInstance } from "fastify";
 import { SessionStore } from "../../store/session-store.js";
 import { choiceRoutes } from "../choice.js";
 import { SessionLock } from "../session-lock.js";
-import type { ChoiceResponse } from "@hatchquest/shared";
+import type { ChoiceResponse, NarrativeSkin } from "@hatchquest/shared";
+import type { RegisteredSkeleton } from "../../skeletons/registry.js";
 
 // --- Test-double registry ---
-// Injected instead of the real scenario-registry so tests are hermetic.
-// The node and effect here are deliberately minimal — enough for route logic.
+// Injected instead of the real skeleton registry so tests are hermetic.
+// The skeleton and effect here are deliberately minimal — enough for route logic.
 
 const STUB_EFFECT = {
   capital: -500,
@@ -19,15 +20,27 @@ const STUB_EFFECT = {
   eoDeltas: { riskTaking: 1 },
 };
 
-const STUB_NODE = {
-  id: "L1-node-1",
-  layer: 1,
+const STUB_SKELETON_ENTRY: RegisteredSkeleton = {
+  skeleton: {
+    id: "L1-node-1",
+    layer: 1,
+    theme: "general",
+    baseWeight: 1.0,
+    eoTargetDimensions: [],
+    situationSeed: "A test scenario.",
+    choiceArchetypes: [
+      { eoPoleSignal: "a", archetypeDescription: "Option A", tensionAxis: "hint A" },
+      { eoPoleSignal: "b", archetypeDescription: "Option B", tensionAxis: "hint B" },
+      { eoPoleSignal: "c", archetypeDescription: "Option C", tensionAxis: "hint C" },
+    ],
+  },
+  effects: [STUB_EFFECT, STUB_EFFECT, STUB_EFFECT],
+};
+
+const STUB_SKIN: NarrativeSkin = {
   narrative: "A test scenario.",
-  choices: [
-    { index: 0 as const, text: "Option A", tensionHint: "hint A" },
-    { index: 1 as const, text: "Option B", tensionHint: "hint B" },
-    { index: 2 as const, text: "Option C", tensionHint: "hint C" },
-  ],
+  choices: ["Option A", "Option B", "Option C"],
+  tensionHints: ["hint A", "hint B", "hint C"],
 };
 
 // Build a Fastify app with injected store and registry stubs.
@@ -36,9 +49,9 @@ function buildApp(store: SessionStore): FastifyInstance {
   const app = Fastify({ logger: false });
   app.register(choiceRoutes, {
     store,
-    getNode: (id: string | null) => (id === "L1-node-1" || id === "L2-node-1" ? STUB_NODE : null),
-    getChoiceEffect: (nodeId: string, idx: 0 | 1 | 2) =>
-      nodeId === "L1-node-1" ? STUB_EFFECT : null,
+    getSkeleton: (id: string) =>
+      id === "L1-node-1" || id === "L2-node-1" ? STUB_SKELETON_ENTRY : null,
+    generateSkin: async () => STUB_SKIN,
     // Stub Director AI — always returns L2-node-1 so route tests stay hermetic
     selectNextNodeId: () => "L2-node-1",
   });

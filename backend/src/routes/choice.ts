@@ -1,24 +1,30 @@
 import type { FastifyPluginAsync, FastifyReply, FastifyRequest } from "fastify";
-import type { ScenarioNode, WorldState } from "@hatchquest/shared";
+import type {
+  ScenarioNode,
+  WorldState,
+  PlayerContext,
+  ScenarioSkeleton,
+  NarrativeSkin,
+} from "@hatchquest/shared";
 import type { ISessionStore } from "../store/types.js";
-import type { ChoiceEffect } from "../engine/apply-choice.js";
+import type { RegisteredSkeleton } from "../skeletons/registry.js";
 import { applyEffect } from "../engine/apply-choice.js";
 import { toClientState } from "./helpers.js";
 import { SessionLock } from "./session-lock.js";
 
-// Registry dependency interface — injected by callers so tests can stub it.
-export interface ChoiceRegistry {
-  /** Returns the client-safe node for a given id, or null if not found / game over. */
-  getNode: (nodeId: string | null) => ScenarioNode | null;
-  /** Returns the ChoiceEffect for the given node and choice index, or null if unknown. */
-  getChoiceEffect: (nodeId: string, choiceIndex: 0 | 1 | 2) => ChoiceEffect | null;
-}
-
 // Options injected when registering this plugin.
 export interface ChoiceRouteOptions {
   store: ISessionStore;
-  getNode: ChoiceRegistry["getNode"];
-  getChoiceEffect: ChoiceRegistry["getChoiceEffect"];
+  /**
+   * Returns a registered skeleton by id, or null if not found.
+   * Used for both current-node effect lookup and next-node skin generation.
+   */
+  getSkeleton: (id: string) => RegisteredSkeleton | null;
+  /**
+   * Narrator AI — generates personalised NarrativeSkin from a skeleton +
+   * the player's business context. Falls back internally when API key is absent.
+   */
+  generateSkin: (skeleton: ScenarioSkeleton, context: PlayerContext) => Promise<NarrativeSkin>;
   /**
    * Director AI node selector — takes post-effect world state, returns next nodeId.
    * Optional: defaults to returning null (game over) when not injected.
@@ -51,7 +57,10 @@ function isNonEmptyString(v: unknown): v is string {
  *   2. Session existence → 404
  *   3. Session already complete → 409
  *   4. nodeId matches session's currentNodeId (double-submit guard) → 400
- *   5. ChoiceEffect existence → 400
+ *   5. Skeleton + effect lookup for current node → 400
+ *
+ * After applying the choice, the Narrator AI skins the next skeleton before
+ * returning it to the client. Falls back to a deterministic skin on API failure.
  *
  * The entire read-modify-write cycle (steps 2–5 + update) is serialized per
  * sessionId via a SessionLock, preventing TOCTOU races from concurrent requests.
@@ -61,8 +70,8 @@ async function handleChoice(
   reply: FastifyReply,
   store: ISessionStore,
   lock: SessionLock,
-  getNode: ChoiceRegistry["getNode"],
-  getChoiceEffect: ChoiceRegistry["getChoiceEffect"],
+  getSkeleton: (id: string) => RegisteredSkeleton | null,
+  generateSkin: ChoiceRouteOptions["generateSkin"],
   selectNextNodeId: (state: WorldState) => string | null
 ): Promise<void> {
   const { sessionId, nodeId, choiceIndex } = request.body ?? {};
@@ -98,11 +107,12 @@ async function handleChoice(
         .send({ error: "nodeId does not match current session node (stale client or double-submit)." });
     }
 
-    // --- Step 5: choice effect lookup ---
-    const effect = getChoiceEffect(nodeId, choiceIndex);
-    if (!effect) {
-      return reply.status(400).send({ error: `No effect found for node "${nodeId}" choice ${choiceIndex}.` });
+    // --- Step 5: skeleton + effect lookup for the current node ---
+    const currentEntry = getSkeleton(nodeId);
+    if (!currentEntry) {
+      return reply.status(400).send({ error: `No skeleton found for node "${nodeId}".` });
     }
+    const effect = currentEntry.effects[choiceIndex];
 
     // --- Apply the choice ---
     // applyEffect gives us the post-choice state without committing nextNodeId,
@@ -129,7 +139,35 @@ async function handleChoice(
       status: gameOver ? "complete" : "active",
     });
 
-    const nextNode = gameOver ? null : getNode(newState.currentNodeId);
+    // --- Build the next node via Narrator AI ---
+    // If no skeleton exists for the next id (e.g., empty registry during migration),
+    // nextNode stays null — the client renders a game-over or waiting state.
+    let nextNode: ScenarioNode | null = null;
+    if (!gameOver) {
+      // currentNodeId may be null if selector returned null — guard before lookup
+      const nextEntry = newState.currentNodeId ? getSkeleton(newState.currentNodeId) : null;
+      if (nextEntry) {
+        // Use a fallback context if playerContext not yet set (e.g., legacy /classify path)
+        const ctx: PlayerContext = newState.playerContext ?? {
+          businessDescription: "your business",
+          motivation: "to build something meaningful in Accra",
+          rawQ1Response: "",
+          rawQ2Response: "",
+          q2Prompt: "",
+        };
+        const skin = await generateSkin(nextEntry.skeleton, ctx);
+        nextNode = {
+          id: nextEntry.skeleton.id,
+          layer: nextEntry.skeleton.layer,
+          narrative: skin.narrative,
+          choices: [
+            { index: 0, text: skin.choices[0], tensionHint: skin.tensionHints[0] },
+            { index: 1, text: skin.choices[1], tensionHint: skin.tensionHints[1] },
+            { index: 2, text: skin.choices[2], tensionHint: skin.tensionHints[2] },
+          ],
+        };
+      }
+    }
 
     return reply.status(200).send({
       sessionId,
@@ -143,16 +181,16 @@ async function handleChoice(
 
 /**
  * Fastify plugin that registers POST /choice.
- * Accepts store, registry functions, and optional Director AI selector as options.
+ * Accepts store, skeleton registry functions, Narrator AI, and optional Director AI selector.
  */
 export const choiceRoutes: FastifyPluginAsync<ChoiceRouteOptions> = async (
   fastify,
   options
 ): Promise<void> => {
-  const { store, getNode, getChoiceEffect, selectNextNodeId = () => null } = options;
+  const { store, getSkeleton, generateSkin, selectNextNodeId = () => null } = options;
   const lock = new SessionLock();
 
   fastify.post<{ Body: ChoiceBody }>("/choice", async (request, reply) => {
-    return handleChoice(request, reply, store, lock, getNode, getChoiceEffect, selectNextNodeId);
+    return handleChoice(request, reply, store, lock, getSkeleton, generateSkin, selectNextNodeId);
   });
 };

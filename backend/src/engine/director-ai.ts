@@ -1,5 +1,6 @@
-import type { WorldState } from "@hatchquest/shared";
+import type { EODimension, WorldState } from "@hatchquest/shared";
 import type { ScenarioNodeFull, NodeTheme } from "../scenario-registry.js";
+import type { RegisteredSkeleton } from "../skeletons/registry.js";
 
 /**
  * Returns true if the world state satisfies all hard eligibility conditions on the node.
@@ -138,6 +139,79 @@ export function selectNextNode(
       node.baseWeight *
       computeThemeAffinity(node.theme, state) *
       computeEOAffinity(node, state),
+  }));
+
+  return weightedDraw(scored, rng);
+}
+
+// ─── Skeleton-based selection (Task 10) ──────────────────────────────────────
+
+/**
+ * EO affinity calculation that works directly with EODimension arrays.
+ * Extracted so selectNextSkeleton doesn't need a ScenarioNodeFull.
+ */
+function computeEOAffinityFromDimensions(
+  dims: EODimension[],
+  state: WorldState
+): number {
+  if (dims.length === 0) return 1.0;
+  const isLateGame = state.layer >= 3;
+  const scores = dims.map((dim) => {
+    const playerValue = state.eoProfile[dim];
+    return isLateGame ? (10 - playerValue) / 10 : playerValue / 10;
+  });
+  const mean = scores.reduce((a, b) => a + b, 0) / scores.length;
+  return 1.0 + mean;
+}
+
+/**
+ * Checks hard eligibility conditions on a skeleton — same logic as passesConditions
+ * but operates on ScenarioSkeleton.conditions rather than ScenarioNodeFull.conditions.
+ */
+function skeletonPassesConditions(
+  entry: RegisteredSkeleton,
+  state: WorldState
+): boolean {
+  const c = entry.skeleton.conditions;
+  if (!c) return true;
+  if (c.capitalMin !== undefined && state.capital < c.capitalMin) return false;
+  if (c.capitalMax !== undefined && state.capital > c.capitalMax) return false;
+  if (c.reputationMin !== undefined && state.reputation < c.reputationMin) return false;
+  if (c.reputationMax !== undefined && state.reputation > c.reputationMax) return false;
+  if (c.debtMin !== undefined && state.debt < c.debtMin) return false;
+  if (c.debtMax !== undefined && state.debt > c.debtMax) return false;
+  if (c.requiresMentorAccess && !state.mentorAccess) return false;
+  if (c.requiresPremises && !state.hasPremises) return false;
+  if (c.employeeCountMin !== undefined && state.employeeCount < c.employeeCountMin) return false;
+  return true;
+}
+
+/**
+ * Selects the next scenario skeleton from the pool based on world state.
+ * Same algorithm as selectNextNode but operates on RegisteredSkeleton[] directly.
+ * Falls back to full layer pool if all candidates fail conditions.
+ * Returns null if no skeletons exist for the next layer.
+ */
+export function selectNextSkeleton(
+  state: WorldState,
+  allEntries: RegisteredSkeleton[],
+  rng: () => number
+): RegisteredSkeleton | null {
+  const nextLayer = state.layer + 1;
+  if (nextLayer > 5) return null;
+
+  const layerEntries = allEntries.filter((e) => e.skeleton.layer === nextLayer);
+  if (layerEntries.length === 0) return null;
+
+  const eligible = layerEntries.filter((e) => skeletonPassesConditions(e, state));
+  const pool = eligible.length > 0 ? eligible : layerEntries;
+
+  const scored = pool.map((entry) => ({
+    item: entry,
+    weight:
+      entry.skeleton.baseWeight *
+      computeThemeAffinity(entry.skeleton.theme as NodeTheme, state) *
+      computeEOAffinityFromDimensions(entry.skeleton.eoTargetDimensions, state),
   }));
 
   return weightedDraw(scored, rng);
