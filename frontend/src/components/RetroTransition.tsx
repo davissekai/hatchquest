@@ -9,12 +9,17 @@ interface RetroTransitionProps {
 }
 
 const defaultMessages = [
-  "LOADING MARKET DATA...",
-  "CONNECTING TO ACCRA...",
-  "BUILDING YOUR EMPIRE...",
-  "CALCULATING ODDS...",
+  "Loading market data...",
+  "Connecting to Accra...",
+  "Building your empire...",
+  "Calculating the odds...",
 ];
 
+/**
+ * Full-screen loading transition in Stitch design language.
+ * Shows cycling messages and an animated progress bar.
+ * Calls onComplete when the duration elapses.
+ */
 const RetroTransition = ({
   messages = defaultMessages,
   duration = 2500,
@@ -23,23 +28,22 @@ const RetroTransition = ({
   const [progress, setProgress] = useState(0);
   const [msgIndex, setMsgIndex] = useState(0);
 
+  /* Progress bar — 10 steps over duration */
   useEffect(() => {
-    const steps = 10;
-    const stepTime = duration / steps;
+    const stepTime = duration / 10;
     let current = 0;
-
     const interval = setInterval(() => {
       current++;
       setProgress(current * 10);
-      if (current >= steps) {
+      if (current >= 10) {
         clearInterval(interval);
         setTimeout(onComplete, 200);
       }
     }, stepTime);
-
     return () => clearInterval(interval);
   }, [duration, onComplete]);
 
+  /* Cycle messages every 600 ms */
   useEffect(() => {
     const interval = setInterval(() => {
       setMsgIndex((i) => (i + 1) % messages.length);
@@ -49,31 +53,33 @@ const RetroTransition = ({
 
   return (
     <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-background">
-      <div className="scanlines pointer-events-none" />
+      {/* Subtle kente texture at very low opacity */}
+      <div className="absolute inset-0 kente-pattern opacity-30 pointer-events-none" />
 
-      <div className="relative z-10 flex flex-col items-center gap-8 px-6">
-        <span className="font-display text-5xl text-accent retro-blink">&#9654;</span>
+      <div className="relative z-10 flex flex-col items-center gap-8 px-8 max-w-sm w-full">
+        {/* Animated icon */}
+        <div className="w-20 h-20 rounded-full hero-gradient flex items-center justify-center shadow-[0_12px_40px_rgba(82,79,178,0.3)]">
+          <span className="material-symbols-outlined text-on-primary text-4xl animate-pulse">
+            rocket_launch
+          </span>
+        </div>
 
-        <p className="font-display text-xs sm:text-sm tracking-[0.2em] text-primary text-center min-h-[2em]">
+        {/* Cycling message */}
+        <p className="font-body italic text-lg text-on-surface-variant text-center min-h-[2em]">
           {messages[msgIndex]}
         </p>
 
-        <div className="w-64 sm:w-80 border-[3px] border-primary bg-card p-1 shadow-brutal-sm">
-          <div className="flex gap-[2px] h-5">
-            {Array.from({ length: 10 }).map((_, i) => (
-              <div
-                key={i}
-                className={`flex-1 transition-colors duration-100 ${
-                  i < progress / 10 ? "bg-accent" : "bg-muted"
-                }`}
-              />
-            ))}
-          </div>
+        {/* Progress bar */}
+        <div className="w-full rounded-full bg-surface-container-high overflow-hidden h-2">
+          <div
+            className="h-full bg-primary rounded-full transition-all duration-200 ease-out"
+            style={{ width: `${progress}%` }}
+          />
         </div>
 
-        <span className="font-display text-[10px] tracking-[0.3em] text-muted-foreground uppercase">
+        <p className="font-label text-xs text-on-surface-variant tracking-widest uppercase">
           {progress}%
-        </span>
+        </p>
       </div>
     </div>
   );

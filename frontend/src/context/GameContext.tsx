@@ -1,181 +1,110 @@
 "use client";
 
-import React, { createContext, useContext, useState, ReactNode } from "react";
+import React, { createContext, useContext, useState, ReactNode, useMemo } from "react";
+import { api } from "@/lib/api";
+import type {
+  ClientWorldState,
+  ScenarioNode,
+  EOProfile,
+  ResultsResponse,
+} from "@hatchquest/shared";
 
-// ── Types from API contract ─────────────────────────────────────────────────
+export type SessionPhase = 'idle' | 'layer0' | 'active' | 'complete';
 
-export interface Beat {
-  id: string;
-  round: number;
-  title: string;
-  storyText: string;
-  orderIndex: number;
-  choices: Choice[];
-}
-
-export interface Choice {
-  id: string;
-  beatId: string;
-  label: string;
-  immediateFeedback: string;
-  nextBeatId: string | null;
-}
-
-interface Player {
-  name: string;
-  email: string;
-}
+// ── State shape ───────────────────────────────────────────────────────────────
 
 interface GameState {
-  player: Player | null;
+  playerName: string | null;
   sessionId: string | null;
-  currentBeat: Beat | null;
-  currentScene: number;
-  currentRound: number;
-  choices: string[];
-  score: number;
-  dimensions: {
-    autonomy: number;
-    innovativeness: number;
-    proactiveness: number;
-    riskTaking: number;
-    competitiveAggressiveness: number;
-  };
-  resources: {
-    capital: number;
-    reputation: number;
-    network: number;
-    momentumMultiplier: number;
-  };
+  layer0Question: string | null;
+  clientState: ClientWorldState | null;
+  currentNode: ScenarioNode | null;
+  eoProfile: EOProfile | null;
   isComplete: boolean;
+  results: ResultsResponse | null;
 }
 
 interface GameContextType {
   state: GameState;
+  phase: SessionPhase;
   isLoading: boolean;
   error: string | null;
-  startGame: (player: Player) => Promise<void>;
-  makeChoice: (
-    choiceId: string
-  ) => Promise<{ feedback: string; deltas: { capital: number; reputation: number; network: number } }>;
-  resumeSession: () => Promise<boolean>;
-  loadResults: () => Promise<void>;
+  /** Create a new session. Stores session meta in localStorage, sets layer0Question. */
+  startGame: (playerName: string, email: string, password: string) => Promise<void>;
+  /** Submit the Layer 0 free-text response. Updates state; caller handles navigation. */
+  classifyLayer0: (response: string) => Promise<void>;
+  /** Submit a choice by index. Returns isComplete flag. */
+  makeChoice: (nodeId: string, choiceIndex: 0 | 1 | 2) => Promise<boolean>;
+  /** Hydrate state from an existing sessionId (resume flow). Returns the phase. */
+  resumeSession: (explicitId?: string) => Promise<SessionPhase>;
+  /** Fetch and store results for a completed session. */
+  loadResults: (sessionId: string) => Promise<ResultsResponse>;
   resetGame: () => void;
-  clearSession: () => void;
   hasActiveSession: () => boolean;
 }
 
-// ── Storage ─────────────────────────────────────────────────────────────────
+// ── Storage ───────────────────────────────────────────────────────────────────
 
-const STORAGE_KEY = "hatchquest-session";
-const SESSION_ID_KEY = "sessionId";
+const SESSION_META_KEY = "hq-session-meta";
+
+interface SessionMeta {
+  sessionId: string;
+  layer0Question?: string | null;
+}
 
 const initialState: GameState = {
-  player: null,
+  playerName: null,
   sessionId: null,
-  currentBeat: null,
-  currentScene: 0,
-  currentRound: 0,
-  choices: [],
-  score: 0,
-  dimensions: {
-    autonomy: 0,
-    innovativeness: 0,
-    proactiveness: 0,
-    riskTaking: 0,
-    competitiveAggressiveness: 0,
-  },
-  resources: {
-    capital: 10000,
-    reputation: 50,
-    network: 10,
-    momentumMultiplier: 1.0,
-  },
+  layer0Question: null,
+  clientState: null,
+  currentNode: null,
+  eoProfile: null,
   isComplete: false,
+  results: null,
 };
 
-function loadSession(): GameState | null {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (!raw) return null;
-    return JSON.parse(raw) as GameState;
-  } catch {
-    return null;
-  }
-}
-
-function saveSession(state: GameState) {
-  try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
-  } catch {}
-}
-
-// ── Context ──────────────────────────────────────────────────────────────────
+// ── Context ───────────────────────────────────────────────────────────────────
 
 const GameContext = createContext<GameContextType | undefined>(undefined);
 
 export const GameProvider = ({ children }: { children: ReactNode }) => {
-  const [state, setState] = useState<GameState>(() => {
-    if (typeof window === "undefined") return initialState;
-    const saved = loadSession();
-    return saved ?? initialState;
-  });
+  const [state, setState] = useState<GameState>(initialState);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const updateState = (updates: Partial<GameState> | ((prev: GameState) => Partial<GameState>)) => {
-    setState((prev) => {
-      const patch = typeof updates === "function" ? updates(prev) : updates;
-      const next = { ...prev, ...patch };
-      saveSession(next);
-      return next;
-    });
-  };
+  const phase: SessionPhase = useMemo(() => {
+    if (!state.sessionId) return "idle";
+    if (state.isComplete) return "complete";
+    if (!state.currentNode && (!state.clientState || state.clientState.layer <= 0)) return "layer0";
+    return "active";
+  }, [state]);
 
-  // ── startGame ──────────────────────────────────────────────────────────────
-  const startGame = async (player: Player) => {
+  const patch = (updates: Partial<GameState>) =>
+    setState((prev) => ({ ...prev, ...updates }));
+
+  // ── startGame ────────────────────────────────────────────────────────────────
+
+  const startGame = async (playerName: string, email: string, password: string): Promise<void> => {
     setIsLoading(true);
     setError(null);
     try {
-      const res = await fetch("/api/game/start", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: player.email, name: player.name }),
-      });
-
-      if (!res.ok) {
-        const data = await res.json().catch(() => ({}));
-        throw new Error((data as { error?: string }).error ?? `Server error ${res.status}`);
-      }
-
-      const data = await res.json() as {
-        sessionId: string;
-        beat: Beat;
-        state: {
-          session: { playerId: string; currentNarrativeId: string; isStoryComplete: boolean; history: unknown[] };
-          resources: { capital: number; reputation: number; network: number; momentumMultiplier: number };
-          flags: Record<string, boolean>;
-        };
+      const res = await api.start({ playerName, email, password });
+      
+      const meta: SessionMeta = {
+        sessionId: res.sessionId,
+        layer0Question: res.layer0Question,
       };
-
-      localStorage.setItem(SESSION_ID_KEY, data.sessionId);
-
-      updateState({
-        player,
-        sessionId: data.sessionId,
-        currentBeat: data.beat,
-        currentScene: data.beat.orderIndex,
-        currentRound: data.beat.round,
-        choices: [],
-        score: 0,
-        dimensions: { autonomy: 0, innovativeness: 0, proactiveness: 0, riskTaking: 0, competitiveAggressiveness: 0 },
-        resources: {
-          capital: data.state.resources.capital,
-          reputation: data.state.resources.reputation,
-          network: data.state.resources.network,
-          momentumMultiplier: data.state.resources.momentumMultiplier,
-        },
-        isComplete: data.state.session.isStoryComplete,
+      localStorage.setItem(SESSION_META_KEY, JSON.stringify(meta));
+      
+      patch({
+        playerName,
+        sessionId: res.sessionId,
+        layer0Question: res.layer0Question,
+        clientState: null,
+        currentNode: null,
+        eoProfile: null,
+        isComplete: false,
+        results: null,
       });
     } catch (err) {
       const msg = err instanceof Error ? err.message : "Failed to start game";
@@ -186,59 +115,44 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
-  // ── makeChoice ─────────────────────────────────────────────────────────────
-  const makeChoice = async (
-    choiceId: string
-  ): Promise<{ feedback: string; deltas: { capital: number; reputation: number; network: number } }> => {
+  // ── classifyLayer0 ────────────────────────────────────────────────────────────
+
+  const classifyLayer0 = async (response: string): Promise<void> => {
     if (!state.sessionId) throw new Error("No active session");
     setIsLoading(true);
     setError(null);
     try {
-      const res = await fetch("/api/game/choice", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ sessionId: state.sessionId, choiceId }),
+      await api.classify({ sessionId: state.sessionId, response });
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "Classification failed";
+      setError(msg);
+      throw err;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // ── makeChoice ────────────────────────────────────────────────────────────────
+
+  const makeChoice = async (
+    nodeId: string,
+    choiceIndex: 0 | 1 | 2
+  ): Promise<boolean> => {
+    if (!state.sessionId) throw new Error("No active session");
+    setIsLoading(true);
+    setError(null);
+    try {
+      const res = await api.choice({
+        sessionId: state.sessionId,
+        nodeId,
+        choiceIndex,
       });
-
-      if (!res.ok) {
-        const data = await res.json().catch(() => ({}));
-        throw new Error((data as { error?: string }).error ?? `Server error ${res.status}`);
-      }
-
-      const data = await res.json() as {
-        nextBeat: Beat;
-        updatedState: {
-          session: { playerId: string; currentNarrativeId: string; isStoryComplete: boolean; history: unknown[] };
-          resources: { capital: number; reputation: number; network: number; momentumMultiplier: number };
-          flags: Record<string, boolean>;
-        };
-        feedback: string;
-      };
-
-      const prevResources = state.resources;
-      const newResources = {
-        capital: data.updatedState.resources.capital,
-        reputation: data.updatedState.resources.reputation,
-        network: data.updatedState.resources.network,
-        momentumMultiplier: data.updatedState.resources.momentumMultiplier,
-      };
-
-      const deltas = {
-        capital: newResources.capital - prevResources.capital,
-        reputation: newResources.reputation - prevResources.reputation,
-        network: newResources.network - prevResources.network,
-      };
-
-      updateState((prev) => ({
-        currentBeat: data.nextBeat,
-        currentScene: data.nextBeat.orderIndex,
-        currentRound: data.nextBeat.round,
-        choices: [...prev.choices, choiceId],
-        resources: newResources,
-        isComplete: data.updatedState.session.isStoryComplete,
-      }));
-
-      return { feedback: data.feedback, deltas };
+      patch({
+        clientState: res.clientState,
+        currentNode: res.nextNode,
+        isComplete: res.clientState.isComplete,
+      });
+      return res.clientState.isComplete;
     } catch (err) {
       const msg = err instanceof Error ? err.message : "Failed to submit choice";
       setError(msg);
@@ -248,96 +162,77 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
-  // ── resumeSession ──────────────────────────────────────────────────────────
-  const resumeSession = async (): Promise<boolean> => {
-    const sessionId = localStorage.getItem(SESSION_ID_KEY);
-    if (!sessionId) return false;
+  // ── resumeSession ──────────────────────────────────────────────────────────────
+
+  const resumeSession = async (explicitId?: string): Promise<SessionPhase> => {
+    let sessionId = explicitId;
+    let layer0Question = null;
+    
+    if (!sessionId) {
+      const metaStr = localStorage.getItem(SESSION_META_KEY);
+      if (metaStr) {
+        try {
+          const meta: SessionMeta = JSON.parse(metaStr);
+          sessionId = meta.sessionId;
+          layer0Question = meta.layer0Question || null;
+        } catch {
+          // invalid json
+        }
+      }
+    }
+    // Fallback for migration
+    if (!sessionId) {
+      sessionId = localStorage.getItem("hq-session-id") || undefined;
+    }
+
+    if (!sessionId) return "idle";
 
     setIsLoading(true);
     setError(null);
     try {
-      const res = await fetch(`/api/game/session?sessionId=${encodeURIComponent(sessionId)}`);
-
-      if (!res.ok) {
-        localStorage.removeItem(SESSION_ID_KEY);
-        localStorage.removeItem(STORAGE_KEY);
-        setState(initialState);
-        return false;
-      }
-
-      const data = await res.json() as {
-        beat: Beat;
-        state: {
-          session: { playerId: string; currentNarrativeId: string; isStoryComplete: boolean; history: unknown[] };
-          resources: { capital: number; reputation: number; network: number; momentumMultiplier: number };
-          flags: Record<string, boolean>;
-        };
-      };
-
-      updateState({
+      const res = await api.session(sessionId);
+      
+      const meta: SessionMeta = { sessionId, layer0Question };
+      localStorage.setItem(SESSION_META_KEY, JSON.stringify(meta));
+      
+      const isComplete = res.clientState.isComplete;
+      const isLayer0 = !res.currentNode && (!res.clientState || res.clientState.layer <= 0) && !isComplete;
+      
+      patch({
         sessionId,
-        currentBeat: data.beat,
-        currentScene: data.beat.orderIndex,
-        currentRound: data.beat.round,
-        resources: {
-          capital: data.state.resources.capital,
-          reputation: data.state.resources.reputation,
-          network: data.state.resources.network,
-          momentumMultiplier: data.state.resources.momentumMultiplier,
-        },
-        isComplete: data.state.session.isStoryComplete,
+        layer0Question,
+        clientState: res.clientState,
+        currentNode: res.currentNode,
+        isComplete,
       });
-
-      return true;
-    } catch (err) {
-      const msg = err instanceof Error ? err.message : "Failed to resume session";
-      setError(msg);
-      return false;
+      
+      if (isComplete) return "complete";
+      if (isLayer0) return "layer0";
+      return "active";
+    } catch {
+      localStorage.removeItem(SESSION_META_KEY);
+      localStorage.removeItem("hq-session-id");
+      setState(initialState);
+      return "idle";
     } finally {
       setIsLoading(false);
     }
   };
 
-  // ── loadResults ────────────────────────────────────────────────────────────
-  const loadResults = async () => {
-    if (!state.sessionId) return;
+  // ── loadResults ───────────────────────────────────────────────────────────────
+
+  const loadResults = async (sessionId: string): Promise<ResultsResponse> => {
     setIsLoading(true);
     setError(null);
     try {
-      const res = await fetch(`/api/game/results?sessionId=${encodeURIComponent(state.sessionId)}`);
-
-      if (!res.ok) {
-        const data = await res.json().catch(() => ({}));
-        throw new Error((data as { error?: string }).error ?? `Server error ${res.status}`);
-      }
-
-      const data = await res.json() as {
-        finalState: {
-          session: { playerId: string; currentNarrativeId: string; isStoryComplete: boolean; history: unknown[] };
-          resources: { capital: number; reputation: number; network: number; momentumMultiplier: number };
-          dimensions: {
-            autonomy: number;
-            innovativeness: number;
-            proactiveness: number;
-            riskTaking: number;
-            competitiveAggressiveness: number;
-          };
-          flags: Record<string, boolean>;
-        };
-        acumenScore: number | null;
-      };
-
-      updateState({
-        score: data.acumenScore ?? 0,
-        dimensions: data.finalState.dimensions,
-        resources: {
-          capital: data.finalState.resources.capital,
-          reputation: data.finalState.resources.reputation,
-          network: data.finalState.resources.network,
-          momentumMultiplier: data.finalState.resources.momentumMultiplier,
-        },
+      const res = await api.results(sessionId);
+      patch({
+        eoProfile: res.eoProfile,
+        clientState: res.clientState,
         isComplete: true,
+        results: res,
       });
+      return res;
     } catch (err) {
       const msg = err instanceof Error ? err.message : "Failed to load results";
       setError(msg);
@@ -347,37 +242,32 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
-  // ── clearSession / resetGame ───────────────────────────────────────────────
-  const clearSession = () => {
-    localStorage.removeItem(STORAGE_KEY);
-    localStorage.removeItem(SESSION_ID_KEY);
-    setState(initialState);
-  };
+  // ── resetGame ─────────────────────────────────────────────────────────────────
 
   const resetGame = () => {
-    localStorage.removeItem(STORAGE_KEY);
-    localStorage.removeItem(SESSION_ID_KEY);
+    localStorage.removeItem(SESSION_META_KEY);
+    localStorage.removeItem("hq-session-id");
     setState(initialState);
   };
 
-  const hasActiveSession = () => {
+  const hasActiveSession = (): boolean => {
     if (typeof window === "undefined") return false;
-    const sessionId = localStorage.getItem(SESSION_ID_KEY);
-    return !!(sessionId && state.sessionId && !state.isComplete);
+    return !!localStorage.getItem(SESSION_META_KEY) || !!localStorage.getItem("hq-session-id");
   };
 
   return (
     <GameContext.Provider
       value={{
         state,
+        phase,
         isLoading,
         error,
         startGame,
+        classifyLayer0,
         makeChoice,
         resumeSession,
         loadResults,
         resetGame,
-        clearSession,
         hasActiveSession,
       }}
     >

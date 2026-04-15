@@ -54,6 +54,7 @@ export async function buildApp(
 ): Promise<FastifyInstance> {
   const app = Fastify({ logger: opts?.logger ?? false });
   const prefix = opts?.routePrefix ?? "/api/game";
+
   const selectNextNodeId =
     opts?.selectNextNodeId ?? productionSelectNextNodeId;
 

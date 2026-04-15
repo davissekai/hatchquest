@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>HatchQuest | Accra Pulse</title>
+<!-- Google Fonts: Plus Jakarta Sans & Newsreader -->
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,400;0,700;0,800;1,800&amp;family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,700;1,6..72,400;1,6..72,700&amp;display=swap" rel="stylesheet"/>
+<!-- Material Symbols -->
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                    "inverse-primary": "#9592fa",
+                    "error-dim": "#a70138",
+                    "surface-container-high": "#e2e2e1",
+                    "inverse-on-surface": "#9d9d9c",
+                    "on-secondary-fixed-variant": "#635100",
+                    "background": "#f7f6f5",
+                    "on-secondary": "#fff2cf",
+                    "inverse-surface": "#0d0e0e",
+                    "on-primary-fixed": "#000000",
+                    "secondary": "#6d5a00",
+                    "tertiary-dim": "#972500",
+                    "surface-container-lowest": "#ffffff",
+                    "surface-container": "#e8e8e7",
+                    "secondary-fixed": "#fad11b",
+                    "surface-tint": "#524fb2",
+                    "on-tertiary-fixed": "#350700",
+                    "outline": "#767776",
+                    "on-primary-fixed-variant": "#201881",
+                    "on-error": "#ffefef",
+                    "surface-variant": "#dcdddc",
+                    "on-error-container": "#510017",
+                    "primary-fixed": "#9895fd",
+                    "surface-container-low": "#f1f1f0",
+                    "on-secondary-container": "#584800",
+                    "on-primary": "#f4f1ff",
+                    "on-background": "#2e2f2f",
+                    "on-tertiary": "#ffefec",
+                    "tertiary-fixed": "#ff9476",
+                    "secondary-dim": "#5f4e00",
+                    "surface": "#f7f6f5",
+                    "tertiary-fixed-dim": "#ff7d58",
+                    "secondary-container": "#fad11b",
+                    "primary-dim": "#4642a5",
+                    "error-container": "#f74b6d",
+                    "primary": "#524fb2",
+                    "surface-container-highest": "#dcdddc",
+                    "on-tertiary-fixed-variant": "#701900",
+                    "surface-dim": "#d4d4d4",
+                    "secondary-fixed-dim": "#ebc300",
+                    "surface-bright": "#f7f6f5",
+                    "on-tertiary-container": "#601400",
+                    "on-surface": "#2e2f2f",
+                    "tertiary-container": "#ff9476",
+                    "error": "#b41340",
+                    "on-primary-container": "#150678",
+                    "on-surface-variant": "#5b5c5b",
+                    "on-secondary-fixed": "#423500",
+                    "primary-fixed-dim": "#8b88ef",
+                    "tertiary": "#ac2c00",
+                    "outline-variant": "#adadac",
+                    "primary-container": "#9895fd"
+            },
+            "borderRadius": {
+                    "DEFAULT": "1rem",
+                    "lg": "2rem",
+                    "xl": "3rem",
+                    "full": "9999px"
+            },
+            "fontFamily": {
+                    "headline": ["Plus Jakarta Sans"],
+                    "body": ["Newsreader"],
+                    "label": ["Plus Jakarta Sans"]
+            }
+          },
+        },
+      }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        body { font-family: 'Newsreader', serif; }
+        h1, h2, h3, button, span.label { font-family: 'Plus Jakarta Sans', sans-serif; }
+        .glass-panel {
+            background: rgba(247, 246, 245, 0.15);
+            backdrop-filter: blur(24px);
+            -webkit-backdrop-filter: blur(24px);
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background text-on-surface selection:bg-primary-container selection:text-on-primary-container min-h-screen relative overflow-hidden">
+<!-- Hero Background Layer -->
+<div class="fixed inset-0 z-0">
+<img class="w-full h-full object-cover filter brightness-[0.4] contrast-[1.1]" data-alt="Cinematic high-angle view of a luxury Accra boardroom at dusk, floor-to-ceiling windows overlooking glowing city lights and modern skyscrapers with warm interior reflections" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDqoNe_1-tDbyoc4dYUK5x8nONPaUe5l6z0SfTT_QntKKVKxHC9jyTf24r7MIf4gejQY06WDVmwyKDZ5S-U31NbF4qAHWe0qzdqtYDi8-EGP2Yf_H9ztbA7zyC2G7q-D4WhtttZYi72__d1GJ7B0Ijyn8MH1QF7vfRPdZ1pIfgFCX2-p5Yd8FVRsm--b9kebwihaIqGE27wQExWi462sbsyjE_gusfShfrj1MzK5DLhsgQQTNbbODLA50h6vmCIFCPxgcmSpet2DTU"/>
+<!-- Atmospheric Gradient Overlay -->
+<div class="absolute inset-0 bg-gradient-to-tr from-primary/40 via-transparent to-tertiary/20 mix-blend-multiply"></div>
+</div>
+<!-- Shared TopAppBar Component -->
+<header class="fixed top-0 w-full z-50 rounded-b-[3rem] bg-stone-50/80 dark:bg-stone-950/80 backdrop-blur-xl shadow-[0_12px_40px_rgba(21,5,120,0.08)]">
+<div class="flex justify-between items-center px-8 py-6 w-full max-w-screen-2xl mx-auto">
+<div class="flex items-center gap-4">
+<div class="w-12 h-12 rounded-full overflow-hidden ring-2 ring-primary/20">
+<img alt="Scholar Entrepreneur Portrait" class="w-full h-full object-cover" data-alt="Close-up portrait of a charismatic Ghanaian academic in a modern suit, soft studio lighting, intellectual and confident expression" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBGf5RX2AhKrO-PLtPyQlCToSWWdz3ufgCAni8USPUTDxEeFJq2DmOuTIj9Z4haQtdad7mce6094alNAfS-zhKqngN0E-LV3cf5x5RFsGbw3U5v0NqdAjODmFLRB_N6Vgh4Xm48oPC3fEH6gA8uOrcf9KZnkIG0a3n3PoMXsydqlQhc7zJYr4JtOM-jY-HjtJHsUSEdi46yWeUhK17DWD-Mq5nWWaMxeHQiy1-iQT-YTm2l5RL9yrcm1Lhj4Gd1H8bgc5EAscdJeQU"/>
+</div>
+<span class="text-2xl font-black text-[#524fb2] dark:text-[#9895fd] italic font-['Plus_Jakarta_Sans'] tracking-tight">HatchQuest</span>
+</div>
+<div class="hidden md:flex items-center gap-8">
+<nav class="flex gap-6">
+<a class="text-[#524fb2] dark:text-[#9895fd] font-bold transition-transform active:scale-95 duration-200" href="#">The Great Hall</a>
+<a class="text-stone-600 dark:text-stone-400 hover:bg-stone-200/50 dark:hover:bg-stone-800/50 transition-colors px-3 py-1 rounded-full" href="#">Makola Market</a>
+<a class="text-stone-600 dark:text-stone-400 hover:bg-stone-200/50 dark:hover:bg-stone-800/50 transition-colors px-3 py-1 rounded-full" href="#">Venture Lab</a>
+</nav>
+<div class="h-8 w-[1px] bg-outline-variant/30"></div>
+<button class="text-[#524fb2] dark:text-[#9895fd] flex items-center gap-2 font-bold hover:bg-stone-200/50 p-2 rounded-full transition-colors">
+<span class="material-symbols-outlined" data-icon="account_balance_wallet">account_balance_wallet</span>
+<span class="text-sm">GHS 12,450</span>
+</button>
+</div>
+</div>
+</header>
+<!-- Main Content Canvas (Game Layer 0) -->
+<main class="relative z-10 flex flex-col items-center justify-center min-h-screen px-6 pt-24 pb-12">
+<div class="max-w-4xl w-full grid grid-cols-1 md:grid-cols-12 gap-8 items-center">
+<!-- Left: Narrative & Context -->
+<div class="md:col-span-7 flex flex-col gap-6">
+<div class="inline-flex items-center px-4 py-2 bg-tertiary/10 text-tertiary rounded-full w-fit">
+<span class="material-symbols-outlined text-sm mr-2" style="font-variation-settings: 'FILL' 1;">emergency</span>
+<span class="font-label text-xs font-bold tracking-widest uppercase">Chapter 0: The Incubation</span>
+</div>
+<h2 class="text-5xl md:text-7xl font-headline font-extrabold text-white leading-tight tracking-tighter">
+                    Accra <span class="text-secondary-fixed italic">Pulse</span>
+</h2>
+<div class="space-y-4">
+<p class="text-2xl md:text-3xl font-body italic text-stone-200 leading-relaxed">
+                        "The humidity in Accra is thick tonight... The city lights below hum with the restless energy of ten million dreams, but in this room, only one matters."
+                    </p>
+<p class="text-xl font-body text-stone-300/90 leading-relaxed max-w-xl">
+                        Nana Kwesi watches you from across the mahogany table. The deal is laid bare—equity, influence, and the keys to the District. Are you ready to bargain?
+                    </p>
+</div>
+</div>
+<!-- Right: Interactive Interaction Panel (Floating Card) -->
+<div class="md:col-span-5 w-full">
+<div class="glass-panel p-8 rounded-xl shadow-2xl border border-white/10 flex flex-col gap-8">
+<div class="flex flex-col gap-2">
+<label class="text-white font-headline font-bold text-sm tracking-widest uppercase opacity-80" for="bargain-input">Your Counter-Offer</label>
+<textarea class="w-full bg-white/5 border-none focus:ring-2 focus:ring-primary-container rounded-xl text-white font-body text-lg p-6 placeholder:text-stone-500 transition-all resize-none" id="bargain-input" placeholder="Draft your response to Nana Kwesi here... Use your wit, or use your weight." rows="5"></textarea>
+</div>
+<div class="flex flex-col gap-4">
+<button class="w-full py-6 bg-primary text-on-primary rounded-xl font-headline font-extrabold text-xl shadow-lg hover:bg-primary-dim hover:scale-[1.02] active:scale-95 transition-all flex items-center justify-center gap-3 group">
+                            Decide
+                            <span class="material-symbols-outlined group-hover:translate-x-2 transition-transform" data-icon="east">east</span>
+</button>
+<div class="flex justify-between items-center px-2">
+<button class="text-stone-300 font-label text-sm hover:text-white transition-colors">Risk Assessment</button>
+<div class="flex gap-1">
+<div class="w-2 h-2 rounded-full bg-secondary"></div>
+<div class="w-2 h-2 rounded-full bg-stone-600"></div>
+<div class="w-2 h-2 rounded-full bg-stone-600"></div>
+</div>
+</div>
+</div>
+</div>
+<!-- Secondary Floating Detail -->
+<div class="mt-6 flex items-center gap-4 bg-surface-container-lowest/10 backdrop-blur-md p-4 rounded-full border border-white/5">
+<div class="w-10 h-10 rounded-full bg-secondary-container flex items-center justify-center text-on-secondary-container">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">trending_up</span>
+</div>
+<div class="flex flex-col">
+<span class="text-white font-headline font-bold text-xs">MARKET TENSION</span>
+<span class="text-secondary-fixed text-xs font-bold">CRITICAL · 88%</span>
+</div>
+</div>
+</div>
+</div>
+</main>
+<!-- Side Decoration: District Intel (Asymmetric Layout element) -->
+<div class="fixed left-0 bottom-12 hidden lg:flex flex-col gap-4 z-20">
+<div class="bg-primary/90 text-white py-4 pl-8 pr-12 rounded-r-full shadow-xl flex items-center gap-4 hover:translate-x-2 transition-transform cursor-pointer">
+<span class="material-symbols-outlined" data-icon="location_on">location_on</span>
+<div>
+<p class="font-headline font-bold text-xs tracking-tighter opacity-70">CURRENT DISTRICT</p>
+<p class="font-body italic text-lg leading-none">Accra Central District</p>
+</div>
+</div>
+<div class="bg-secondary/90 text-on-secondary py-4 pl-8 pr-12 rounded-r-full shadow-xl flex items-center gap-4 hover:translate-x-2 transition-transform cursor-pointer">
+<span class="material-symbols-outlined" data-icon="history_edu">history_edu</span>
+<div>
+<p class="font-headline font-bold text-xs tracking-tighter opacity-70">REPUTATION</p>
+<p class="font-body italic text-lg leading-none">Level 12 Entrepreneur</p>
+</div>
+</div>
+</div>
+<!-- Decorative Corner Street Texture -->
+<div class="fixed top-0 right-0 w-64 h-64 opacity-20 pointer-events-none z-0">
+<div class="absolute inset-0 bg-gradient-to-bl from-tertiary to-transparent rounded-full blur-[100px]"></div>
+</div>
+</body></html>

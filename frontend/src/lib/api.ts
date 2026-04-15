@@ -9,10 +9,11 @@ import type {
   ResultsResponse,
 } from "@hatchquest/shared";
 
-// Base URL for the Fastify backend.
-// Set NEXT_PUBLIC_BACKEND_URL in Vercel env vars to the Railway deployment URL.
-// Falls back to localhost:3001 for local dev.
-const BASE_URL = process.env.NEXT_PUBLIC_BACKEND_URL ?? "http://localhost:3001";
+// All requests go through Next.js rewrites → Fastify backend.
+// In dev: Next.js proxies /api/game/* to localhost:3001.
+// In prod: Next.js proxies to NEXT_PUBLIC_BACKEND_URL (Railway URL).
+// No CORS issues — browser always talks to the same origin.
+const BASE_URL = "";
 
 /** Generic request helper — throws with server error message on non-2xx. */
 async function request<T>(path: string, init?: RequestInit): Promise<T> {

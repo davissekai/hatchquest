@@ -1,36 +1,29 @@
 "use client";
 
 interface LoadingOverlayProps {
-  /** Message to display below the spinner. */
+  /** Message shown below the spinner. */
   message?: string;
 }
 
 /**
- * Full-screen loading overlay in retro HatchQuest style.
- * Mount conditionally — renders a fixed overlay when mounted.
+ * Full-screen loading overlay in Stitch design language.
+ * Uses glassmorphism on the bg-background base with a primary spinner.
  */
-export default function LoadingOverlay({ message = "LOADING..." }: LoadingOverlayProps) {
+export default function LoadingOverlay({ message = "Loading..." }: LoadingOverlayProps) {
   return (
     <div
       aria-live="polite"
       aria-label="Loading"
-      className="fixed inset-0 z-40 flex flex-col items-center justify-center bg-background/90"
+      className="fixed inset-0 z-40 flex flex-col items-center justify-center bg-background/80 backdrop-blur-sm"
     >
-      <div className="scanlines pointer-events-none" />
-      <div className="relative z-10 flex flex-col items-center gap-4">
-        {/* Retro spinner — 4 rotating blocks */}
-        <div className="grid grid-cols-2 gap-1.5 animate-spin-slow">
-          {[0, 1, 2, 3].map((i) => (
-            <div
-              key={i}
-              className="h-4 w-4 border-[2px] border-primary bg-accent"
-              style={{ animationDelay: `${i * 0.15}s` }}
-            />
-          ))}
-        </div>
-        <span className="font-display text-xs tracking-[0.3em] text-muted-foreground uppercase animate-pulse">
+      <div className="flex flex-col items-center gap-6">
+        {/* Circular spinner using primary color */}
+        <div
+          className="w-12 h-12 rounded-full border-4 border-primary-container border-t-primary animate-spin"
+        />
+        <p className="font-label text-sm font-semibold text-on-surface-variant tracking-wide">
           {message}
-        </span>
+        </p>
       </div>
     </div>
   );

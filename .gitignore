@@ -48,3 +48,6 @@ next-env.d.ts
 
 # local project artifacts
 hatchquest/
+
+# Visual brainstorming sessions
+.superpowers/
