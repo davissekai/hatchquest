@@ -15,7 +15,7 @@ vi.mock("../context/GameContext", () => ({
 
 // Mock the RetroTransition to just call onComplete immediately for testing
 vi.mock("@/components/RetroTransition", () => ({
-  default: ({ onComplete }: any) => {
+  default: ({ onComplete }: { onComplete: () => void }) => {
     // We can manually trigger it to test the callback
     return <div data-testid="retro-transition" onClick={onComplete} />;
   },
