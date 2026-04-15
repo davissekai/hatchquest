@@ -50,9 +50,9 @@ describe("createSession", () => {
     expect(s.worldState.isComplete).toBe(false);
   });
 
-  it("defaults sector to tech", async () => {
+  it("initialises worldState with null playerContext", async () => {
     const s = await store.createSession("Kwame", "kwame@example.com");
-    expect(s.worldState.sector).toBe("tech");
+    expect(s.worldState.playerContext).toBeNull();
   });
 
   it("produces unique ids for successive sessions", async () => {

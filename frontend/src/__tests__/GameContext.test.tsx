@@ -15,7 +15,7 @@ const mockClientState: ClientWorldState = {
   monthlyBurn: 0,
   revenue: 0,
   debt: 0,
-  sector: "retail",
+  playerBusinessName: null,
   employeeCount: 0,
   businessFormality: "unregistered",
   hasBackupPower: false,
@@ -50,7 +50,7 @@ describe('GameContext State Machine', () => {
   it('startGame persists sessionId and layer0Question', async () => {
     mockApi.start.mockResolvedValueOnce({
       sessionId: 'sess-123',
-      layer0Question: 'What is your goal?',
+      preamble: 'Test preamble', layer0Question: 'What is your goal?',
     });
 
     const { result } = renderHook(() => useGame(), { wrapper });

@@ -3,7 +3,7 @@ import { createInitialWorldState } from "../world-state.js";
 
 describe("createInitialWorldState", () => {
   it("returns a valid WorldState with correct defaults", () => {
-    const state = createInitialWorldState({ seed: 42, sector: "tech" });
+    const state = createInitialWorldState({ seed: 42 });
 
     // Meta
     expect(state.seed).toBe(42);
@@ -19,8 +19,8 @@ describe("createInitialWorldState", () => {
     expect(state.revenue).toBe(0);
     expect(state.debt).toBe(0);
 
-    // Business
-    expect(state.sector).toBe("tech");
+    // Business — playerContext null until Layer 0 classify step
+    expect(state.playerContext).toBeNull();
     expect(state.employeeCount).toBe(0);
     expect(state.businessFormality).toBe("unregistered");
     expect(state.hasBackupPower).toBe(false);
@@ -43,8 +43,8 @@ describe("createInitialWorldState", () => {
   });
 
   it("produces deterministic environment for the same seed", () => {
-    const s1 = createInitialWorldState({ seed: 123, sector: "food" });
-    const s2 = createInitialWorldState({ seed: 123, sector: "food" });
+    const s1 = createInitialWorldState({ seed: 123 });
+    const s2 = createInitialWorldState({ seed: 123 });
     expect(s1.marketDemand).toBe(s2.marketDemand);
     expect(s1.infrastructureReliability).toBe(s2.infrastructureReliability);
     expect(s1.regulatoryPressure).toBe(s2.regulatoryPressure);
@@ -53,9 +53,8 @@ describe("createInitialWorldState", () => {
   });
 
   it("produces different environments for different seeds", () => {
-    const s1 = createInitialWorldState({ seed: 1, sector: "tech" });
-    const s2 = createInitialWorldState({ seed: 9999, sector: "tech" });
-    // At least one environment variable should differ
+    const s1 = createInitialWorldState({ seed: 1 });
+    const s2 = createInitialWorldState({ seed: 9999 });
     const envDiffers =
       s1.marketDemand !== s2.marketDemand ||
       s1.infrastructureReliability !== s2.infrastructureReliability ||
@@ -65,9 +64,8 @@ describe("createInitialWorldState", () => {
   });
 
   it("environment variables are in [0, 100] range", () => {
-    // Test with many seeds to catch range issues
     for (let seed = 0; seed < 100; seed++) {
-      const state = createInitialWorldState({ seed, sector: "retail" });
+      const state = createInitialWorldState({ seed });
       expect(state.marketDemand).toBeGreaterThanOrEqual(0);
       expect(state.marketDemand).toBeLessThanOrEqual(100);
       expect(state.infrastructureReliability).toBeGreaterThanOrEqual(0);
@@ -80,23 +78,15 @@ describe("createInitialWorldState", () => {
   });
 
   it("monthlyBurn is an integer", () => {
-    const state = createInitialWorldState({ seed: 77, sector: "agri" });
+    const state = createInitialWorldState({ seed: 77 });
     expect(Number.isInteger(state.monthlyBurn)).toBe(true);
   });
 
   it("environment variables are integers", () => {
-    const state = createInitialWorldState({ seed: 55, sector: "services" });
+    const state = createInitialWorldState({ seed: 55 });
     expect(Number.isInteger(state.marketDemand)).toBe(true);
     expect(Number.isInteger(state.infrastructureReliability)).toBe(true);
     expect(Number.isInteger(state.regulatoryPressure)).toBe(true);
     expect(Number.isInteger(state.competitorAggression)).toBe(true);
-  });
-
-  it("accepts all valid sectors", () => {
-    const sectors = ["tech", "agri", "retail", "food", "services"] as const;
-    for (const sector of sectors) {
-      const state = createInitialWorldState({ seed: 42, sector });
-      expect(state.sector).toBe(sector);
-    }
   });
 });

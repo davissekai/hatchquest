@@ -51,7 +51,7 @@ export interface WorldState {
   debt: number; // Accumulated debt, starts at 0
 
   // --- Business ---
-  sector: BusinessSector; // Set during Layer 0
+  // sector removed — lives inside playerContext after Layer 0 classify
   employeeCount: number; // Starts at 0 (solo founder)
   businessFormality: BusinessFormality; // Starts unregistered
   hasBackupPower: boolean; // Dumsor resilience

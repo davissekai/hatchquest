@@ -17,6 +17,10 @@ export type {
   StartResponse,
   ClassifyRequest,
   ClassifyResponse,
+  ClassifyQ1Request,
+  ClassifyQ1Response,
+  ClassifyQ2Request,
+  ClassifyQ2Response,
   ChoiceRequest,
   ChoiceResponse,
   SessionResponse,
@@ -24,3 +28,4 @@ export type {
   ScenarioNode,
   Choice,
 } from "./types/api.js";
+export type { ScenarioSkeleton, ChoiceArchetype, NarrativeSkin } from "./types/skeleton.js";

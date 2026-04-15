@@ -5,7 +5,7 @@ import type { ChoiceEffect } from "../apply-choice.js";
 
 // Helper: create a base state for testing
 function makeState() {
-  return createInitialWorldState({ seed: 42, sector: "tech" });
+  return createInitialWorldState({ seed: 42 });
 }
 
 describe("applyChoice", () => {

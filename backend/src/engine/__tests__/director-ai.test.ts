@@ -34,7 +34,7 @@ function makeNode(overrides: Partial<ScenarioNodeFull> = {}): ScenarioNodeFull {
 }
 
 function makeState() {
-  return createInitialWorldState({ seed: 42, sector: "tech" });
+  return createInitialWorldState({ seed: 42 });
 }
 
 // --- passesConditions ---
