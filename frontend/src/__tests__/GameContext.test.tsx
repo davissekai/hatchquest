@@ -69,6 +69,42 @@ describe('GameContext State Machine', () => {
     expect(meta.layer0Question).toBe('What is your goal?');
   });
 
+  it('classifyLayer0 hydrates the first playable node after classification', async () => {
+    mockApi.start.mockResolvedValueOnce({
+      sessionId: 'sess-234',
+      layer0Question: 'What are you building?',
+    });
+    mockApi.classify.mockResolvedValueOnce({
+      sessionId: 'sess-234',
+      layer1NodeId: 'L1-node-1',
+    });
+    mockApi.session.mockResolvedValueOnce({
+      sessionId: 'sess-234',
+      clientState: { ...mockClientState, layer: 1, capital: 10000 },
+      currentNode: {
+        id: 'L1-node-1',
+        layer: 1,
+        narrative: 'Narrated scenario',
+        choices: [],
+      },
+    });
+
+    const { result } = renderHook(() => useGame(), { wrapper });
+
+    await act(async () => {
+      await result.current.startGame('Player1', 'test@test.com', 'password');
+      await result.current.classifyLayer0('I am building a fintech app.');
+    });
+
+    expect(mockApi.classify).toHaveBeenCalledWith({
+      sessionId: 'sess-234',
+      response: 'I am building a fintech app.',
+    });
+    expect(mockApi.session).toHaveBeenCalledWith('sess-234');
+    expect(result.current.state.currentNode?.id).toBe('L1-node-1');
+    expect(result.current.phase).toBe('active');
+  });
+
   it('resumeSession correctly restores phase to layer0', async () => {
     localStorage.setItem('hq-session-meta', JSON.stringify({
       sessionId: 'sess-456',

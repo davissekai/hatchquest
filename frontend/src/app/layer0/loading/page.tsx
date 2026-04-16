@@ -8,17 +8,15 @@ import { useGame } from "@/context/GameContext";
 /** Post-Layer 0 loading screen — shown while the classifier routes the player to Layer 1. */
 const Layer0LoadingPage = () => {
   const router = useRouter();
-  const { hasActiveSession, resumeSession } = useGame();
+  const { state, hasActiveSession, resumeSession } = useGame();
 
   useEffect(() => {
-    // Guard: if no session in localStorage the player navigated here directly.
     if (!hasActiveSession()) {
       router.replace("/create");
-    } else {
-      // Hydrate state so when we reach /play, it has the Layer 1 node ready.
+    } else if (!state.currentNode) {
       void resumeSession();
     }
-  }, [hasActiveSession, resumeSession, router]);
+  }, [hasActiveSession, resumeSession, router, state.currentNode]);
 
   const handleComplete = useCallback(() => {
     router.replace("/play");

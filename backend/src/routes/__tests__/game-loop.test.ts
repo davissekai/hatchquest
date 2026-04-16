@@ -137,16 +137,18 @@ describe("full game loop — start → classify → 5 choices → results", () =
 
     expect(finalTurn.clientState.isComplete).toBe(true);
     expect(finalTurn.clientState.turnsElapsed).toBe(5);
+    expect(finalTurn.clientState.layer).toBe(5);
     expect(finalTurn.nextNode).toBeNull();
   });
 
-  it("session layer increments by 1 each turn", async () => {
+  it("session layer advances to the next layer and stays at 5 on completion", async () => {
     const sessionId = await startSession(app);
     const layer1NodeId = await classifySession(app, sessionId);
 
-    // After classify we're at layer 1
     let currentNode = layer1NodeId;
-    for (let expectedLayer = 2; expectedLayer <= 6; expectedLayer++) {
+    const expectedLayers = [2, 3, 4, 5, 5];
+
+    for (const expectedLayer of expectedLayers) {
       const res = await makeChoice(app, sessionId, currentNode, 0);
       expect(res.clientState.layer).toBe(expectedLayer);
       currentNode = res.nextNode?.id ?? "";

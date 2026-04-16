@@ -123,6 +123,12 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
     setError(null);
     try {
       await api.classify({ sessionId: state.sessionId, response });
+      const hydrated = await api.session(state.sessionId);
+      patch({
+        clientState: hydrated.clientState,
+        currentNode: hydrated.currentNode,
+        isComplete: hydrated.clientState.isComplete,
+      });
     } catch (err) {
       const msg = err instanceof Error ? err.message : "Classification failed";
       setError(msg);

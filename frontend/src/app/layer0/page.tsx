@@ -37,6 +37,8 @@ const Layer0Page = () => {
 
   const charCount = response.length;
   const canSubmit = response.trim().length > 0 && !isLoading;
+  const layer0Prompt =
+    state.layer0Question ?? "Describe the business you want to build.";
 
   return (
     <div className="bg-background text-on-surface min-h-screen relative overflow-hidden">
@@ -104,21 +106,30 @@ const Layer0Page = () => {
           <div className="md:col-span-5 w-full">
             <div className="glass-panel-dark p-8 rounded-xl shadow-2xl border border-white/10 flex flex-col gap-6">
               <form onSubmit={handleSubmit} className="flex flex-col gap-6">
+                <div className="rounded-xl border border-white/10 bg-white/5 p-5">
+                  <p className="text-white font-headline font-bold text-sm tracking-widest uppercase opacity-80 mb-3">
+                    Assessment Brief
+                  </p>
+                  <p className="whitespace-pre-line text-sm leading-7 text-stone-200 font-body">
+                    {layer0Prompt}
+                  </p>
+                </div>
+
                 <div className="flex flex-col gap-2">
                   <label
                     htmlFor="layer0-response"
                     className="text-white font-headline font-bold text-sm tracking-widest uppercase opacity-80"
                   >
-                    {state.layer0Question ?? "Describe the business you want to build."}
+                    Your response
                   </label>
                   <textarea
                     id="layer0-response"
                     value={response}
                     onChange={(e) => setResponse(e.target.value)}
-                    placeholder="Write freely — there are no right answers. Your instinct is the data."
+                    placeholder="Answer in the same 4 parts if you want — what you build, why now, what you do under pressure, and how you react to competition."
                     disabled={isLoading}
-                    rows={5}
-                    className="w-full bg-white/5 border-none focus:ring-2 focus:ring-primary-container rounded-xl text-white font-body text-base p-5 placeholder:text-stone-500 transition-all resize-none outline-none disabled:opacity-50"
+                    rows={8}
+                    className="w-full bg-white/5 border-none focus:ring-2 focus:ring-primary-container rounded-xl text-white font-body text-base p-5 placeholder:text-stone-500 transition-all resize-none outline-none disabled:opacity-50 whitespace-pre-wrap"
                   />
                   <div className="flex justify-between items-center px-1">
                     <span className="font-label text-xs text-stone-400">

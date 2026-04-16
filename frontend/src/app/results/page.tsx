@@ -118,7 +118,7 @@ const Results = () => {
                 Entrepreneurial Profile
               </h3>
               {results.summary && (
-                <p className="font-body text-base text-on-surface-variant mb-6 leading-relaxed italic text-center">
+                <p className="font-body text-base text-on-surface-variant mb-6 leading-relaxed italic text-center whitespace-pre-line">
                   &ldquo;{results.summary}&rdquo;
                 </p>
               )}
