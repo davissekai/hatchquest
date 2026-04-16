@@ -7,6 +7,7 @@ import { HUD } from "@/components/HUD";
 import RetroTransition from "@/components/RetroTransition";
 import ErrorBanner from "@/components/ErrorBanner";
 import LoadingOverlay from "@/components/LoadingOverlay";
+import type { ClientWorldState } from "@hatchquest/shared";
 
 const transitionMessages = [
   "Processing your decision...",
@@ -104,7 +105,7 @@ const Gameplay = () => {
           )}
           <button
             onClick={() => { resetGame(); router.replace("/"); }}
-            className="px-8 py-4 bg-navy text-white rounded-none border-4 border-navy font-headline font-black uppercase tracking-widest hover:bg-electric-yellow hover:text-navy transition-colors shadow-[8px_8px_0_0_#1E3A8A] hover:translate-x-1 hover:translate-y-1 hover:shadow-[4px_4px_0_0_#1E3A8A]"
+            className="px-8 py-4 bg-navy text-white rounded-full font-headline font-black uppercase tracking-widest hover:bg-lime hover:text-navy transition-all duration-300 shadow-[0_10px_30px_rgba(30,58,138,0.2)] hover:scale-105 active:scale-95 border-4 border-transparent hover:border-white"
           >
             Return Home
           </button>
@@ -123,7 +124,7 @@ const Gameplay = () => {
       {/* ── Top HUD ─────────────────────────────────────── */}
       <div className="relative z-20">
         <HUD
-          clientState={clientState || { capital: 0, reputation: 0, networkStrength: 0, layer: 0, turnsElapsed: 0 } as any}
+          clientState={clientState || { capital: 0, reputation: 0, networkStrength: 0, layer: 0, turnsElapsed: 0 } as ClientWorldState}
           layer={layer}
         />
       </div>
@@ -152,59 +153,67 @@ const Gameplay = () => {
         <div className="max-w-2xl w-full flex flex-col gap-6">
 
           {/* Turn badge */}
-          <div className="inline-block self-start border-4 border-navy bg-electric-yellow text-navy px-4 py-2 font-headline font-black uppercase tracking-widest text-sm shadow-[4px_4px_0_0_#1E3A8A]">
+          <div className="inline-block self-start border-4 border-white bg-lime text-navy px-6 py-2 rounded-full font-headline font-black uppercase tracking-widest text-sm shadow-[0_5px_15px_rgba(57,255,20,0.3)]">
             Turn {turns}
           </div>
 
           {/* Narrative flat card */}
-          <div className="bg-white border-4 border-navy p-8 shadow-[8px_8px_0_0_#1E3A8A]">
-            <p className="font-headline font-black text-2xl md:text-3xl text-navy leading-tight whitespace-pre-line tracking-tight">
+          <div className="bg-white/80 backdrop-blur-xl border-4 border-white p-10 rounded-[3rem] shadow-[0_20px_60px_rgba(30,58,138,0.1)]">
+            <p className="font-headline font-extrabold text-2xl md:text-3xl text-navy leading-tight whitespace-pre-line tracking-tight drop-shadow-sm">
               {currentNode.narrative}
             </p>
           </div>
 
           {/* Choices */}
-          <div className="flex flex-col gap-4 mt-4">
+          <div className="flex flex-col gap-5 mt-4">
             {currentNode.choices.map((choice, i: number) => {
               const letterLabel = String.fromCharCode(65 + i);
+              
+              // Color code the buttons: A = Cyan, B = Pink, C = Yellow/Orange
+              const colors = [
+                "bg-electric-cyan hover:bg-electric-cyan/90 text-navy shadow-[0_10px_30px_rgba(0,240,255,0.3)]",
+                "bg-hot-pink hover:bg-hot-pink/90 text-white shadow-[0_10px_30px_rgba(255,42,133,0.3)]",
+                "bg-electric-yellow hover:bg-electric-yellow/90 text-navy shadow-[0_10px_30px_rgba(255,234,0,0.3)]",
+              ];
+              const buttonColor = colors[i % colors.length];
 
               return (
                 <button
                   key={choice.index}
                   onClick={() => handleChoice(choice.index)}
                   disabled={isTransitioning || choiceDisabled}
-                  className="group flex items-center w-full bg-white border-4 border-navy text-navy hover:bg-electric-yellow active:scale-95 transition-all duration-75 disabled:opacity-50 disabled:cursor-not-allowed shadow-[6px_6px_0_0_#1E3A8A] hover:shadow-[2px_2px_0_0_#1E3A8A] hover:translate-x-1 hover:translate-y-1"
+                  className={`group flex items-center w-full rounded-full border-4 border-white transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed hover:scale-105 active:scale-95 ${buttonColor}`}
                 >
-                  <span className="flex-shrink-0 w-16 h-16 border-r-4 border-navy flex items-center justify-center text-2xl font-black group-hover:bg-navy group-hover:text-electric-yellow transition-colors">
+                  <span className={`flex-shrink-0 w-16 h-16 rounded-full m-2 flex items-center justify-center text-2xl font-black bg-white/20 backdrop-blur-sm group-hover:bg-white/40 transition-colors`}>
                     {letterLabel}
                   </span>
-                  <span className="flex-1 flex flex-col items-start px-6 py-4 text-left">
-                    <span className="font-headline font-extrabold text-lg">{choice.text}</span>
+                  <span className="flex-1 flex flex-col items-start px-4 py-4 text-left">
+                    <span className="font-headline font-extrabold text-lg drop-shadow-sm">{choice.text}</span>
                     {choice.tensionHint && (
-                      <span className="font-headline font-bold text-xs mt-1 opacity-80 uppercase tracking-widest">{choice.tensionHint}</span>
+                      <span className="font-headline font-bold text-xs mt-1 opacity-90 uppercase tracking-widest">{choice.tensionHint}</span>
                     )}
                   </span>
-                  <span className="material-symbols-outlined text-3xl pr-6 font-bold group-hover:translate-x-2 transition-transform">arrow_forward</span>
+                  <span className="material-symbols-outlined text-3xl pr-6 font-bold group-hover:translate-x-2 transition-transform drop-shadow-sm">arrow_forward</span>
                 </button>
               );
             })}
           </div>
 
           {/* Bottom market tension indicator */}
-          <div className="flex items-center gap-4 border-4 border-navy bg-white p-4 self-start shadow-[4px_4px_0_0_#1E3A8A] mt-4">
-            <div className="w-10 h-10 bg-navy flex items-center justify-center text-electric-yellow flex-shrink-0">
+          <div className="flex items-center gap-4 border-4 border-white bg-white/80 backdrop-blur-md rounded-full p-3 self-start shadow-[0_10px_30px_rgba(30,58,138,0.08)] mt-4">
+            <div className="w-12 h-12 rounded-full bg-navy flex items-center justify-center text-electric-cyan flex-shrink-0 shadow-inner">
               <span
-                className="material-symbols-outlined text-lg"
+                className="material-symbols-outlined text-xl"
                 style={{ fontVariationSettings: "'FILL' 1" }}
               >
                 trending_up
               </span>
             </div>
-            <div>
+            <div className="pr-4">
               <p className="text-navy font-headline font-black text-xs tracking-widest uppercase">
                 Market Tension
               </p>
-              <p className="text-navy/80 font-headline font-bold text-[10px] uppercase tracking-wider">Active · Accra Central</p>
+              <p className="text-navy/70 font-headline font-bold text-[10px] uppercase tracking-wider">Active · Accra Central</p>
             </div>
           </div>
         </div>
