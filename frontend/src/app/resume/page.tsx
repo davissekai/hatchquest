@@ -30,16 +30,13 @@ const ResumeSession = () => {
   // ── Loading ─────────────────────────────────────────────────────────────────
   if (isLoading || !resumeAttempted) {
     return (
-      <div
-        className="min-h-[100dvh] flex items-center justify-center"
-        style={{ background: "var(--c-navy)" }}
-      >
-        <span
-          className="font-display uppercase animate-pulse"
-          style={{ fontSize: "10px", letterSpacing: "0.3em", color: "var(--c-amber)" }}
-        >
-          RECONNECTING...
-        </span>
+      <div className="min-h-screen bg-navy flex items-center justify-center">
+        <div className="flex flex-col items-center gap-6">
+          <div className="w-16 h-16 rounded-full border-4 border-white/20 border-t-lime animate-spin shadow-[0_0_20px_rgba(57,255,20,0.3)]" />
+          <span className="font-headline font-black text-lime tracking-[0.3em] uppercase italic drop-shadow-sm">
+            RECONNECTING...
+          </span>
+        </div>
       </div>
     );
   }
@@ -47,48 +44,28 @@ const ResumeSession = () => {
   // ── Expired ──────────────────────────────────────────────────────────────────
   if (!canResume) {
     return (
-      <div className="min-h-[100dvh] flex flex-col" style={{ background: "var(--c-canvas)" }}>
-        <div
-          style={{ background: "var(--c-laterite)" }}
-          className="flex flex-col justify-end px-6 pt-14 pb-10 flex-[0_0_42%]"
-        >
-          <span
-            className="font-display uppercase mb-4"
-            style={{ fontSize: "9px", letterSpacing: "0.3em", color: "rgba(255,255,255,0.6)" }}
-          >
+      <div className="min-h-screen bg-cream flex flex-col relative overflow-hidden">
+        <div className="absolute inset-0 adinkra-pattern opacity-10 z-0" />
+        
+        <div className="bg-navy flex flex-col justify-center px-8 pt-24 pb-16 flex-[0_0_45%] relative z-10 rounded-b-[4rem] shadow-[0_20px_60px_rgba(30,58,138,0.3)]">
+          <span className="font-headline font-black text-hot-pink tracking-[0.3em] mb-6 uppercase text-sm drop-shadow-sm">
             SESSION EXPIRED
           </span>
-          <h1
-            className="font-body italic"
-            style={{ fontSize: "clamp(2.2rem, 9vw, 3.5rem)", color: "#fff", lineHeight: 1.05 }}
-          >
-            Your journey
-            <br />
-            was lost.
+          <h1 className="font-headline font-black text-white italic leading-none tracking-tighter text-6xl md:text-8xl drop-shadow-md">
+            Your journey<br />was lost.
           </h1>
-          <p
-            className="font-body mt-3"
-            style={{ fontSize: "13px", color: "rgba(255,255,255,0.6)", lineHeight: 1.6 }}
-          >
+          <p className="font-body text-xl text-white/70 mt-6 max-w-md font-medium leading-relaxed">
             Every founder faces setbacks. The question is whether you rebuild.
           </p>
         </div>
-        <div className="hud-curve" style={{ background: "var(--c-canvas)" }} />
-        <div className="flex-1 flex flex-col justify-end px-6 pb-10">
+
+        <div className="flex-1 flex flex-col justify-end px-8 pb-12 relative z-10">
           <button
             onClick={() => { resetGame(); router.push("/create"); }}
-            className="font-display uppercase w-full"
-            style={{
-              background: "var(--c-navy)",
-              color: "var(--c-amber)",
-              fontSize: "12px",
-              letterSpacing: "0.2em",
-              padding: "16px",
-              border: "none",
-              cursor: "pointer",
-            }}
+            className="w-full py-6 bg-lime text-navy font-headline font-black text-xl rounded-full shadow-[0_12px_40px_rgba(57,255,20,0.4)] border-4 border-white hover:scale-105 active:scale-95 transition-all duration-300 flex items-center justify-center gap-3"
           >
-            START FRESH →
+            START FRESH
+            <span className="material-symbols-outlined font-black">refresh</span>
           </button>
         </div>
       </div>
@@ -99,115 +76,66 @@ const ResumeSession = () => {
   const isCompleted = phase === "complete";
   
   return (
-    <div className="min-h-[100dvh] flex flex-col" style={{ background: "var(--c-canvas)" }}>
+    <div className="min-h-screen bg-cream flex flex-col relative overflow-hidden">
+      <div className="absolute inset-0 adinkra-pattern opacity-10 z-0" />
 
       {/* Zone 1 — navy */}
-      <div
-        style={{ background: "var(--c-navy)" }}
-        className="flex flex-col justify-end px-6 pt-14 pb-10 flex-[0_0_42%]"
-      >
-        <span
-          className="font-display uppercase mb-4"
-          style={{ fontSize: "9px", letterSpacing: "0.3em", color: "var(--c-amber)" }}
-        >
+      <div className="bg-navy flex flex-col justify-center px-8 pt-24 pb-16 flex-[0_0_45%] relative z-10 rounded-b-[4rem] shadow-[0_20px_60px_rgba(30,58,138,0.3)]">
+        <span className="font-headline font-black text-electric-cyan tracking-[0.3em] mb-6 uppercase text-sm drop-shadow-sm">
           {isCompleted ? "JOURNEY COMPLETE" : "JOURNEY IN PROGRESS"}
         </span>
-        <h1
-          className="font-body italic"
-          style={{ fontSize: "clamp(2.2rem, 9vw, 3.5rem)", color: "#fff", lineHeight: 1.05 }}
-        >
-          {isCompleted ? (
-            <>
-              The results
-              <br />
-              are in.
-            </>
-          ) : (
-            <>
-              Still in the
-              <br />
-              game.
-            </>
-          )}
+        <h1 className="font-headline font-black text-white italic leading-none tracking-tighter text-6xl md:text-8xl drop-shadow-md">
+          {isCompleted ? "The results are in." : "Still in the game."}
         </h1>
       </div>
 
-      {/* Curve */}
-      <div className="hud-curve" />
-
       {/* Zone 2 — stats + actions */}
-      <div className="flex-1 flex flex-col px-6 pt-6 pb-10">
-
-        {/* Stats strip */}
-        <div
-          className="grid grid-cols-3 mb-8"
-          style={{ borderTop: "1px solid rgba(21,5,120,0.15)", borderBottom: "1px solid rgba(21,5,120,0.15)" }}
-        >
-          {[
-            { label: "LAYER", value: layer },
-            { label: "DECISIONS", value: turns },
-            { label: "CAPITAL", value: `₵${(capital / 1000).toFixed(1)}k` },
-          ].map((s, i) => (
-            <div
-              key={s.label}
-              className="flex flex-col items-center py-5"
-              style={{ borderRight: i < 2 ? "1px solid rgba(21,5,120,0.15)" : "none" }}
-            >
-              <span
-                className="font-display uppercase mb-1"
-                style={{ fontSize: "8px", letterSpacing: "0.2em", color: "rgba(21,5,120,0.45)" }}
+      <div className="flex-1 flex flex-col px-8 pt-10 pb-12 relative z-10">
+        
+        {/* Stats card */}
+        <div className="bg-white/80 backdrop-blur-xl border-4 border-white rounded-[3rem] p-8 shadow-[0_20px_60px_rgba(30,58,138,0.1)] mb-10">
+          <div className="grid grid-cols-3 gap-4">
+            {[
+              { label: "LAYER", value: layer, color: "text-hot-pink" },
+              { label: "DECISIONS", value: turns, color: "text-electric-cyan" },
+              { label: "CAPITAL", value: `₵${(capital / 1000).toFixed(1)}k`, color: "text-lime" },
+            ].map((s, i) => (
+              <div
+                key={s.label}
+                className={`flex flex-col items-center gap-2 ${i < 2 ? "border-r-2 border-cream" : ""}`}
               >
-                {s.label}
-              </span>
-              <span
-                className="font-body"
-                style={{ fontSize: "22px", color: "var(--c-navy)", fontWeight: 500 }}
-              >
-                {s.value}
-              </span>
-            </div>
-          ))}
+                <span className="font-headline font-black text-[10px] tracking-widest text-navy/40 uppercase">
+                  {s.label}
+                </span>
+                <span className={`font-headline font-black text-2xl md:text-3xl ${s.color} drop-shadow-sm`}>
+                  {s.value}
+                </span>
+              </div>
+            ))}
+          </div>
         </div>
 
-        <div className="space-y-3 mt-auto">
+        <div className="space-y-4 mt-auto">
           <button
             onClick={() => {
               if (phase === "layer0") router.push("/layer0");
               else if (phase === "complete") router.push("/results");
               else router.push("/play");
             }}
-            className="font-display uppercase w-full"
-            style={{
-              background: "var(--c-navy)",
-              color: "var(--c-amber)",
-              fontSize: "12px",
-              letterSpacing: "0.2em",
-              padding: "16px",
-              border: "none",
-              cursor: "pointer",
-            }}
+            className="w-full py-6 bg-lime text-navy font-headline font-black text-xl rounded-full shadow-[0_12px_40px_rgba(57,255,20,0.4)] border-4 border-white hover:scale-105 active:scale-95 transition-all duration-300 flex items-center justify-center gap-3"
           >
-            {isCompleted ? "VIEW RESULTS →" : "CONTINUE JOURNEY →"}
+            {isCompleted ? "VIEW RESULTS" : "CONTINUE JOURNEY"}
+            <span className="material-symbols-outlined font-black">east</span>
           </button>
+          
           <button
             onClick={() => { resetGame(); router.push("/create"); }}
-            className="font-display uppercase w-full"
-            style={{
-              background: "transparent",
-              color: "var(--c-navy)",
-              fontSize: "11px",
-              letterSpacing: "0.2em",
-              padding: "14px",
-              border: "1.5px solid rgba(21,5,120,0.25)",
-              cursor: "pointer",
-              opacity: 0.7,
-            }}
+            className="w-full py-4 bg-white text-navy/40 rounded-full font-headline font-bold text-sm hover:text-navy border-4 border-transparent hover:border-cream transition-all uppercase tracking-widest shadow-sm"
           >
-            START FRESH
+            Abandon & Start Fresh
           </button>
         </div>
       </div>
-
     </div>
   );
 };

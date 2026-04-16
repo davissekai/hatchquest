@@ -1,8 +1,0 @@
-{
-  "/page": "app/page.js",
-  "/create/page": "app/create/page.js",
-  "/loading/page": "app/loading/page.js",
-  "/layer0/page": "app/layer0/page.js",
-  "/layer0/loading/page": "app/layer0/loading/page.js",
-  "/play/page": "app/play/page.js"
-}

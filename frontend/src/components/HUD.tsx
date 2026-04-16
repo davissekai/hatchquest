@@ -1,8 +1,5 @@
 "use client";
 
-// HUD — two-zone navy header bar showing layer progress and world-state stats.
-// GSAP animates the capital counter on each update; laterite color signals crisis.
-
 import { useEffect, useRef } from "react";
 import type { ClientWorldState } from "@hatchquest/shared";
 
@@ -16,27 +13,20 @@ function formatCapital(value: number): string {
   return `GHS ${Math.round(value).toLocaleString("en-GH")}`;
 }
 
-/** Clamp a value between min and max. */
-function clamp(value: number, min: number, max: number): number {
-  return Math.min(max, Math.max(min, value));
-}
-
 export function HUD({ clientState, layer }: HUDProps): React.ReactElement {
   const capitalRef = useRef<HTMLSpanElement>(null);
-  // Store previous capital value so GSAP can count from it.
-  const prevCapitalRef = useRef<number>(clientState.capital);
+  const prevCapitalRef = useRef<number>(clientState?.capital || 0);
 
-  const isCrisis = clientState.capital < 1500;
-  const barWidth = clamp((clientState.capital / 10000) * 100, 0, 100);
+  const capital = clientState?.capital ?? 0;
+  const reputation = clientState?.reputation ?? 0;
+  const network = clientState?.networkStrength ?? 0;
 
   useEffect(() => {
-    // Lazily import GSAP to avoid SSR issues — this component is client-only.
     void import("gsap").then(({ gsap }) => {
       if (!capitalRef.current) return;
-
       const counter = { value: prevCapitalRef.current };
       gsap.to(counter, {
-        value: clientState.capital,
+        value: capital,
         duration: 0.6,
         ease: "power2.out",
         onUpdate() {
@@ -45,49 +35,30 @@ export function HUD({ clientState, layer }: HUDProps): React.ReactElement {
           }
         },
         onComplete() {
-          prevCapitalRef.current = clientState.capital;
+          prevCapitalRef.current = capital;
         },
       });
     });
-  }, [clientState.capital]);
+  }, [capital]);
 
   return (
-    <div
-      style={{
-        background: "var(--c-navy)",
-        padding: "16px 20px 28px",
-        position: "relative",
-      }}
-    >
+    <div className="m-4 bg-navy/95 backdrop-blur-xl text-white px-10 py-5 rounded-full shadow-[0_20px_60px_rgba(30,58,138,0.3)] border-4 border-white flex flex-col md:flex-row items-center justify-between gap-6">
       {/* Layer progress dots */}
-      <div
-        style={{
-          display: "flex",
-          alignItems: "center",
-          gap: "8px",
-          justifyContent: "center",
-          marginBottom: "16px",
-        }}
-      >
+      <div className="flex items-center gap-2">
+        <span className="font-headline font-extrabold uppercase tracking-widest text-lime mr-2">Layer {layer}</span>
         {[1, 2, 3, 4, 5].map((l) => {
           const isCurrent = l === layer;
           const isPast = l < layer;
           return (
             <span
               key={l}
-              style={{
-                display: "inline-block",
-                width: isCurrent ? "16px" : "10px",
-                height: isCurrent ? "16px" : "10px",
-                borderRadius: "50%",
-                background: isCurrent
-                  ? "var(--c-amber)"
+              className={`inline-block w-4 h-4 rounded-full border-2 transition-all duration-300 ${
+                isCurrent
+                  ? "bg-lime border-lime scale-110 shadow-[0_0_10px_rgba(57,255,20,0.5)]"
                   : isPast
-                  ? "#ffffff"
-                  : "transparent",
-                border: isCurrent || isPast ? "none" : "2px solid #ffffff",
-                transition: "all 0.3s ease",
-              }}
+                  ? "bg-electric-cyan border-electric-cyan"
+                  : "bg-transparent border-white/50"
+              }`}
               aria-label={`Layer ${l}${isCurrent ? " (current)" : isPast ? " (complete)" : ""}`}
             />
           );
@@ -95,108 +66,38 @@ export function HUD({ clientState, layer }: HUDProps): React.ReactElement {
       </div>
 
       {/* Stats row */}
-      <div
-        style={{
-          display: "flex",
-          alignItems: "flex-start",
-          gap: "24px",
-        }}
-      >
-        {/* Capital — large, animated, crisis-aware */}
-        <div style={{ flex: 1 }}>
+      <div className="flex items-center gap-6 md:gap-10 bg-white/10 px-6 py-2 rounded-full border border-white/20">
+        {/* Capital */}
+        <div className="flex flex-col items-center">
+          <span className="font-headline text-[10px] font-bold uppercase tracking-widest text-lime">Capital</span>
           <span
             ref={capitalRef}
-            style={{
-              fontFamily: "var(--font-outfit), serif",
-              fontSize: "20px",
-              fontWeight: 600,
-              color: isCrisis ? "var(--c-laterite)" : "#ffffff",
-              display: "block",
-              animation: isCrisis
-                ? "crisis-pulse 1.2s ease-in-out infinite"
-                : "none",
-              transition: "color 0.4s ease",
-            }}
+            className="font-headline text-xl font-black tracking-tight drop-shadow-sm"
           >
-            {formatCapital(clientState.capital)}
+            {formatCapital(capital)}
           </span>
-          {/* Capital progress bar */}
-          <div
-            style={{
-              marginTop: "4px",
-              height: "4px",
-              borderRadius: "2px",
-              background: "rgba(255,255,255,0.15)",
-              overflow: "hidden",
-            }}
-          >
-            <div
-              style={{
-                height: "100%",
-                width: `${barWidth}%`,
-                background: isCrisis ? "var(--c-laterite)" : "var(--c-amber)",
-                borderRadius: "2px",
-                transition: "width 0.6s ease, background 0.4s ease",
-              }}
-            />
-          </div>
         </div>
+
+        <div className="w-px h-8 bg-white/20" />
 
         {/* Reputation */}
-        <div style={{ textAlign: "center" }}>
-          <span
-            style={{
-              fontFamily: "var(--font-press-start), sans-serif",
-              fontSize: "11px",
-              color: "rgba(255,255,255,0.5)",
-              display: "block",
-              letterSpacing: "0.08em",
-              textTransform: "uppercase",
-            }}
-          >
-            REP
-          </span>
-          <span
-            style={{
-              fontFamily: "var(--font-press-start), sans-serif",
-              fontSize: "13px",
-              color: "rgba(255,255,255,0.7)",
-              fontWeight: 600,
-            }}
-          >
-            {clientState.reputation}
+        <div className="flex flex-col items-center">
+          <span className="font-headline text-[10px] font-bold uppercase tracking-widest text-hot-pink">Rep</span>
+          <span className="font-headline text-xl font-black tracking-tight drop-shadow-sm">
+            {reputation}
           </span>
         </div>
 
+        <div className="w-px h-8 bg-white/20" />
+
         {/* Network */}
-        <div style={{ textAlign: "center" }}>
-          <span
-            style={{
-              fontFamily: "var(--font-press-start), sans-serif",
-              fontSize: "11px",
-              color: "rgba(255,255,255,0.5)",
-              display: "block",
-              letterSpacing: "0.08em",
-              textTransform: "uppercase",
-            }}
-          >
-            NET
-          </span>
-          <span
-            style={{
-              fontFamily: "var(--font-press-start), sans-serif",
-              fontSize: "13px",
-              color: "rgba(255,255,255,0.7)",
-              fontWeight: 600,
-            }}
-          >
-            {clientState.networkStrength}
+        <div className="flex flex-col items-center">
+          <span className="font-headline text-[10px] font-bold uppercase tracking-widest text-electric-cyan">Net</span>
+          <span className="font-headline text-xl font-black tracking-tight drop-shadow-sm">
+            {network}
           </span>
         </div>
       </div>
-
-      {/* Curve separator — canvas-colored pill that overlaps the bottom edge */}
-      <div className="hud-curve" />
     </div>
   );
 }

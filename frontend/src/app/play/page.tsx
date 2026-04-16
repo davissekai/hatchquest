@@ -3,10 +3,11 @@
 import { useState, useCallback, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useGame } from "@/context/GameContext";
-import { TopAppBar } from "@/components/stitch/TopAppBar";
+import { HUD } from "@/components/HUD";
 import RetroTransition from "@/components/RetroTransition";
 import ErrorBanner from "@/components/ErrorBanner";
 import LoadingOverlay from "@/components/LoadingOverlay";
+import type { ClientWorldState } from "@hatchquest/shared";
 
 const transitionMessages = [
   "Processing your decision...",
@@ -23,16 +24,13 @@ const finalMessages = [
   "Final verdict incoming...",
 ];
 
-/** Core game loop — dark cinematic hero + glass narrative + rounded pill choices. */
+/** Core game loop — High-Contrast Minimalist (Swiss-Graffiti) aesthetic */
 const Gameplay = () => {
   const router = useRouter();
   const { state, phase, hasActiveSession, makeChoice, isLoading, error, resetGame, resumeSession } = useGame();
   const currentNode = state.currentNode;
   const clientState = state.clientState;
 
-  const capital = clientState?.capital ?? 0;
-  const reputation = clientState?.reputation ?? 0;
-  const network = clientState?.networkStrength ?? 0;
   const layer = clientState?.layer ?? 0;
   const turns = clientState?.turnsElapsed ?? 0;
 
@@ -96,18 +94,18 @@ const Gameplay = () => {
   // No session + not transitioning — show empty state
   if (!currentNode && !isTransitioning && phase !== "complete") {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center px-6">
+      <div className="min-h-screen bg-cream flex items-center justify-center px-6">
         <div className="flex flex-col items-center gap-6 max-w-sm text-center">
           {error ? (
             <ErrorBanner message={error} onRetry={() => router.replace("/resume")} />
           ) : (
-            <p className="font-body italic text-xl text-on-surface-variant">
+            <p className="font-body italic text-xl text-navy">
               No active session found.
             </p>
           )}
           <button
             onClick={() => { resetGame(); router.replace("/"); }}
-            className="px-8 py-4 bg-primary text-on-primary rounded-xl font-headline font-bold hover:bg-primary-dim transition-colors"
+            className="px-8 py-4 bg-navy text-white rounded-full font-headline font-black uppercase tracking-widest hover:bg-lime hover:text-navy transition-all duration-300 shadow-[0_10px_30px_rgba(30,58,138,0.2)] hover:scale-105 active:scale-95 border-4 border-transparent hover:border-white"
           >
             Return Home
           </button>
@@ -117,19 +115,19 @@ const Gameplay = () => {
   }
 
   return (
-    <div className="bg-background text-on-surface min-h-screen relative overflow-hidden">
-      {/* ── Dark cinematic hero background ─────────────────────────────── */}
-      <div className="fixed inset-0 z-0">
-        <div className="w-full h-full bg-gradient-to-br from-primary/90 via-primary-dim/85 to-on-surface/95" />
-        <div className="absolute inset-0 bg-gradient-to-tr from-primary/30 via-transparent to-tertiary/15 mix-blend-multiply" />
-        <div className="absolute inset-0 kente-pattern opacity-5" />
+    <div className="bg-cream text-navy min-h-screen relative overflow-hidden">
+      {/* ── Adinkra Pattern Background ─────────────────────────────── */}
+      <div className="fixed inset-0 z-0 bg-cream">
+        <div className="absolute inset-0 adinkra-pattern" />
       </div>
 
-      {/* ── TopAppBar with game HUD ─────────────────────────────────────── */}
-      <TopAppBar
-        walletBalance={capital}
-        gameInfo={{ layer, turn: turns }}
-      />
+      {/* ── Top HUD ─────────────────────────────────────── */}
+      <div className="relative z-20">
+        <HUD
+          clientState={clientState || { capital: 0, reputation: 0, networkStrength: 0, layer: 0, turnsElapsed: 0 } as ClientWorldState}
+          layer={layer}
+        />
+      </div>
 
       {/* ── Overlays ───────────────────────────────────────────────────── */}
       {isLoading && !isTransitioning && <LoadingOverlay message="Loading..." />}
@@ -150,105 +148,77 @@ const Gameplay = () => {
       )}
 
       {/* ── Main content ───────────────────────────────────────────────── */}
-      <main className="relative z-10 flex flex-col items-center justify-center min-h-screen px-6 pt-28 pb-12">
+      <main className="relative z-10 flex flex-col items-center justify-center min-h-screen px-6 pt-24 pb-12">
         {currentNode && (
         <div className="max-w-2xl w-full flex flex-col gap-6">
 
-          {/* Chapter badge */}
-          <div className="flex items-center justify-between">
-            <div className="inline-flex items-center px-4 py-2 bg-tertiary/20 text-tertiary-container rounded-full border border-tertiary/30">
-              <span
-                className="material-symbols-outlined text-sm mr-2"
-                style={{ fontVariationSettings: "'FILL' 1" }}
-              >
-                emergency
-              </span>
-              <span className="font-label text-xs font-bold tracking-widest uppercase">
-                Layer {layer} · Turn {turns}
-              </span>
-            </div>
-
-            {/* Reputation + Network pills */}
-            <div className="flex gap-2">
-              <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/10 backdrop-blur-sm">
-                <span className="material-symbols-outlined text-secondary-fixed text-sm">star</span>
-                <span className="font-label text-xs font-bold text-stone-200">{reputation}</span>
-              </div>
-              <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/10 backdrop-blur-sm">
-                <span className="material-symbols-outlined text-secondary-fixed text-sm">group</span>
-                <span className="font-label text-xs font-bold text-stone-200">{network}</span>
-              </div>
-            </div>
+          {/* Turn badge */}
+          <div className="inline-block self-start border-4 border-white bg-lime text-navy px-6 py-2 rounded-full font-headline font-black uppercase tracking-widest text-sm shadow-[0_5px_15px_rgba(57,255,20,0.3)]">
+            Turn {turns}
           </div>
 
-          {/* Narrative glass card */}
-          <div className="glass-panel-dark rounded-xl p-8 shadow-2xl border border-white/10">
-            <p className="font-body italic text-xl md:text-2xl text-stone-100 leading-relaxed whitespace-pre-line">
+          {/* Narrative flat card */}
+          <div className="bg-white/80 backdrop-blur-xl border-4 border-white p-10 rounded-[3rem] shadow-[0_20px_60px_rgba(30,58,138,0.1)]">
+            <p className="font-headline font-extrabold text-2xl md:text-3xl text-navy leading-tight whitespace-pre-line tracking-tight drop-shadow-sm">
               {currentNode.narrative}
             </p>
           </div>
 
           {/* Choices */}
-          <div className="flex flex-col gap-3">
+          <div className="flex flex-col gap-5 mt-4">
             {currentNode.choices.map((choice, i: number) => {
               const letterLabel = String.fromCharCode(65 + i);
-              // A = primary (bold/energy), B = secondary-container (measured), C = surface (cautious)
-              const variants = [
-                "bg-primary text-on-primary hover:bg-primary-dim shadow-[0_8px_30px_rgba(82,79,178,0.3)]",
-                "bg-secondary-container text-on-secondary-container hover:opacity-90",
-                "bg-white/15 text-white hover:bg-white/25 backdrop-blur-sm border border-white/20",
-              ] as const;
+              
+              // Color code the buttons: A = Cyan, B = Pink, C = Yellow/Orange
+              const colors = [
+                "bg-electric-cyan hover:bg-electric-cyan/90 text-navy shadow-[0_10px_30px_rgba(0,240,255,0.3)]",
+                "bg-hot-pink hover:bg-hot-pink/90 text-white shadow-[0_10px_30px_rgba(255,42,133,0.3)]",
+                "bg-electric-yellow hover:bg-electric-yellow/90 text-navy shadow-[0_10px_30px_rgba(255,234,0,0.3)]",
+              ];
+              const buttonColor = colors[i % colors.length];
 
               return (
                 <button
                   key={choice.index}
                   onClick={() => handleChoice(choice.index)}
                   disabled={isTransitioning || choiceDisabled}
-                  className={`flex items-center gap-4 w-full px-6 py-5 rounded-xl font-headline font-bold text-base text-left transition-all hover:scale-[1.01] active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed ${variants[i]}`}
+                  className={`group flex items-center w-full rounded-full border-4 border-white transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed hover:scale-105 active:scale-95 ${buttonColor}`}
                 >
-                  <span className="flex-shrink-0 w-8 h-8 rounded-full bg-white/20 flex items-center justify-center text-sm font-extrabold">
+                  <span className={`flex-shrink-0 w-16 h-16 rounded-full m-2 flex items-center justify-center text-2xl font-black bg-white/20 backdrop-blur-sm group-hover:bg-white/40 transition-colors`}>
                     {letterLabel}
                   </span>
-                  <span className="flex-1 flex flex-col">
-                    <span>{choice.text}</span>
+                  <span className="flex-1 flex flex-col items-start px-4 py-4 text-left">
+                    <span className="font-headline font-extrabold text-lg drop-shadow-sm">{choice.text}</span>
                     {choice.tensionHint && (
-                      <span className="text-xs font-normal opacity-70 mt-1">{choice.tensionHint}</span>
+                      <span className="font-headline font-bold text-xs mt-1 opacity-90 uppercase tracking-widest">{choice.tensionHint}</span>
                     )}
                   </span>
-                  <span className="material-symbols-outlined text-lg opacity-60">arrow_forward</span>
+                  <span className="material-symbols-outlined text-3xl pr-6 font-bold group-hover:translate-x-2 transition-transform drop-shadow-sm">arrow_forward</span>
                 </button>
               );
             })}
           </div>
 
           {/* Bottom market tension indicator */}
-          <div className="flex items-center gap-4 bg-surface-container-lowest/10 backdrop-blur-md p-4 rounded-full border border-white/5 self-start">
-            <div className="w-8 h-8 rounded-full bg-secondary-container flex items-center justify-center text-on-secondary-container flex-shrink-0">
+          <div className="flex items-center gap-4 border-4 border-white bg-white/80 backdrop-blur-md rounded-full p-3 self-start shadow-[0_10px_30px_rgba(30,58,138,0.08)] mt-4">
+            <div className="w-12 h-12 rounded-full bg-navy flex items-center justify-center text-electric-cyan flex-shrink-0 shadow-inner">
               <span
-                className="material-symbols-outlined text-sm"
+                className="material-symbols-outlined text-xl"
                 style={{ fontVariationSettings: "'FILL' 1" }}
               >
                 trending_up
               </span>
             </div>
-            <div>
-              <p className="text-white font-headline font-bold text-xs tracking-wide uppercase">
+            <div className="pr-4">
+              <p className="text-navy font-headline font-black text-xs tracking-widest uppercase">
                 Market Tension
               </p>
-              <p className="text-secondary-fixed text-xs font-bold">Active · Accra Central</p>
+              <p className="text-navy/70 font-headline font-bold text-[10px] uppercase tracking-wider">Active · Accra Central</p>
             </div>
           </div>
         </div>
         )}
       </main>
-
-      {/* Decorative corner glows */}
-      <div className="fixed top-0 right-0 w-64 h-64 opacity-20 pointer-events-none z-0">
-        <div className="absolute inset-0 bg-gradient-to-bl from-tertiary to-transparent rounded-full blur-[100px]" />
-      </div>
-      <div className="fixed bottom-0 left-0 w-48 h-48 opacity-15 pointer-events-none z-0">
-        <div className="absolute inset-0 bg-gradient-to-tr from-secondary-container to-transparent rounded-full blur-[80px]" />
-      </div>
     </div>
   );
 };
