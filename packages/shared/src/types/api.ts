@@ -1,9 +1,9 @@
-import type { EOProfile, BusinessSector, BusinessFormality } from "./game.js";
+import type { EOProfile, BusinessFormality } from "./game.js";
 import type { GameSession } from "./session.js";
 
 // Client-safe world state — what the frontend can see during gameplay.
-// Strips eoProfile (revealed only at results) and all environment variables
-// (Director AI internals — marketDemand, infrastructureReliability, etc.).
+// Strips eoProfile (revealed only at results), environment variables
+// (Director AI internals), and the full playerContext (server-side only).
 export interface ClientWorldState {
   capital: number;
   monthlyBurn: number;
@@ -14,7 +14,9 @@ export interface ClientWorldState {
   layer: number;
   turnsElapsed: number;
   isComplete: boolean;
-  sector: BusinessSector;
+  // sector removed — now lives inside playerContext (server-side).
+  // playerBusinessName is the display-safe label extracted from playerContext.
+  playerBusinessName: string | null;
   employeeCount: number;
   businessFormality: BusinessFormality;
   hasBackupPower: boolean;
@@ -32,17 +34,38 @@ export interface StartRequest {
 }
 export interface StartResponse {
   sessionId: string;
-  layer0Question: string; // single open-ended free-text prompt
+  preamble: string;        // narrative world intro — fills first viewport
+  layer0Question: string;  // Q1 — open-ended free-text prompt
 }
 
-// POST /api/game/classify — Layer 0 free-text → EO poles → Layer 1 node
+// POST /api/game/classify — legacy single-step (kept for backward compat)
 export interface ClassifyRequest {
   sessionId: string;
-  response: string; // player's free-text answer to the layer0Question
+  response: string;
 }
 export interface ClassifyResponse {
   sessionId: string;
-  layer1NodeId: string; // which Layer 1 node the player is routed to — poles stay server-side
+  layer1NodeId: string;
+}
+
+// POST /api/game/classify-q1 — two-step flow: Q1 response → AI generates Q2 prompt
+export interface ClassifyQ1Request {
+  sessionId: string;
+  q1Response: string;
+}
+export interface ClassifyQ1Response {
+  sessionId: string;
+  q2Prompt: string; // AI-generated follow-up question personalised to the player's business
+}
+
+// POST /api/game/classify-q2 — Q2 response → EO poles → Layer 1 node assignment
+export interface ClassifyQ2Request {
+  sessionId: string;
+  q2Response: string;
+}
+export interface ClassifyQ2Response {
+  sessionId: string;
+  layer1NodeId: string;
 }
 
 // POST /api/game/choice
@@ -50,6 +73,7 @@ export interface ChoiceRequest {
   sessionId: string;
   nodeId: string;
   choiceIndex: 0 | 1 | 2;
+  freeText?: string; // optional — for free-text choice variants
 }
 export interface ChoiceResponse {
   sessionId: string;

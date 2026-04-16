@@ -1,13 +1,15 @@
 /**
- * Game loop integration tests — all routes wired together with the real registry.
+ * Game loop integration tests — all routes wired together with the real skeleton registry.
  *
  * These tests exercise the full request lifecycle:
  *   POST /start → POST /classify → POST /choice × 5 → GET /results
  *
- * They use a deterministic node selector (first eligible node in the next
- * layer) so results are repeatable without seeding the PRNG.
+ * They use a deterministic node selector so results are repeatable without
+ * seeding the PRNG. When a layer has no skeletons (layers 2–5 are sparse
+ * during content authoring), the selector falls back to the first available
+ * skeleton so the game loop can still complete 5 turns.
  *
- * They do NOT mock the registry — real nodes mean real effect application,
+ * They do NOT mock the registry — real skeletons mean real effect application,
  * catching calibration bugs that pure route unit tests cannot reach.
  */
 
@@ -15,19 +17,23 @@ import { describe, it, expect, beforeEach } from "vitest";
 import type { FastifyInstance } from "fastify";
 import { buildApp } from "../../app.js";
 import { SessionStore } from "../../store/session-store.js";
-import { getNodesForLayer } from "../../scenario-registry.js";
+import { getAllSkeletons, getSkeletonsForLayer } from "../../skeletons/registry.js";
 import type { WorldState, ChoiceResponse, ResultsResponse } from "@hatchquest/shared";
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
 /**
- * Deterministic Director AI for tests — always selects the first available
- * node in the next layer. Eliminates PRNG variance, so tests are repeatable.
+ * Deterministic Director AI for tests — selects the first skeleton in the
+ * next layer, falling back to the first registered skeleton when the layer
+ * has no content yet. Eliminates PRNG variance so tests are repeatable.
  */
 function deterministicSelector(state: WorldState): string | null {
   const nextLayer = state.layer + 1;
-  const pool = getNodesForLayer(nextLayer);
-  return pool[0]?.id ?? null;
+  const layerPool = getSkeletonsForLayer(nextLayer);
+  if (layerPool.length > 0) return layerPool[0].skeleton.id;
+  // Fallback: reuse first available skeleton when layer content is sparse.
+  const all = getAllSkeletons();
+  return all[0]?.skeleton.id ?? null;
 }
 
 /** Builds a Fastify app with all routes, deterministic selector, and no route prefix. */

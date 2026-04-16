@@ -15,7 +15,7 @@ const mockClientState: ClientWorldState = {
   monthlyBurn: 0,
   revenue: 0,
   debt: 0,
-  sector: "retail",
+  playerBusinessName: null,
   employeeCount: 0,
   businessFormality: "unregistered",
   hasBackupPower: false,
@@ -28,7 +28,8 @@ const mockClientState: ClientWorldState = {
 vi.mock('../lib/api', () => ({
   api: {
     start: vi.fn(),
-    classify: vi.fn(),
+    classifyQ1: vi.fn(),
+    classifyQ2: vi.fn(),
     choice: vi.fn(),
     session: vi.fn(),
     results: vi.fn(),
@@ -50,6 +51,7 @@ describe('GameContext State Machine', () => {
   it('startGame persists sessionId and layer0Question', async () => {
     mockApi.start.mockResolvedValueOnce({
       sessionId: 'sess-123',
+      preamble: 'Test preamble',
       layer0Question: 'What is your goal?',
     });
 
@@ -69,40 +71,45 @@ describe('GameContext State Machine', () => {
     expect(meta.layer0Question).toBe('What is your goal?');
   });
 
-  it('classifyLayer0 hydrates the first playable node after classification', async () => {
+  it('submitQ1 returns q2Prompt and submitQ2 completes classification', async () => {
     mockApi.start.mockResolvedValueOnce({
       sessionId: 'sess-234',
+      preamble: 'Accra, 2026.',
       layer0Question: 'What are you building?',
     });
-    mockApi.classify.mockResolvedValueOnce({
+    mockApi.classifyQ1.mockResolvedValueOnce({
+      sessionId: 'sess-234',
+      q2Prompt: 'Your supplier just backed out. What do you do?',
+    });
+    mockApi.classifyQ2.mockResolvedValueOnce({
       sessionId: 'sess-234',
       layer1NodeId: 'L1-node-1',
-    });
-    mockApi.session.mockResolvedValueOnce({
-      sessionId: 'sess-234',
-      clientState: { ...mockClientState, layer: 1, capital: 10000 },
-      currentNode: {
-        id: 'L1-node-1',
-        layer: 1,
-        narrative: 'Narrated scenario',
-        choices: [],
-      },
     });
 
     const { result } = renderHook(() => useGame(), { wrapper });
 
     await act(async () => {
       await result.current.startGame('Player1', 'test@test.com', 'password');
-      await result.current.classifyLayer0('I am building a fintech app.');
     });
 
-    expect(mockApi.classify).toHaveBeenCalledWith({
-      sessionId: 'sess-234',
-      response: 'I am building a fintech app.',
+    let q2Prompt: string | undefined;
+    await act(async () => {
+      q2Prompt = await result.current.submitQ1('I am building a fintech app.');
     });
-    expect(mockApi.session).toHaveBeenCalledWith('sess-234');
-    expect(result.current.state.currentNode?.id).toBe('L1-node-1');
-    expect(result.current.phase).toBe('active');
+    expect(q2Prompt).toBe('Your supplier just backed out. What do you do?');
+
+    await act(async () => {
+      await result.current.submitQ2('I would call my backup vendor.');
+    });
+
+    expect(mockApi.classifyQ1).toHaveBeenCalledWith({
+      sessionId: 'sess-234',
+      q1Response: 'I am building a fintech app.',
+    });
+    expect(mockApi.classifyQ2).toHaveBeenCalledWith({
+      sessionId: 'sess-234',
+      q2Response: 'I would call my backup vendor.',
+    });
   });
 
   it('resumeSession correctly restores phase to layer0', async () => {

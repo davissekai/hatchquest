@@ -29,7 +29,7 @@ export class DbSessionStore implements ISessionStore {
     // Pre-generate id so callers get a predictable UUID without a round-trip
     const id = crypto.randomUUID();
     const seed = (Math.random() * 1_000_000) | 0;
-    const worldState = createInitialWorldState({ seed, sector: "tech" });
+    const worldState = createInitialWorldState({ seed });
 
     const [row] = await db
       .insert(gameSessions)

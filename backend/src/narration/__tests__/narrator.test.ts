@@ -11,7 +11,7 @@ import {
 
 function makeState() {
   return {
-    ...createInitialWorldState({ seed: 42, sector: "tech" }),
+    ...createInitialWorldState({ seed: 42 }),
     capital: 12_000,
     monthlyBurn: 1_500,
     reputation: 18,
@@ -56,7 +56,7 @@ afterEach(() => {
 describe("narrator fallback builders", () => {
   it("buildScenarioWorldStateBrief includes key world-state signals", () => {
     const brief = buildScenarioWorldStateBrief(makeState());
-    expect(brief).toContain("Sector: tech");
+    expect(brief).toContain("Business:");
     expect(brief).toContain("Capital: GHS 12,000");
     expect(brief).toContain("Competition:");
   });

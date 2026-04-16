@@ -1,3 +1,5 @@
+import type { PlayerContext } from "./context.js";
+
 // EO framework dimensions (Lumpkin & Dess, 1996)
 export type EODimension =
   | "autonomy"
@@ -49,11 +51,14 @@ export interface WorldState {
   debt: number; // Accumulated debt, starts at 0
 
   // --- Business ---
-  sector: BusinessSector; // Set during Layer 0
+  // sector removed — lives inside playerContext after Layer 0 classify
   employeeCount: number; // Starts at 0 (solo founder)
   businessFormality: BusinessFormality; // Starts unregistered
   hasBackupPower: boolean; // Dumsor resilience
   hasPremises: boolean; // Home-based vs rented space
+
+  /** Player's business identity — set during Layer 0 classification */
+  playerContext: PlayerContext | null;
 
   // --- Social Capital ---
   reputation: number; // [0–100] Trust/credibility in the market. Starts at 0.

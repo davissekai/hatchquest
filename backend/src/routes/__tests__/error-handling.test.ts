@@ -15,15 +15,17 @@ import type { FastifyInstance } from "fastify";
 import { buildApp } from "../../app.js";
 import type { ISessionStore } from "../../store/types.js";
 import { SessionStore } from "../../store/session-store.js";
-import { getNodesForLayer } from "../../scenario-registry.js";
+import { getAllSkeletons, getSkeletonsForLayer } from "../../skeletons/registry.js";
 import type { WorldState } from "@hatchquest/shared";
 
-// Deterministic selector — always picks the first node in the next layer.
-// Mirrors game-loop.test.ts so 5 turns can complete without PRNG variance.
+// Deterministic selector — mirrors game-loop.test.ts so 5 turns can complete.
+// Falls back to first available skeleton when next layer has no content yet.
 function deterministicSelector(state: WorldState): string | null {
   const nextLayer = state.layer + 1;
-  const pool = getNodesForLayer(nextLayer);
-  return pool[0]?.id ?? null;
+  const layerPool = getSkeletonsForLayer(nextLayer);
+  if (layerPool.length > 0) return layerPool[0].skeleton.id;
+  const all = getAllSkeletons();
+  return all[0]?.skeleton.id ?? null;
 }
 
 // ── Throwing store — simulates DB connection failure on every method ──────────
@@ -298,8 +300,7 @@ describe("route-generated 4xx — always { error: string }, never Fastify verbos
   });
 
   it("POST /choice with completed session → 409 with { error: string }", async () => {
-    // Use deterministic selector so all 5 turns can complete (null selector would
-    // set currentNodeId="" after turn 1, breaking the stale-nodeId guard on turns 2+)
+    // Use deterministic selector so all 5 turns can complete.
     const goodApp = await buildApp(new SessionStore(), {
       routePrefix: "",
       selectNextNodeId: deterministicSelector,

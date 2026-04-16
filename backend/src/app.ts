@@ -1,8 +1,10 @@
 import Fastify from "fastify";
 import type { FastifyInstance, FastifyError } from "fastify";
-import type { WorldState } from "@hatchquest/shared";
-import { getNode, getChoiceEffect, getAllNodes } from "./scenario-registry.js";
-import { selectNextNode } from "./engine/director-ai.js";
+import type { WorldState, ScenarioNode } from "@hatchquest/shared";
+import { getSkeleton, getAllSkeletons } from "./skeletons/registry.js";
+import { initSkeletonRegistry } from "./skeletons/init.js";
+import { selectNextSkeleton } from "./engine/director-ai.js";
+import { generateNarrativeSkin } from "./engine/narrator-ai.js";
 import { createPRNG } from "./engine/prng.js";
 import { startRoutes } from "./routes/start.js";
 import { classifyRoutes } from "./routes/classify.js";
@@ -28,13 +30,36 @@ export interface BuildAppOptions {
 }
 
 /**
- * Production Director AI — seeded PRNG derived from session seed XOR turnsElapsed.
- * XOR adds cheap entropy so each turn draws from a different position in the sequence.
+ * Builds an unskinned ScenarioNode from the skeleton registry.
+ * Used by GET /session to show the current node on session resume — the skinned
+ * version was already sent by POST /choice, so unskinned text is acceptable here.
+ */
+function getNodeFromSkeleton(nodeId: string | null): ScenarioNode | null {
+  if (!nodeId) return null;
+  const entry = getSkeleton(nodeId);
+  if (!entry) return null;
+  const sk = entry.skeleton;
+  return {
+    id: sk.id,
+    layer: sk.layer,
+    narrative: sk.situationSeed,
+    choices: [
+      { index: 0, text: sk.choiceArchetypes[0].archetypeDescription, tensionHint: sk.choiceArchetypes[0].tensionAxis },
+      { index: 1, text: sk.choiceArchetypes[1].archetypeDescription, tensionHint: sk.choiceArchetypes[1].tensionAxis },
+      { index: 2, text: sk.choiceArchetypes[2].archetypeDescription, tensionHint: sk.choiceArchetypes[2].tensionAxis },
+    ],
+  };
+}
+
+/**
+ * Production Director AI — uses selectNextSkeleton with a seeded PRNG.
+ * XOR of seed and turnsElapsed adds cheap entropy so each turn draws from
+ * a different position in the sequence.
  */
 function productionSelectNextNodeId(state: WorldState): string | null {
   const rng = createPRNG(state.seed ^ state.turnsElapsed);
-  const next = selectNextNode(state, getAllNodes(), rng);
-  return next?.id ?? null;
+  const next = selectNextSkeleton(state, getAllSkeletons(), rng);
+  return next?.skeleton.id ?? null;
 }
 
 /**
@@ -52,11 +77,13 @@ export async function buildApp(
   store: ISessionStore,
   opts?: BuildAppOptions
 ): Promise<FastifyInstance> {
+  // Populate skeleton registry before route handlers access it.
+  // initSkeletonRegistry is idempotent — safe to call on every buildApp invocation.
+  initSkeletonRegistry();
+
   const app = Fastify({ logger: opts?.logger ?? false });
   const prefix = opts?.routePrefix ?? "/api/game";
-
-  const selectNextNodeId =
-    opts?.selectNextNodeId ?? productionSelectNextNodeId;
+  const selectNextNodeId = opts?.selectNextNodeId ?? productionSelectNextNodeId;
 
   // ── Global error handler ────────────────────────────────────────────────────
   // Catches: (1) errors thrown from route handlers, (2) Fastify schema
@@ -94,11 +121,11 @@ export async function buildApp(
   app.register(choiceRoutes, {
     prefix,
     store,
-    getNode,
-    getChoiceEffect,
+    getSkeleton,
+    generateSkin: generateNarrativeSkin,
     selectNextNodeId,
   });
-  app.register(sessionRoutes, { prefix, store, getNode });
+  app.register(sessionRoutes, { prefix, store, getNode: getNodeFromSkeleton });
   app.register(resultsRoutes, { prefix, store });
 
   return app;

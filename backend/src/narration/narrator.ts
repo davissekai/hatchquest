@@ -87,7 +87,7 @@ function dimensionLabel(dimension: keyof EOProfile): string {
 
 export function buildScenarioWorldStateBrief(state: WorldState): string {
   return [
-    `Sector: ${state.sector}`,
+    state.playerContext ? `Business: ${state.playerContext.businessDescription}` : "Business: undisclosed",
     `Capital: ${formatCurrency(state.capital)}`,
     `Monthly burn: ${formatCurrency(state.monthlyBurn)}`,
     `Revenue: ${formatCurrency(state.revenue)}`,

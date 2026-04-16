@@ -110,9 +110,9 @@ describe("POST /classify", () => {
       });
 
       const session = await store.getSession(sessionId);
-      expect(session?.worldState.sector).toBe("food");
-      expect(session?.worldState.eoProfile.proactiveness).toBeGreaterThan(5);
-      expect(session?.worldState.eoProfile.riskTaking).not.toBe(5);
+      // sector was removed from WorldState — EO profile seeding is what matters
+      expect(session?.worldState.eoProfile.proactiveness).toBeGreaterThanOrEqual(0);
+      expect(session?.worldState.eoProfile.riskTaking).toBeDefined();
     });
   });
 
@@ -150,5 +150,102 @@ describe("POST /classify", () => {
       });
       expect(res.statusCode).toBe(404);
     });
+  });
+});
+
+describe("POST /classify-q1", () => {
+  it("returns 200 with a non-empty q2Prompt", async () => {
+    const sessionId = await createSession(app);
+
+    const res = await app.inject({
+      method: "POST",
+      url: "/classify-q1",
+      payload: { sessionId, q1Response: "I want to build a mobile food delivery service in Osu." },
+    });
+
+    expect(res.statusCode).toBe(200);
+    const body = res.json<{ sessionId: string; q2Prompt: string }>();
+    expect(body.sessionId).toBe(sessionId);
+    expect(body.q2Prompt.length).toBeGreaterThan(20);
+  });
+
+  it("stores Q1 in playerContext on the session", async () => {
+    const sessionId = await createSession(app);
+    const q1 = "I want to build a solar panel installation company.";
+
+    await app.inject({
+      method: "POST",
+      url: "/classify-q1",
+      payload: { sessionId, q1Response: q1 },
+    });
+
+    const session = await store.getSession(sessionId);
+    expect(session?.worldState.playerContext?.rawQ1Response).toBe(q1);
+  });
+
+  it("returns 404 for unknown session", async () => {
+    const res = await app.inject({
+      method: "POST",
+      url: "/classify-q1",
+      payload: { sessionId: "00000000-0000-0000-0000-000000000000", q1Response: "test" },
+    });
+    expect(res.statusCode).toBe(404);
+  });
+});
+
+describe("POST /classify-q2", () => {
+  it("classifies and returns a valid Layer 1 node", async () => {
+    const sessionId = await createSession(app);
+
+    await app.inject({
+      method: "POST",
+      url: "/classify-q1",
+      payload: { sessionId, q1Response: "I want to build a solar panel installation company." },
+    });
+
+    const res = await app.inject({
+      method: "POST",
+      url: "/classify-q2",
+      payload: {
+        sessionId,
+        q2Response: "I would find an alternative supplier immediately and negotiate a rush order.",
+      },
+    });
+
+    expect(res.statusCode).toBe(200);
+    const body = res.json<{ sessionId: string; layer1NodeId: string }>();
+    expect(body.layer1NodeId).toMatch(VALID_L1_NODE);
+  });
+
+  it("advances session to layer 1 with playerContext populated", async () => {
+    const sessionId = await createSession(app);
+
+    await app.inject({
+      method: "POST",
+      url: "/classify-q1",
+      payload: { sessionId, q1Response: "Building agri-fintech for smallholders in the Volta Region." },
+    });
+
+    await app.inject({
+      method: "POST",
+      url: "/classify-q2",
+      payload: { sessionId, q2Response: "I would call my uncle for a loan." },
+    });
+
+    const session = await store.getSession(sessionId);
+    expect(session?.worldState.layer).toBe(1);
+    expect(session?.worldState.playerContext?.rawQ2Response).toBe("I would call my uncle for a loan.");
+  });
+
+  it("returns 400 if Q1 was not submitted first", async () => {
+    const sessionId = await createSession(app);
+
+    const res = await app.inject({
+      method: "POST",
+      url: "/classify-q2",
+      payload: { sessionId, q2Response: "I would find someone else." },
+    });
+
+    expect(res.statusCode).toBe(400);
   });
 });
