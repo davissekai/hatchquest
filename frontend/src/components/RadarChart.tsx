@@ -13,10 +13,11 @@ interface RadarChartProps {
 
 const labels = ["Autonomy", "Innovative", "Proactiveness", "Risk-Taking", "Comp.\nAggressive"];
 
-const primary = "var(--primary)";
-const primaryFill = "color-mix(in srgb, var(--primary) 35%, transparent)";
-const cardBg = "var(--surface-container-lowest)";
-const fgColor = "var(--on-surface)";
+// Re-themed for Vibrant Rounded Graffiti aesthetic
+const primary = "#FF2A85"; // hot-pink
+const primaryFill = "rgba(255, 42, 133, 0.35)";
+const cardBg = "#FFFFFF";
+const fgColor = "#1E3A8A"; // navy
 
 const RadarChart = ({ dimensions, maxValue }: RadarChartProps) => {
   const cx = 200, cy = 190, r = 110;
@@ -60,23 +61,23 @@ const RadarChart = ({ dimensions, maxValue }: RadarChartProps) => {
         const pts = Array.from({ length: 5 }, (_, i) => getPoint(i, effectiveMax * level));
         const path = pts.map((p, i) => `${i === 0 ? "M" : "L"} ${p.x} ${p.y}`).join(" ") + " Z";
         return (
-          <path key={level} d={path} fill="none" stroke={primary} strokeWidth="1" opacity={0.15} />
+          <path key={level} d={path} fill="none" stroke={fgColor} strokeWidth="1" opacity={0.1} />
         );
       })}
 
       {Array.from({ length: 5 }, (_, i) => {
         const p = getPoint(i, effectiveMax);
-        return <line key={i} x1={cx} y1={cy} x2={p.x} y2={p.y} stroke={primary} strokeWidth="1" opacity={0.2} />;
+        return <line key={i} x1={cx} y1={cy} x2={p.x} y2={p.y} stroke={fgColor} strokeWidth="1" opacity={0.1} />;
       })}
 
-      <path d={dataPath} fill={primaryFill} stroke={primary} strokeWidth="3" />
+      <path d={dataPath} fill={primaryFill} stroke={primary} strokeWidth="4" />
 
       {dataPoints.map((p, i) => (
-        <circle key={i} cx={p.x} cy={p.y} r="5" fill={primary} stroke={cardBg} strokeWidth="2" />
+        <circle key={i} cx={p.x} cy={p.y} r="6" fill={primary} stroke={cardBg} strokeWidth="3" shadow-sm="true" />
       ))}
 
       {Array.from({ length: 5 }, (_, i) => {
-        const p = getPoint(i, effectiveMax * 1.25);
+        const p = getPoint(i, effectiveMax * 1.3);
         const anchor = i === 4 ? "end" : i === 1 ? "start" : "middle";
         return (
           <text
@@ -86,11 +87,13 @@ const RadarChart = ({ dimensions, maxValue }: RadarChartProps) => {
             textAnchor={anchor}
             dominantBaseline="middle"
             fill={fgColor}
-            fontSize="9"
-            fontFamily="var(--font-plus-jakarta), 'Plus Jakarta Sans', sans-serif"
+            fontSize="11"
+            fontWeight="900"
+            fontFamily="var(--font-headline), 'Plus Jakarta Sans', sans-serif"
+            className="uppercase tracking-tighter"
           >
             {labels[i].split("\n").map((line, li) => (
-              <tspan key={li} x={p.x} dy={li === 0 ? 0 : 11}>
+              <tspan key={li} x={p.x} dy={li === 0 ? 0 : 13}>
                 {line}
               </tspan>
             ))}

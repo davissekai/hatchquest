@@ -42,7 +42,7 @@ export function HUD({ clientState, layer }: HUDProps): React.ReactElement {
   }, [capital]);
 
   return (
-    <div className="m-4 bg-navy/95 backdrop-blur-xl text-white px-8 py-4 rounded-full shadow-[0_15px_40px_rgba(30,58,138,0.25)] border-4 border-white flex flex-col md:flex-row items-center justify-between gap-4">
+    <div className="m-4 bg-navy/95 backdrop-blur-xl text-white px-10 py-5 rounded-full shadow-[0_20px_60px_rgba(30,58,138,0.3)] border-4 border-white flex flex-col md:flex-row items-center justify-between gap-6">
       {/* Layer progress dots */}
       <div className="flex items-center gap-2">
         <span className="font-headline font-extrabold uppercase tracking-widest text-lime mr-2">Layer {layer}</span>

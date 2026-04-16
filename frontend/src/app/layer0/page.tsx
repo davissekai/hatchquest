@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useGame } from "@/context/GameContext";
-import { TopAppBar } from "@/components/stitch/TopAppBar";
+import { TopAppBar } from "@/components/TopAppBar";
 
 type Step = "preamble" | "q1" | "q2";
 
@@ -284,7 +284,7 @@ You have GHS 10,000 and an idea. That is where your story starts.`;
                       Your First Challenge
                     </label>
                     {/* AI-generated Q2 prompt */}
-                    <p className="text-navy/90 font-body text-base leading-relaxed italic bg-cream rounded-2xl p-5 border border-surface-container">
+                    <p className="text-navy/90 font-body text-base leading-relaxed italic bg-cream rounded-2xl p-5 border-2 border-white">
                       {q2Prompt}
                     </p>
                     <textarea
