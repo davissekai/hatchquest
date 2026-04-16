@@ -16,9 +16,9 @@ const defaultMessages = [
 ];
 
 /**
- * Full-screen loading transition in Stitch design language.
- * Shows cycling messages and an animated progress bar.
- * Calls onComplete when the duration elapses.
+ * Full-screen loading transition.
+ * Re-imagined for the "Vibrant Rounded Graffiti" aesthetic.
+ * Shows cycling messages and a chunky, vibrant progress bar.
  */
 const RetroTransition = ({
   messages = defaultMessages,
@@ -52,34 +52,36 @@ const RetroTransition = ({
   }, [messages]);
 
   return (
-    <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-background">
+    <div className="fixed inset-0 z-[70] flex flex-col items-center justify-center bg-navy">
       {/* Subtle kente texture at very low opacity */}
-      <div className="absolute inset-0 kente-pattern opacity-30 pointer-events-none" />
+      <div className="absolute inset-0 kente-pattern opacity-10 pointer-events-none" />
 
-      <div className="relative z-10 flex flex-col items-center gap-8 px-8 max-w-sm w-full">
+      <div className="relative z-10 flex flex-col items-center gap-10 px-8 max-w-sm w-full">
         {/* Animated icon */}
-        <div className="w-20 h-20 rounded-full hero-gradient flex items-center justify-center shadow-[0_12px_40px_rgba(82,79,178,0.3)]">
-          <span className="material-symbols-outlined text-on-primary text-4xl animate-pulse">
+        <div className="w-24 h-24 rounded-full bg-hot-pink flex items-center justify-center shadow-[0_12px_40px_rgba(255,42,133,0.4)] border-4 border-white animate-pulse">
+          <span className="material-symbols-outlined text-white text-5xl">
             rocket_launch
           </span>
         </div>
 
         {/* Cycling message */}
-        <p className="font-body italic text-lg text-on-surface-variant text-center min-h-[2em]">
+        <p className="font-headline font-extrabold text-xl text-white italic text-center min-h-[3em] drop-shadow-md tracking-tight">
           {messages[msgIndex]}
         </p>
 
-        {/* Progress bar */}
-        <div className="w-full rounded-full bg-surface-container-high overflow-hidden h-2">
-          <div
-            className="h-full bg-primary rounded-full transition-all duration-200 ease-out"
-            style={{ width: `${progress}%` }}
-          />
-        </div>
+        <div className="w-full space-y-4">
+          {/* Progress bar */}
+          <div className="w-full rounded-full bg-white/10 overflow-hidden h-6 border-4 border-white/20 p-1">
+            <div
+              className="h-full bg-lime rounded-full transition-all duration-200 ease-out shadow-[0_0_15px_rgba(57,255,20,0.5)]"
+              style={{ width: `${progress}%` }}
+            />
+          </div>
 
-        <p className="font-label text-xs text-on-surface-variant tracking-widest uppercase">
-          {progress}%
-        </p>
+          <p className="font-headline font-black text-center text-sm text-lime tracking-widest uppercase">
+            System status: {progress}%
+          </p>
+        </div>
       </div>
     </div>
   );
