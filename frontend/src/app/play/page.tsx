@@ -52,8 +52,18 @@ const Gameplay = () => {
       router.replace("/layer0");
     } else if (phase === "complete") {
       router.replace("/results");
+    } else if (phase === "active" && !currentNode && !isLoading && hasActiveSession()) {
+      void resumeSession();
     }
-  }, [phase, isLoading, hasActiveSession, resumeSession, router, isTransitioning]);
+  }, [
+    phase,
+    isLoading,
+    hasActiveSession,
+    resumeSession,
+    router,
+    isTransitioning,
+    currentNode,
+  ]);
 
   const handleChoice = useCallback(
     async (index: number) => {
@@ -173,7 +183,7 @@ const Gameplay = () => {
 
           {/* Narrative glass card */}
           <div className="glass-panel-dark rounded-xl p-8 shadow-2xl border border-white/10">
-            <p className="font-body italic text-xl md:text-2xl text-stone-100 leading-relaxed">
+            <p className="font-body italic text-xl md:text-2xl text-stone-100 leading-relaxed whitespace-pre-line">
               {currentNode.narrative}
             </p>
           </div>

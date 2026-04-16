@@ -9,6 +9,7 @@ import type {
 } from "@hatchquest/shared";
 import type { ISessionStore } from "../store/types.js";
 import {
+  assessLayer0,
   classify,
   classifyFromBothResponses,
   generateQ2,
@@ -55,13 +56,19 @@ export const classifyRoutes: FastifyPluginAsync<ClassifyPluginOptions> = async (
         return reply.status(409).send({ error: "Session is already classified." });
       }
 
-      const layer1NodeId = await classify(response);
+      // Use full assessment to seed EO profile from Layer 0 signal
+      const assessment = await assessLayer0(response);
 
       await store.updateSession(sessionId, {
-        worldState: { ...session.worldState, layer: 1, currentNodeId: layer1NodeId },
+        worldState: {
+          ...session.worldState,
+          layer: 1,
+          currentNodeId: assessment.layer1NodeId,
+          eoProfile: assessment.initialEOProfile,
+        },
       });
 
-      return reply.status(200).send({ sessionId, layer1NodeId });
+      return reply.status(200).send({ sessionId, layer1NodeId: assessment.layer1NodeId });
     }
   );
 
@@ -157,7 +164,7 @@ export const classifyRoutes: FastifyPluginAsync<ClassifyPluginOptions> = async (
       // Build the final PlayerContext with full extraction
       const playerContext = extractPlayerContext(pc.rawQ1Response, q2Response, pc.q2Prompt);
 
-      // Advance to Layer 1
+      // Advance to Layer 1 with full player context
       await store.updateSession(sessionId, {
         worldState: {
           ...session.worldState,
