@@ -1,6 +1,43 @@
 import type { EODimension, WorldState } from "@hatchquest/shared";
-import type { ScenarioNodeFull, NodeTheme } from "../scenario-registry.js";
 import type { RegisteredSkeleton } from "../skeletons/registry.js";
+
+/**
+ * Scenario theme — used to compute context-sensitive weight multipliers.
+ * Kept here (not in skeleton types) because it is a Director AI concern.
+ */
+export type NodeTheme =
+  | "financing"
+  | "competition"
+  | "crisis"
+  | "branding"
+  | "hiring"
+  | "networking"
+  | "operations"
+  | "general";
+
+/**
+ * Full scenario node shape — used by selectNextNode (legacy weighted selector).
+ * Kept for backward compat with director-ai tests while selectNextSkeleton is the
+ * production path. Removed when old content is fully migrated.
+ */
+export interface ScenarioNodeFull {
+  id: string;
+  layer: number;
+  theme: NodeTheme;
+  baseWeight: number;
+  eoTargetDimensions: EODimension[];
+  conditions?: {
+    capitalMin?: number;
+    capitalMax?: number;
+    reputationMin?: number;
+    reputationMax?: number;
+    debtMin?: number;
+    debtMax?: number;
+    requiresMentorAccess?: boolean;
+    requiresPremises?: boolean;
+    employeeCountMin?: number;
+  };
+}
 
 /**
  * Returns true if the world state satisfies all hard eligibility conditions on the node.

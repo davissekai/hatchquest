@@ -15,44 +15,17 @@ import type { FastifyInstance } from "fastify";
 import { buildApp } from "../../app.js";
 import type { ISessionStore } from "../../store/types.js";
 import { SessionStore } from "../../store/session-store.js";
-import { getNode, getChoiceEffect, getNodesForLayer } from "../../scenario-registry.js";
-import { buildFallbackSkin } from "../../engine/narrator-ai.js";
+import { getAllSkeletons, getSkeletonsForLayer } from "../../skeletons/registry.js";
 import type { WorldState } from "@hatchquest/shared";
-import type { RegisteredSkeleton } from "../../skeletons/registry.js";
 
-// Deterministic selector — always picks the first node in the next layer.
-// Mirrors game-loop.test.ts so 5 turns can complete without PRNG variance.
+// Deterministic selector — mirrors game-loop.test.ts so 5 turns can complete.
+// Falls back to first available skeleton when next layer has no content yet.
 function deterministicSelector(state: WorldState): string | null {
   const nextLayer = state.layer + 1;
-  const pool = getNodesForLayer(nextLayer);
-  return pool[0]?.id ?? null;
-}
-
-// Adapter — wraps old ScenarioNodeFull as RegisteredSkeleton for the choice route.
-// Removed in Task 13 when skeleton registry is fully populated.
-function skeletonFromOldNode(id: string): RegisteredSkeleton | null {
-  const node = getNode(id);
-  if (!node) return null;
-  const e0 = getChoiceEffect(node.id, 0);
-  const e1 = getChoiceEffect(node.id, 1);
-  const e2 = getChoiceEffect(node.id, 2);
-  if (!e0 || !e1 || !e2) return null;
-  return {
-    skeleton: {
-      id: node.id,
-      layer: node.layer,
-      theme: "general",
-      baseWeight: 1.0,
-      eoTargetDimensions: [],
-      situationSeed: node.narrative,
-      choiceArchetypes: [
-        { eoPoleSignal: "", archetypeDescription: node.choices[0].text, tensionAxis: node.choices[0].tensionHint },
-        { eoPoleSignal: "", archetypeDescription: node.choices[1].text, tensionAxis: node.choices[1].tensionHint },
-        { eoPoleSignal: "", archetypeDescription: node.choices[2].text, tensionAxis: node.choices[2].tensionHint },
-      ],
-    },
-    effects: [e0, e1, e2],
-  };
+  const layerPool = getSkeletonsForLayer(nextLayer);
+  if (layerPool.length > 0) return layerPool[0].skeleton.id;
+  const all = getAllSkeletons();
+  return all[0]?.skeleton.id ?? null;
 }
 
 // ── Throwing store — simulates DB connection failure on every method ──────────
@@ -327,12 +300,10 @@ describe("route-generated 4xx — always { error: string }, never Fastify verbos
   });
 
   it("POST /choice with completed session → 409 with { error: string }", async () => {
-    // Use deterministic selector + old-registry adapter so all 5 turns can complete.
+    // Use deterministic selector so all 5 turns can complete.
     const goodApp = await buildApp(new SessionStore(), {
       routePrefix: "",
       selectNextNodeId: deterministicSelector,
-      getSkeleton: skeletonFromOldNode,
-      generateSkin: (skeleton, context) => Promise.resolve(buildFallbackSkin(skeleton, context)),
     });
     await goodApp.ready();
 

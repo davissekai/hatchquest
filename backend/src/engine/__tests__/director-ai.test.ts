@@ -7,25 +7,12 @@ import {
   selectNextNode,
 } from "../director-ai.js";
 import { createInitialWorldState } from "../world-state.js";
-import type { ScenarioNodeFull, NodeTheme } from "../../scenario-registry.js";
-import type { ChoiceEffect } from "../apply-choice.js";
-
-// Minimal ScenarioNodeFull for testing
+import type { ScenarioNodeFull, NodeTheme } from "../director-ai.js";
+// Minimal ScenarioNodeFull for testing — only fields the Director AI reads.
 function makeNode(overrides: Partial<ScenarioNodeFull> = {}): ScenarioNodeFull {
-  const effect: ChoiceEffect = {
-    capital: 0, revenue: 0, debt: 0, monthlyBurn: 0,
-    reputation: 0, networkStrength: 0, eoDeltas: {},
-  };
   return {
     id: "test-node",
     layer: 2,
-    narrative: "test",
-    choices: [
-      { index: 0, text: "A", tensionHint: "x" },
-      { index: 1, text: "B", tensionHint: "y" },
-      { index: 2, text: "C", tensionHint: "z" },
-    ],
-    effects: [effect, effect, effect],
     theme: "general",
     baseWeight: 1.0,
     eoTargetDimensions: [],

@@ -1,8 +1,8 @@
 import Fastify from "fastify";
 import type { FastifyInstance, FastifyError } from "fastify";
-import type { WorldState, PlayerContext, ScenarioSkeleton, NarrativeSkin } from "@hatchquest/shared";
-import { getNode } from "./scenario-registry.js";
+import type { WorldState, ScenarioNode } from "@hatchquest/shared";
 import { getSkeleton, getAllSkeletons } from "./skeletons/registry.js";
+import { initSkeletonRegistry } from "./skeletons/init.js";
 import { selectNextSkeleton } from "./engine/director-ai.js";
 import { generateNarrativeSkin } from "./engine/narrator-ai.js";
 import { createPRNG } from "./engine/prng.js";
@@ -12,7 +12,6 @@ import { choiceRoutes } from "./routes/choice.js";
 import { sessionRoutes } from "./routes/session.js";
 import { resultsRoutes } from "./routes/results.js";
 import type { ISessionStore } from "./store/types.js";
-import type { RegisteredSkeleton } from "./skeletons/registry.js";
 
 export interface BuildAppOptions {
   /** Enable Fastify's built-in logger. Default: false (tests stay quiet). */
@@ -28,18 +27,28 @@ export interface BuildAppOptions {
    * stub without coupling to the PRNG. Default: production weighted selector.
    */
   selectNextNodeId?: (state: WorldState) => string | null;
-  /**
-   * Skeleton getter override for integration tests.
-   * Default: real skeleton registry (getSkeleton from skeletons/registry.ts).
-   * Tests that use old scenario-registry node IDs inject an adapter here.
-   */
-  getSkeleton?: (id: string) => RegisteredSkeleton | null;
-  /**
-   * Narrator AI override for integration tests.
-   * Default: generateNarrativeSkin (calls Anthropic API, falls back to deterministic skin).
-   * Tests inject a synchronous buildFallbackSkin wrapper to avoid any API dependency.
-   */
-  generateSkin?: (skeleton: ScenarioSkeleton, context: PlayerContext) => Promise<NarrativeSkin>;
+}
+
+/**
+ * Builds an unskinned ScenarioNode from the skeleton registry.
+ * Used by GET /session to show the current node on session resume — the skinned
+ * version was already sent by POST /choice, so unskinned text is acceptable here.
+ */
+function getNodeFromSkeleton(nodeId: string | null): ScenarioNode | null {
+  if (!nodeId) return null;
+  const entry = getSkeleton(nodeId);
+  if (!entry) return null;
+  const sk = entry.skeleton;
+  return {
+    id: sk.id,
+    layer: sk.layer,
+    narrative: sk.situationSeed,
+    choices: [
+      { index: 0, text: sk.choiceArchetypes[0].archetypeDescription, tensionHint: sk.choiceArchetypes[0].tensionAxis },
+      { index: 1, text: sk.choiceArchetypes[1].archetypeDescription, tensionHint: sk.choiceArchetypes[1].tensionAxis },
+      { index: 2, text: sk.choiceArchetypes[2].archetypeDescription, tensionHint: sk.choiceArchetypes[2].tensionAxis },
+    ],
+  };
 }
 
 /**
@@ -68,12 +77,13 @@ export async function buildApp(
   store: ISessionStore,
   opts?: BuildAppOptions
 ): Promise<FastifyInstance> {
+  // Populate skeleton registry before route handlers access it.
+  // initSkeletonRegistry is idempotent — safe to call on every buildApp invocation.
+  initSkeletonRegistry();
+
   const app = Fastify({ logger: opts?.logger ?? false });
   const prefix = opts?.routePrefix ?? "/api/game";
-
   const selectNextNodeId = opts?.selectNextNodeId ?? productionSelectNextNodeId;
-  const effectiveGetSkeleton = opts?.getSkeleton ?? getSkeleton;
-  const effectiveGenerateSkin = opts?.generateSkin ?? generateNarrativeSkin;
 
   // ── Global error handler ────────────────────────────────────────────────────
   // Catches: (1) errors thrown from route handlers, (2) Fastify schema
@@ -111,12 +121,11 @@ export async function buildApp(
   app.register(choiceRoutes, {
     prefix,
     store,
-    getSkeleton: effectiveGetSkeleton,
-    generateSkin: effectiveGenerateSkin,
+    getSkeleton,
+    generateSkin: generateNarrativeSkin,
     selectNextNodeId,
   });
-  // sessionRoutes still uses getNode from old scenario-registry until Task 13 migration
-  app.register(sessionRoutes, { prefix, store, getNode });
+  app.register(sessionRoutes, { prefix, store, getNode: getNodeFromSkeleton });
   app.register(resultsRoutes, { prefix, store });
 
   return app;
