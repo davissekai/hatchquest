@@ -30,6 +30,7 @@ describe("Layer0LoadingPage", () => {
     vi.clearAllMocks();
     (useRouter as Mock).mockReturnValue({ replace: mockReplace });
     (useGame as Mock).mockReturnValue({
+      state: { currentNode: null },
       hasActiveSession: mockHasActiveSession,
       resumeSession: mockResumeSession,
     });

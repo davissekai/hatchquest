@@ -95,6 +95,25 @@ describe("POST /classify", () => {
       const session = await store.getSession(sessionId);
       expect(session?.worldState.currentNodeId).toMatch(VALID_L1_NODE);
     });
+
+    it("after classify, session sector and EO profile are seeded from the assessment", async () => {
+      const sessionId = await createSession(app);
+
+      await app.inject({
+        method: "POST",
+        url: "/classify",
+        payload: {
+          sessionId,
+          response:
+            "1) I am building a food business for office workers. 2) I saw a gap in affordable lunch delivery. 3) I would launch with a backup supplier. 4) I would move first before a rival catches up.",
+        },
+      });
+
+      const session = await store.getSession(sessionId);
+      expect(session?.worldState.sector).toBe("food");
+      expect(session?.worldState.eoProfile.proactiveness).toBeGreaterThan(5);
+      expect(session?.worldState.eoProfile.riskTaking).not.toBe(5);
+    });
   });
 
   describe("validation — missing fields", () => {

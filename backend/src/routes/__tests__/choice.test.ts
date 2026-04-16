@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach } from "vitest";
+import { describe, it, expect, beforeEach, afterEach } from "vitest";
 import Fastify, { type FastifyInstance } from "fastify";
 import { SessionStore } from "../../store/session-store.js";
 import { choiceRoutes } from "../choice.js";
@@ -54,13 +54,22 @@ async function seedSession(store: SessionStore): Promise<string> {
   return session.id;
 }
 
+const savedApiKey = process.env.ANTHROPIC_API_KEY;
+
 let store: SessionStore;
 let app: FastifyInstance;
 
 beforeEach(async () => {
+  delete process.env.ANTHROPIC_API_KEY;
   store = new SessionStore();
   app = buildApp(store);
   await app.ready();
+});
+
+afterEach(() => {
+  if (savedApiKey !== undefined) {
+    process.env.ANTHROPIC_API_KEY = savedApiKey;
+  }
 });
 
 describe("POST /choice", () => {
@@ -81,6 +90,20 @@ describe("POST /choice", () => {
     expect(body.sessionId).toBe(sessionId);
     expect(body.clientState).toBeDefined();
     expect(body.nextNode).toBeDefined();
+  });
+
+  it("returns a narrated nextNode with updated world-state context", async () => {
+    const sessionId = await seedSession(store);
+
+    const res = await app.inject({
+      method: "POST",
+      url: "/choice",
+      payload: { sessionId, nodeId: "L1-node-1", choiceIndex: 0 },
+    });
+
+    const body = res.json<ChoiceResponse>();
+    expect(body.nextNode?.narrative).toContain("A test scenario.");
+    expect(body.nextNode?.narrative).toContain("GHS 9,500");
   });
 
   // --- layer and turnsElapsed advance ---

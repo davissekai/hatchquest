@@ -2,32 +2,30 @@ import type { FastifyPluginAsync } from "fastify";
 import type { StartRequest, StartResponse } from "@hatchquest/shared";
 import type { ISessionStore } from "../store/types.js";
 
-// The single open-ended prompt presented to the player at game start.
-// Feeds Layer 0 free-text classification — must not be multiple choice.
-const LAYER_0_QUESTION =
-  "Describe the business you want to build and the problem it solves. " +
-  "What makes you the right person to build it?";
+const LAYER_0_QUESTION = [
+  "It is a humid evening in Accra. You are sitting in a front room in Madina with GHS 10,000 in working capital, one business idea you cannot ignore, and too many people telling you to choose a safer life.",
+  "Reply in 4 short parts so we can understand how you think under pressure:",
+  "1) What are you building in Accra? Name the kind of business.",
+  "2) Why are you starting now — what problem or opportunity is pulling you in?",
+  "3) Your first supplier backs out one week before launch. What do you do?",
+  "4) You hear that someone nearby is building something similar. What is your move?",
+].join("\n\n");
 
-// Plugin options carry the store so tests can inject a fresh instance
-// rather than relying on the module-level singleton.
 interface StartPluginOptions {
   store: ISessionStore;
 }
 
-/** JSON Schema for POST /start body validation. */
 const startBodySchema = {
   type: "object",
   required: ["playerName", "email", "password"],
   properties: {
     playerName: { type: "string", minLength: 1 },
     email: { type: "string", minLength: 1 },
-    // password is validated for presence but never stored — auth is not yet implemented.
     password: { type: "string", minLength: 1 },
   },
   additionalProperties: false,
 } as const;
 
-/** Registers the POST /start route against the injected ISessionStore. */
 export const startRoutes: FastifyPluginAsync<StartPluginOptions> = async (
   fastify,
   opts
@@ -41,7 +39,6 @@ export const startRoutes: FastifyPluginAsync<StartPluginOptions> = async (
     },
     async (request, reply) => {
       const { playerName, email } = request.body;
-      // password is deliberately not used — no auth implementation yet.
 
       const session = await store.createSession(playerName, email);
 

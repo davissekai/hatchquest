@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach } from "vitest";
+import { describe, it, expect, beforeEach, afterEach } from "vitest";
 import Fastify, { type FastifyInstance } from "fastify";
 import { SessionStore } from "../../store/session-store.js";
 import { sessionRoutes } from "../session.js";
@@ -42,13 +42,22 @@ async function seedSessionNoNode(store: SessionStore): Promise<string> {
   return session.id;
 }
 
+const savedApiKey = process.env.ANTHROPIC_API_KEY;
+
 let store: SessionStore;
 let app: FastifyInstance;
 
 beforeEach(async () => {
+  delete process.env.ANTHROPIC_API_KEY;
   store = new SessionStore();
   app = buildApp(store);
   await app.ready();
+});
+
+afterEach(() => {
+  if (savedApiKey !== undefined) {
+    process.env.ANTHROPIC_API_KEY = savedApiKey;
+  }
 });
 
 describe("GET /session/:sessionId", () => {
@@ -80,6 +89,19 @@ describe("GET /session/:sessionId", () => {
     const body = res.json<SessionResponse>();
     expect(body.currentNode).not.toBeNull();
     expect(body.currentNode?.id).toBe("L1-node-1");
+  });
+
+  it("returns narrated currentNode text with world-state context", async () => {
+    const sessionId = await seedSessionWithNode(store);
+
+    const res = await app.inject({
+      method: "GET",
+      url: `/session/${sessionId}`,
+    });
+
+    const body = res.json<SessionResponse>();
+    expect(body.currentNode?.narrative).toContain("A test scenario.");
+    expect(body.currentNode?.narrative).toContain("GHS 10,000");
   });
 
   // --- clientState does not leak server-only fields ---
