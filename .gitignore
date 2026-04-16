@@ -17,6 +17,14 @@ coverage
 # next.js
 /.next/
 /out/
+frontend/.next/
+frontend/out/
+
+# screenshots / stray image artifacts
+*.png
+*.jpg
+*.jpeg
+!public/**
 
 # production
 /build
