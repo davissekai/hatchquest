@@ -44,7 +44,7 @@ export default function NotFound() {
             Wrong District.
           </h1>
           <p style={{ fontSize: "18px", color: "rgba(30,58,138,0.6)", margin: 0, fontWeight: 500, lineHeight: 1.5 }}>
-            This alleyway doesn't exist in Accra. Let's get you back to the main street.
+            This alleyway doesn&apos;t exist in Accra. Let&apos;s get you back to the main street.
           </p>
         </div>
 

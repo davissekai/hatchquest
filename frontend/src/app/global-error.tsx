@@ -50,7 +50,7 @@ export default function GlobalError({ reset }: { error: Error; reset: () => void
           </h1>
           
           <p style={{ fontSize: "18px", color: "rgba(30,58,138,0.7)", margin: 0, fontWeight: 500, lineHeight: 1.5 }}>
-            Accra pulsates, but your connection flickered. Let's get you back in the game.
+            Accra pulsates, but your connection flickered. Let&apos;s get you back in the game.
           </p>
           
           <button
