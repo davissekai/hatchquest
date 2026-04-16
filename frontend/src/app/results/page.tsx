@@ -85,24 +85,27 @@ const Results = () => {
 
       {!error && results && (
         <div className="pt-20">
-          {/* ── Hero gradient header — score + verdict ──────────────────── */}
-          <div className="hero-gradient relative overflow-hidden py-20 px-6 text-center">
-            <div className="absolute inset-0 kente-pattern opacity-10" />
-            <div className="relative z-10 max-w-xl mx-auto space-y-4">
-              <p className="font-label text-sm font-bold text-on-primary/70 tracking-widest uppercase">
+          {/* ── Hero header — score + verdict ──────────────────── */}
+          <div className="bg-navy relative overflow-hidden py-24 px-6 text-center rounded-b-[4rem] shadow-[0_20px_60px_rgba(30,58,138,0.3)]">
+            <div className="absolute inset-0 adinkra-pattern opacity-10" />
+            <div className="absolute top-0 right-0 w-96 h-96 bg-hot-pink rounded-full opacity-30 blur-[100px] -translate-y-1/2 translate-x-1/2" />
+            <div className="absolute bottom-0 left-0 w-96 h-96 bg-lime rounded-full opacity-20 blur-[100px] translate-y-1/2 -translate-x-1/2" />
+            
+            <div className="relative z-10 max-w-xl mx-auto space-y-6">
+              <p className="font-label text-sm font-bold text-white/70 tracking-widest uppercase bg-white/10 px-4 py-2 rounded-full inline-block">
                 Your Results
               </p>
-              <div className="text-8xl font-headline font-extrabold text-secondary-fixed leading-none">
+              <div className="text-8xl md:text-9xl font-headline font-extrabold text-lime leading-none drop-shadow-md">
                 {score.toFixed(1)}
               </div>
-              <p className="font-label text-sm font-bold text-on-primary/70 tracking-widest uppercase">
+              <p className="font-label text-sm font-bold text-white/70 tracking-widest uppercase">
                 Acumen Score
               </p>
               <div className="pt-4">
-                <h2 className="font-headline text-3xl font-extrabold text-on-primary italic">
+                <h2 className="font-headline text-4xl font-extrabold text-electric-cyan italic drop-shadow-sm">
                   {verdict.text}
                 </h2>
-                <p className="font-body text-lg text-on-primary/80 mt-2 italic">
+                <p className="font-body text-xl text-white/90 mt-4 italic max-w-md mx-auto">
                   {verdict.desc}
                 </p>
               </div>
@@ -110,81 +113,83 @@ const Results = () => {
           </div>
 
           {/* ── Body — cards on bg-background ──────────────────────────── */}
-          <div className="max-w-2xl mx-auto px-6 py-12 space-y-6">
+          <div className="max-w-2xl mx-auto px-6 py-12 space-y-8">
 
             {/* EO Radar chart */}
-            <div className="bg-surface-container-lowest rounded-xl p-6 shadow-[0_12px_40px_rgba(21,5,120,0.06)]">
-              <h3 className="font-headline font-bold text-lg text-primary uppercase tracking-widest mb-4 text-center">
+            <div className="bg-white rounded-[3rem] p-8 md:p-10 shadow-[0_15px_40px_rgba(30,58,138,0.1)] border-4 border-cream">
+              <h3 className="font-headline font-bold text-xl text-navy uppercase tracking-widest mb-6 text-center">
                 Entrepreneurial Profile
               </h3>
               {results.summary && (
-                <p className="font-body text-base text-on-surface-variant mb-6 leading-relaxed italic text-center whitespace-pre-line">
+                <p className="font-body text-lg text-navy/80 mb-8 leading-relaxed italic text-center whitespace-pre-line bg-cream p-6 rounded-3xl border border-surface-container">
                   &ldquo;{results.summary}&rdquo;
                 </p>
               )}
-              <RadarChart
-                maxValue={10}
-                dimensions={
-                  results.eoProfile ?? {
-                    autonomy: 0,
-                    innovativeness: 0,
-                    proactiveness: 0,
-                    riskTaking: 0,
-                    competitiveAggressiveness: 0,
+              <div className="bg-cream/50 rounded-full p-4 border-2 border-white">
+                <RadarChart
+                  maxValue={10}
+                  dimensions={
+                    results.eoProfile ?? {
+                      autonomy: 0,
+                      innovativeness: 0,
+                      proactiveness: 0,
+                      riskTaking: 0,
+                      competitiveAggressiveness: 0,
+                    }
                   }
-                }
-              />
+                />
+              </div>
             </div>
 
             {/* Final Resources */}
-            <div className="bg-surface-container-lowest rounded-xl p-6 shadow-[0_12px_40px_rgba(21,5,120,0.06)]">
-              <h3 className="font-headline font-bold text-lg text-primary uppercase tracking-widest mb-4">
+            <div className="bg-white rounded-[3rem] p-8 md:p-10 shadow-[0_15px_40px_rgba(30,58,138,0.1)] border-4 border-cream">
+              <h3 className="font-headline font-bold text-xl text-navy uppercase tracking-widest mb-8 text-center">
                 Final Resources
               </h3>
-              <div className="space-y-4">
+              <div className="space-y-6">
                 {/* Capital */}
-                <div>
-                  <div className="flex justify-between items-center mb-2">
-                    <span className="font-label font-semibold text-on-surface-variant text-sm">Capital</span>
-                    <span className="font-headline font-bold text-xl text-secondary">
+                <div className="bg-cream p-5 rounded-[2rem] border-2 border-white shadow-sm">
+                  <div className="flex justify-between items-center mb-3">
+                    <span className="font-label font-bold text-navy/70 text-sm uppercase tracking-wider">Capital</span>
+                    <span className="font-headline font-extrabold text-2xl text-lime drop-shadow-sm">
                       GHS {(clientState?.capital ?? 0).toLocaleString()}
                     </span>
                   </div>
-                  <div className="h-2.5 w-full rounded-full bg-surface-container-high overflow-hidden">
+                  <div className="h-5 w-full rounded-full bg-white border border-surface-container overflow-hidden shadow-inner p-1">
                     <div
-                      className="h-full bg-primary rounded-full transition-all duration-1000"
+                      className="h-full bg-lime rounded-full transition-all duration-1000 shadow-sm"
                       style={{ width: `${capitalBarWidth}%` }}
                     />
                   </div>
                 </div>
 
                 {/* Reputation */}
-                <div>
-                  <div className="flex justify-between items-center mb-2">
-                    <span className="font-label font-semibold text-on-surface-variant text-sm">Reputation</span>
-                    <span className="font-headline font-bold text-xl text-secondary">
+                <div className="bg-cream p-5 rounded-[2rem] border-2 border-white shadow-sm">
+                  <div className="flex justify-between items-center mb-3">
+                    <span className="font-label font-bold text-navy/70 text-sm uppercase tracking-wider">Reputation</span>
+                    <span className="font-headline font-extrabold text-2xl text-hot-pink drop-shadow-sm">
                       {clientState?.reputation ?? 0}
                     </span>
                   </div>
-                  <div className="h-2.5 w-full rounded-full bg-surface-container-high overflow-hidden">
+                  <div className="h-5 w-full rounded-full bg-white border border-surface-container overflow-hidden shadow-inner p-1">
                     <div
-                      className="h-full bg-tertiary-container rounded-full transition-all duration-1000"
+                      className="h-full bg-hot-pink rounded-full transition-all duration-1000 shadow-sm"
                       style={{ width: `${Math.min(100, ((clientState?.reputation ?? 0) / 80) * 100)}%` }}
                     />
                   </div>
                 </div>
 
                 {/* Network */}
-                <div>
-                  <div className="flex justify-between items-center mb-2">
-                    <span className="font-label font-semibold text-on-surface-variant text-sm">Network</span>
-                    <span className="font-headline font-bold text-xl text-secondary">
+                <div className="bg-cream p-5 rounded-[2rem] border-2 border-white shadow-sm">
+                  <div className="flex justify-between items-center mb-3">
+                    <span className="font-label font-bold text-navy/70 text-sm uppercase tracking-wider">Network</span>
+                    <span className="font-headline font-extrabold text-2xl text-electric-cyan drop-shadow-sm">
                       {clientState?.networkStrength ?? 0}
                     </span>
                   </div>
-                  <div className="h-2.5 w-full rounded-full bg-surface-container-high overflow-hidden">
+                  <div className="h-5 w-full rounded-full bg-white border border-surface-container overflow-hidden shadow-inner p-1">
                     <div
-                      className="h-full bg-secondary-container rounded-full transition-all duration-1000"
+                      className="h-full bg-electric-cyan rounded-full transition-all duration-1000 shadow-sm"
                       style={{ width: `${Math.min(100, ((clientState?.networkStrength ?? 0) / 80) * 100)}%` }}
                     />
                   </div>
@@ -193,16 +198,16 @@ const Results = () => {
             </div>
 
             {/* Actions */}
-            <div className="flex flex-col gap-3 pb-8">
+            <div className="flex flex-col gap-4 pb-12">
               <button
                 onClick={handlePlayAgain}
-                className="w-full py-5 bg-primary text-on-primary rounded-xl font-headline font-extrabold text-lg shadow-[0_8px_30px_rgba(82,79,178,0.3)] hover:scale-[1.02] active:scale-95 transition-all"
+                className="w-full py-6 bg-lime text-navy rounded-full font-headline font-extrabold text-xl shadow-[0_10px_30px_rgba(57,255,20,0.3)] hover:scale-105 active:scale-95 transition-all duration-300 border-4 border-white"
               >
                 Play Again
               </button>
               <button
                 onClick={handleShare}
-                className="w-full py-4 bg-surface-container-low text-on-surface-variant rounded-xl font-headline font-bold text-base hover:bg-surface-container transition-colors"
+                className="w-full py-5 bg-white text-navy/70 rounded-full font-headline font-bold text-lg hover:bg-cream transition-colors border-4 border-transparent hover:border-white shadow-sm"
               >
                 {copied ? "Copied to clipboard!" : "Share Results"}
               </button>

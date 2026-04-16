@@ -42,22 +42,22 @@ export function HUD({ clientState, layer }: HUDProps): React.ReactElement {
   }, [capital]);
 
   return (
-    <div className="bg-navy text-white px-6 py-4 border-b-4 border-electric-yellow relative flex items-center justify-between">
+    <div className="m-4 bg-navy/95 backdrop-blur-xl text-white px-8 py-4 rounded-full shadow-[0_15px_40px_rgba(30,58,138,0.25)] border-4 border-white flex flex-col md:flex-row items-center justify-between gap-4">
       {/* Layer progress dots */}
       <div className="flex items-center gap-2">
-        <span className="font-headline font-extrabold uppercase tracking-widest text-electric-yellow mr-2">Layer {layer}</span>
+        <span className="font-headline font-extrabold uppercase tracking-widest text-lime mr-2">Layer {layer}</span>
         {[1, 2, 3, 4, 5].map((l) => {
           const isCurrent = l === layer;
           const isPast = l < layer;
           return (
             <span
               key={l}
-              className={`inline-block w-3 h-3 border-2 ${
+              className={`inline-block w-4 h-4 rounded-full border-2 transition-all duration-300 ${
                 isCurrent
-                  ? "bg-electric-yellow border-electric-yellow"
+                  ? "bg-lime border-lime scale-110 shadow-[0_0_10px_rgba(57,255,20,0.5)]"
                   : isPast
-                  ? "bg-white border-white"
-                  : "bg-transparent border-white"
+                  ? "bg-electric-cyan border-electric-cyan"
+                  : "bg-transparent border-white/50"
               }`}
               aria-label={`Layer ${l}${isCurrent ? " (current)" : isPast ? " (complete)" : ""}`}
             />
@@ -66,30 +66,34 @@ export function HUD({ clientState, layer }: HUDProps): React.ReactElement {
       </div>
 
       {/* Stats row */}
-      <div className="flex items-center gap-8">
+      <div className="flex items-center gap-6 md:gap-10 bg-white/10 px-6 py-2 rounded-full border border-white/20">
         {/* Capital */}
-        <div className="flex flex-col items-end">
-          <span className="font-headline text-xs font-bold uppercase tracking-widest text-electric-yellow/80">Capital</span>
+        <div className="flex flex-col items-center">
+          <span className="font-headline text-[10px] font-bold uppercase tracking-widest text-lime">Capital</span>
           <span
             ref={capitalRef}
-            className="font-headline text-2xl font-black tracking-tight"
+            className="font-headline text-xl font-black tracking-tight drop-shadow-sm"
           >
             {formatCapital(capital)}
           </span>
         </div>
 
+        <div className="w-px h-8 bg-white/20" />
+
         {/* Reputation */}
-        <div className="flex flex-col items-end">
-          <span className="font-headline text-xs font-bold uppercase tracking-widest text-electric-yellow/80">Rep</span>
-          <span className="font-headline text-2xl font-black tracking-tight">
+        <div className="flex flex-col items-center">
+          <span className="font-headline text-[10px] font-bold uppercase tracking-widest text-hot-pink">Rep</span>
+          <span className="font-headline text-xl font-black tracking-tight drop-shadow-sm">
             {reputation}
           </span>
         </div>
 
+        <div className="w-px h-8 bg-white/20" />
+
         {/* Network */}
-        <div className="flex flex-col items-end">
-          <span className="font-headline text-xs font-bold uppercase tracking-widest text-electric-yellow/80">Net</span>
-          <span className="font-headline text-2xl font-black tracking-tight">
+        <div className="flex flex-col items-center">
+          <span className="font-headline text-[10px] font-bold uppercase tracking-widest text-electric-cyan">Net</span>
+          <span className="font-headline text-xl font-black tracking-tight drop-shadow-sm">
             {network}
           </span>
         </div>
