@@ -92,7 +92,7 @@ async function makeChoice(
 }
 
 /**
- * Plays through all 5 layers and returns the final ChoiceResponse.
+ * Plays through all 10 layers and returns the final ChoiceResponse.
  * Uses choice index 0 at every turn.
  */
 async function playToCompletion(
@@ -103,9 +103,10 @@ async function playToCompletion(
   let currentNodeId = startNodeId;
   let lastResponse!: ChoiceResponse;
 
-  for (let turn = 0; turn < 5; turn++) {
+  for (let turn = 0; turn < 10; turn++) {
     lastResponse = await makeChoice(app, sessionId, currentNodeId, 0);
     currentNodeId = lastResponse.nextNode?.id ?? "";
+    if (lastResponse.clientState.isComplete) break;
   }
 
   return lastResponse;
@@ -142,8 +143,8 @@ describe("full game loop — start → classify → 5 choices → results", () =
     const finalTurn = await playToCompletion(app, sessionId, layer1NodeId);
 
     expect(finalTurn.clientState.isComplete).toBe(true);
-    expect(finalTurn.clientState.turnsElapsed).toBe(5);
-    expect(finalTurn.clientState.layer).toBe(5);
+    expect(finalTurn.clientState.turnsElapsed).toBe(10);
+    expect(finalTurn.clientState.layer).toBe(10);
     expect(finalTurn.nextNode).toBeNull();
   });
 
@@ -152,7 +153,7 @@ describe("full game loop — start → classify → 5 choices → results", () =
     const layer1NodeId = await classifySession(app, sessionId);
 
     let currentNode = layer1NodeId;
-    const expectedLayers = [2, 3, 4, 5, 5];
+    const expectedLayers = [2, 3, 4, 5, 6, 7, 8, 9, 10, 10];
 
     for (const expectedLayer of expectedLayers) {
       const res = await makeChoice(app, sessionId, currentNode, 0);
@@ -166,10 +167,11 @@ describe("full game loop — start → classify → 5 choices → results", () =
     const layer1NodeId = await classifySession(app, sessionId);
 
     let currentNode = layer1NodeId;
-    for (let turn = 1; turn <= 5; turn++) {
+    for (let turn = 1; turn <= 10; turn++) {
       const res = await makeChoice(app, sessionId, currentNode, 0);
       expect(res.clientState.turnsElapsed).toBe(turn);
       currentNode = res.nextNode?.id ?? "";
+      if (res.clientState.isComplete) break;
     }
   });
 

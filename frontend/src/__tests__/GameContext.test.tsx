@@ -22,6 +22,12 @@ const mockClientState: ClientWorldState = {
   hasPremises: false,
   susuMember: false,
   mentorAccess: false,
+  worldSignals: {
+    marketHeat: 50,
+    competitorThreat: 50,
+    infrastructureStability: 50,
+    lastEventLabel: null,
+  },
 };
 
 // Mock the API calls
@@ -84,6 +90,20 @@ describe('GameContext State Machine', () => {
     mockApi.classifyQ2.mockResolvedValueOnce({
       sessionId: 'sess-234',
       layer1NodeId: 'L1-node-1',
+    });
+    mockApi.session.mockResolvedValueOnce({
+      sessionId: 'sess-234',
+      clientState: { ...mockClientState, layer: 1 },
+      currentNode: {
+        id: 'L1-node-1',
+        layer: 1,
+        narrative: 'Test scenario',
+        choices: [
+          { index: 0, text: 'Choice A', tensionHint: 'hint A' },
+          { index: 1, text: 'Choice B', tensionHint: 'hint B' },
+          { index: 2, text: 'Choice C', tensionHint: 'hint C' },
+        ],
+      },
     });
 
     const { result } = renderHook(() => useGame(), { wrapper });

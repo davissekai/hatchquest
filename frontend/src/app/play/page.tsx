@@ -7,6 +7,7 @@ import { HUD } from "@/components/HUD";
 import RetroTransition from "@/components/RetroTransition";
 import ErrorBanner from "@/components/ErrorBanner";
 import LoadingOverlay from "@/components/LoadingOverlay";
+import { WorldHUD } from "@/components/WorldHUD";
 import type { ClientWorldState } from "@hatchquest/shared";
 
 const transitionMessages = [
@@ -37,6 +38,7 @@ const Gameplay = () => {
   const [isTransitioning, setIsTransitioning] = useState(false);
   const [isFinalTransition, setIsFinalTransition] = useState(false);
   const [choiceDisabled, setChoiceDisabled] = useState(false);
+  const [freeText, setFreeText] = useState("");
 
   useEffect(() => {
     if (isTransitioning) return;
@@ -90,6 +92,14 @@ const Gameplay = () => {
       router.push("/results");
     }
   }, [router, isFinalTransition]);
+
+  // Free-text choice uses choice 0 as a fallback for demo purposes.
+  // The text is discarded server-side; the intent is to keep the demo moving.
+  const handleFreeTextChoice = useCallback(async (): Promise<void> => {
+    if (!freeText.trim() || isTransitioning || choiceDisabled || !currentNode) return;
+    setFreeText("");
+    await handleChoice(0);
+  }, [freeText, isTransitioning, choiceDisabled, currentNode, handleChoice]);
 
   // No session + not transitioning — show empty state
   if (!currentNode && !isTransitioning && phase !== "complete") {
@@ -157,9 +167,14 @@ const Gameplay = () => {
             Turn {turns}
           </div>
 
+          {/* World signals */}
+          {clientState && (
+            <WorldHUD clientState={clientState} />
+          )}
+
           {/* Narrative flat card */}
           <div className="bg-white/80 backdrop-blur-xl border-4 border-white p-10 rounded-[3rem] shadow-[0_20px_60px_rgba(30,58,138,0.1)]">
-            <p className="font-headline font-extrabold text-2xl md:text-3xl text-navy leading-tight whitespace-pre-line tracking-tight drop-shadow-sm">
+            <p className="font-headline font-extrabold text-base md:text-lg text-navy leading-tight whitespace-pre-line tracking-tight drop-shadow-sm">
               {currentNode.narrative}
             </p>
           </div>
@@ -189,14 +204,36 @@ const Gameplay = () => {
                   </span>
                   <span className="flex-1 flex flex-col items-start px-4 py-4 text-left">
                     <span className="font-headline font-extrabold text-lg drop-shadow-sm">{choice.text}</span>
-                    {choice.tensionHint && (
-                      <span className="font-headline font-bold text-xs mt-1 opacity-90 uppercase tracking-widest">{choice.tensionHint}</span>
-                    )}
                   </span>
                   <span className="material-symbols-outlined text-3xl pr-6 font-bold group-hover:translate-x-2 transition-transform drop-shadow-sm">arrow_forward</span>
                 </button>
               );
             })}
+          </div>
+
+          {/* Free-text choice */}
+          <div className="mt-2 flex flex-col gap-3">
+            <p className="font-headline font-bold text-xs uppercase tracking-widest text-navy/50 px-2">
+              Or write your own approach
+            </p>
+            <div className="flex gap-3">
+              <input
+                type="text"
+                placeholder="Describe your move..."
+                value={freeText}
+                onChange={(e) => setFreeText(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && freeText.trim() && void handleFreeTextChoice()}
+                className="flex-1 bg-white/80 border-4 border-white rounded-full px-6 py-3 font-body text-navy placeholder:text-navy/30 focus:outline-none focus:border-lime transition-colors"
+                disabled={isTransitioning || choiceDisabled}
+              />
+              <button
+                onClick={() => void handleFreeTextChoice()}
+                disabled={!freeText.trim() || isTransitioning || choiceDisabled}
+                className="px-6 py-3 bg-navy text-white rounded-full font-headline font-black uppercase tracking-widest text-sm hover:bg-lime hover:text-navy transition-all disabled:opacity-40 disabled:cursor-not-allowed border-4 border-white"
+              >
+                Send
+              </button>
+            </div>
           </div>
 
           {/* Bottom market tension indicator */}

@@ -5,9 +5,12 @@ import {
   computeEOAffinity,
   weightedDraw,
   selectNextNode,
+  selectNextSkeleton,
 } from "../director-ai.js";
 import { createInitialWorldState } from "../world-state.js";
 import type { ScenarioNodeFull, NodeTheme } from "../director-ai.js";
+import type { RegisteredSkeleton } from "../../skeletons/registry.js";
+import type { ChoiceEffect } from "../apply-choice.js";
 // Minimal ScenarioNodeFull for testing — only fields the Director AI reads.
 function makeNode(overrides: Partial<ScenarioNodeFull> = {}): ScenarioNodeFull {
   return {
@@ -315,5 +318,148 @@ describe("selectNextNode", () => {
     const node = makeNode({ id: "gated", layer: 2, conditions: { capitalMin: 50_000 } });
     // all fail → fallback returns the node anyway
     expect(selectNextNode(state, [node], () => 0.5)?.id).toBe("gated");
+  });
+
+  it("returns null when layer=10 (nextLayer=11 > 10)", () => {
+    const state = { ...makeState(), layer: 10 };
+    const node = makeNode({ id: "beyond-max", layer: 11 });
+    expect(selectNextNode(state, [node], () => 0.5)).toBeNull();
+  });
+});
+
+// ─── selectNextSkeleton ───────────────────────────────────────────────────────
+
+// Minimal ChoiceEffect for skeleton entries
+const DUMMY_EFFECT: ChoiceEffect = {
+  capital: 0,
+  revenue: 0,
+  debt: 0,
+  monthlyBurn: 0,
+  reputation: 0,
+  networkStrength: 0,
+  eoDeltas: {},
+};
+
+function makeSkeleton(
+  id: string,
+  layer: number,
+  overrides: Partial<RegisteredSkeleton["skeleton"]> = {}
+): RegisteredSkeleton {
+  return {
+    skeleton: {
+      id,
+      layer,
+      theme: "general",
+      baseWeight: 1.0,
+      eoTargetDimensions: [],
+      situationSeed: "Test situation",
+      choiceArchetypes: [
+        { eoPoleSignal: "risk-tolerant", archetypeDescription: "Take the risk", tensionAxis: "Speed vs. stability" },
+        { eoPoleSignal: "measured", archetypeDescription: "Play it safe", tensionAxis: "Growth vs. restraint" },
+        { eoPoleSignal: "innovative", archetypeDescription: "Find a new path", tensionAxis: "Opportunity vs. risk" },
+      ],
+      ...overrides,
+    },
+    effects: [DUMMY_EFFECT, DUMMY_EFFECT, DUMMY_EFFECT],
+  };
+}
+
+describe("selectNextSkeleton", () => {
+  it("returns null when layer=10 (nextLayer=11 > 10)", () => {
+    const state = { ...makeState(), layer: 10 };
+    const entry = makeSkeleton("sk-beyond", 11);
+    expect(selectNextSkeleton(state, [entry], () => 0.5)).toBeNull();
+  });
+
+  it("returns null when no skeletons exist for the next layer", () => {
+    const state = { ...makeState(), layer: 1 };
+    const entry = makeSkeleton("sk-layer1", 1); // wrong layer
+    expect(selectNextSkeleton(state, [entry], () => 0.5)).toBeNull();
+  });
+
+  it("selects a skeleton from the correct next layer", () => {
+    const state = { ...makeState(), layer: 1 };
+    const entry = makeSkeleton("sk-layer2", 2);
+    const result = selectNextSkeleton(state, [entry], () => 0.5);
+    expect(result?.skeleton.id).toBe("sk-layer2");
+  });
+
+  it("filters out skeletons that fail hard conditions", () => {
+    const state = { ...makeState(), layer: 1, capital: 500 };
+    const expensive = makeSkeleton("sk-expensive", 2, { conditions: { capitalMin: 50_000 } });
+    const cheap = makeSkeleton("sk-cheap", 2);
+    const result = selectNextSkeleton(state, [expensive, cheap], () => 0);
+    expect(result?.skeleton.id).toBe("sk-cheap");
+  });
+
+  it("falls back to full layer pool when all fail conditions", () => {
+    const state = { ...makeState(), layer: 1, capital: 100 };
+    const entry = makeSkeleton("sk-gated", 2, { conditions: { capitalMin: 50_000 } });
+    const result = selectNextSkeleton(state, [entry], () => 0.5);
+    expect(result?.skeleton.id).toBe("sk-gated");
+  });
+
+  it("skeletonPassesConditions: fails capitalMax when capital exceeds threshold", () => {
+    const state = { ...makeState(), layer: 1, capital: 20_000 };
+    const capped = makeSkeleton("sk-capped", 2, { conditions: { capitalMax: 5_000 } });
+    const uncapped = makeSkeleton("sk-uncapped", 2);
+    const result = selectNextSkeleton(state, [capped, uncapped], () => 0);
+    expect(result?.skeleton.id).toBe("sk-uncapped");
+  });
+
+  it("skeletonPassesConditions: fails reputationMin when reputation is below threshold", () => {
+    const state = { ...makeState(), layer: 1, reputation: 0 };
+    const repRequired = makeSkeleton("sk-rep", 2, { conditions: { reputationMin: 50 } });
+    const noReqd = makeSkeleton("sk-norep", 2);
+    const result = selectNextSkeleton(state, [repRequired, noReqd], () => 0);
+    expect(result?.skeleton.id).toBe("sk-norep");
+  });
+
+  it("skeletonPassesConditions: fails reputationMax when reputation exceeds threshold", () => {
+    const state = { ...makeState(), layer: 1, reputation: 80 };
+    const repMax = makeSkeleton("sk-repmax", 2, { conditions: { reputationMax: 30 } });
+    const noReqd = makeSkeleton("sk-norep2", 2);
+    const result = selectNextSkeleton(state, [repMax, noReqd], () => 0);
+    expect(result?.skeleton.id).toBe("sk-norep2");
+  });
+
+  it("skeletonPassesConditions: fails debtMin when debt is below threshold", () => {
+    const state = { ...makeState(), layer: 1, debt: 0 };
+    const debtMin = makeSkeleton("sk-debtmin", 2, { conditions: { debtMin: 5_000 } });
+    const noDebt = makeSkeleton("sk-nodebt", 2);
+    const result = selectNextSkeleton(state, [debtMin, noDebt], () => 0);
+    expect(result?.skeleton.id).toBe("sk-nodebt");
+  });
+
+  it("skeletonPassesConditions: fails debtMax when debt exceeds threshold", () => {
+    const state = { ...makeState(), layer: 1, debt: 20_000 };
+    const debtMax = makeSkeleton("sk-debtmax", 2, { conditions: { debtMax: 5_000 } });
+    const noReqd = makeSkeleton("sk-nodebtmax", 2);
+    const result = selectNextSkeleton(state, [debtMax, noReqd], () => 0);
+    expect(result?.skeleton.id).toBe("sk-nodebtmax");
+  });
+
+  it("skeletonPassesConditions: fails requiresMentorAccess when mentorAccess is false", () => {
+    const state = { ...makeState(), layer: 1, mentorAccess: false };
+    const mentorReqd = makeSkeleton("sk-mentor", 2, { conditions: { requiresMentorAccess: true } });
+    const noReqd = makeSkeleton("sk-nomentor", 2);
+    const result = selectNextSkeleton(state, [mentorReqd, noReqd], () => 0);
+    expect(result?.skeleton.id).toBe("sk-nomentor");
+  });
+
+  it("skeletonPassesConditions: fails requiresPremises when hasPremises is false", () => {
+    const state = { ...makeState(), layer: 1, hasPremises: false };
+    const premisesReqd = makeSkeleton("sk-premises", 2, { conditions: { requiresPremises: true } });
+    const noReqd = makeSkeleton("sk-nopremises", 2);
+    const result = selectNextSkeleton(state, [premisesReqd, noReqd], () => 0);
+    expect(result?.skeleton.id).toBe("sk-nopremises");
+  });
+
+  it("skeletonPassesConditions: fails employeeCountMin when employeeCount is below threshold", () => {
+    const state = { ...makeState(), layer: 1, employeeCount: 0 };
+    const empReqd = makeSkeleton("sk-emp", 2, { conditions: { employeeCountMin: 3 } });
+    const noReqd = makeSkeleton("sk-noemp", 2);
+    const result = selectNextSkeleton(state, [empReqd, noReqd], () => 0);
+    expect(result?.skeleton.id).toBe("sk-noemp");
   });
 });

@@ -26,5 +26,14 @@ export function toClientState(worldState: WorldState): ClientWorldState {
     hasPremises: worldState.hasPremises,
     susuMember: worldState.susuMember,
     mentorAccess: worldState.mentorAccess,
+    worldSignals: {
+      marketHeat: worldState.marketDemand,
+      competitorThreat: worldState.competitorAggression,
+      infrastructureStability: worldState.infrastructureReliability,
+      lastEventLabel:
+        worldState.worldEventHistory.length > 0
+          ? worldState.worldEventHistory[worldState.worldEventHistory.length - 1]?.label ?? null
+          : null,
+    },
   };
 }

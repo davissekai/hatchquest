@@ -59,5 +59,14 @@ export function createInitialWorldState(
       proactiveness: 5,
       competitiveAggressiveness: 5,
     },
+
+    // World event flags
+    capitalAccessOpen: false,
+    underAudit: false,
+    vcWindowOpen: false,
+    hiringDifficulty: 0,
+
+    // World event history
+    worldEventHistory: [],
   };
 }

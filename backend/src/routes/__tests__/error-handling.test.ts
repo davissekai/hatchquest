@@ -321,9 +321,9 @@ describe("route-generated 4xx — always { error: string }, never Fastify verbos
     });
     const { layer1NodeId } = classifyRes.json<{ layer1NodeId: string }>();
 
-    // Play all 5 turns to completion, tracking the next nodeId each time
+    // Play all 10 turns to completion, tracking the next nodeId each time
     let nodeId = layer1NodeId;
-    for (let i = 0; i < 5; i++) {
+    for (let i = 0; i < 10; i++) {
       const r = await goodApp.inject({
         method: "POST",
         url: "/choice",

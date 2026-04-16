@@ -23,7 +23,7 @@ const PlayerCreate = () => {
   };
 
   return (
-    <div className="bg-cream text-navy min-h-screen relative overflow-hidden flex items-center justify-center">
+    <div className="bg-cream text-navy min-h-screen relative flex items-center justify-center py-8">
       {/* Background — vibrant glows and patterns */}
       <div className="absolute inset-0 z-0">
         <div className="absolute inset-0 adinkra-pattern opacity-10" />
@@ -33,23 +33,6 @@ const PlayerCreate = () => {
 
       {/* Main card */}
       <main className="relative z-10 w-full max-w-md px-6 py-12">
-        {/* Branding */}
-        <div className="flex flex-col items-center mb-10">
-          <div className="w-24 h-24 bg-hot-pink rounded-[2.5rem] mb-6 shadow-[0_15px_45px_rgba(255,42,133,0.3)] flex items-center justify-center border-4 border-white rotate-3">
-            <span
-              className="material-symbols-outlined text-white text-5xl"
-              style={{ fontVariationSettings: "'FILL' 1" }}
-            >
-              rocket_launch
-            </span>
-          </div>
-          <h1 className="font-headline font-black text-5xl text-navy tracking-tighter italic drop-shadow-sm">
-            HatchQuest
-          </h1>
-          <p className="font-body italic text-xl text-navy/70 mt-2 font-medium">
-            The Streetwise Pulse of Accra
-          </p>
-        </div>
 
         {/* Auth card — Tactile Graffiti */}
         <div className="bg-white/80 backdrop-blur-xl rounded-[3rem] p-10 shadow-[0_20px_60px_rgba(30,58,138,0.1)] border-4 border-white">
@@ -69,7 +52,7 @@ const PlayerCreate = () => {
                 htmlFor="founder-name"
                 className="font-headline font-bold text-xs tracking-widest text-navy/60 uppercase ml-5 block"
               >
-                Preferred Name
+                Name
               </label>
               <div className="relative group">
                 <span className="material-symbols-outlined absolute left-6 top-1/2 -translate-y-1/2 text-navy/40 group-focus-within:text-hot-pink transition-colors">
@@ -95,7 +78,7 @@ const PlayerCreate = () => {
                 htmlFor="email"
                 className="font-headline font-bold text-xs tracking-widest text-navy/60 uppercase ml-5 block"
               >
-                Academic Email
+                Email
               </label>
               <div className="relative group">
                 <span className="material-symbols-outlined absolute left-6 top-1/2 -translate-y-1/2 text-navy/40 group-focus-within:text-hot-pink transition-colors">
@@ -120,7 +103,7 @@ const PlayerCreate = () => {
                 htmlFor="password"
                 className="font-headline font-bold text-xs tracking-widest text-navy/60 uppercase ml-5 block"
               >
-                Access Key
+                Password
               </label>
               <div className="relative group">
                 <span className="material-symbols-outlined absolute left-6 top-1/2 -translate-y-1/2 text-navy/40 group-focus-within:text-hot-pink transition-colors">

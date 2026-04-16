@@ -23,6 +23,12 @@ export interface ClientWorldState {
   hasPremises: boolean;
   susuMember: boolean;
   mentorAccess: boolean;
+  worldSignals: {
+    marketHeat: number;              // [0-100] derived from marketDemand
+    competitorThreat: number;        // [0-100] derived from competitorAggression
+    infrastructureStability: number; // [0-100] from infrastructureReliability
+    lastEventLabel: string | null;   // most recent world event label
+  };
 }
 
 // POST /api/game/start

@@ -160,7 +160,7 @@ export function selectNextNode(
   rng: () => number
 ): ScenarioNodeFull | null {
   const nextLayer = state.layer + 1;
-  if (nextLayer > 5) return null;
+  if (nextLayer > 10) return null;
 
   const layerNodes = allNodes.filter((n) => n.layer === nextLayer);
   if (layerNodes.length === 0) return null;
@@ -235,7 +235,7 @@ export function selectNextSkeleton(
   rng: () => number
 ): RegisteredSkeleton | null {
   const nextLayer = state.layer + 1;
-  if (nextLayer > 5) return null;
+  if (nextLayer > 10) return null;
 
   const layerEntries = allEntries.filter((e) => e.skeleton.layer === nextLayer);
   if (layerEntries.length === 0) return null;

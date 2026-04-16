@@ -7,6 +7,8 @@ import { TopAppBar } from "@/components/TopAppBar";
 import RadarChart from "@/components/RadarChart";
 import ErrorBanner from "@/components/ErrorBanner";
 import LoadingOverlay from "@/components/LoadingOverlay";
+import { archiveSession, loadArchive } from "@/lib/session-archive";
+import type { ArchivedSession } from "@/lib/session-archive";
 
 const getVerdict = (score: number) => {
   if (score >= 85) return { text: "Visionary Founder", desc: "You balance ambition with wisdom. Accra's next big thing." };
@@ -19,6 +21,8 @@ const Results = () => {
   const router = useRouter();
   const { state, phase, hasActiveSession, resumeSession, loadResults, resetGame, isLoading, error } = useGame();
   const [copied, setCopied] = useState(false);
+  const [archivedSessions, setArchivedSessions] = useState<ArchivedSession[]>([]);
+  const [showCompare, setShowCompare] = useState(false);
   const sessionId = state.sessionId;
   const results = state.results;
   const clientState = results?.clientState;
@@ -39,11 +43,20 @@ const Results = () => {
     }
   }, [phase, isLoading, hasActiveSession, resumeSession, loadResults, results, sessionId, router]);
 
+  // Archive the session once results land, then load the ring buffer for comparison.
+  useEffect(() => {
+    if (!results?.eoProfile || !results.clientState || !sessionId) return;
+    archiveSession(sessionId, results.eoProfile, results.clientState);
+    const id = setTimeout(() => setArchivedSessions(loadArchive()), 0);
+    return () => clearTimeout(id);
+  }, [results, sessionId]);
+
   const score = results?.eoProfile
     ? (Object.values(results.eoProfile).reduce((a, b) => a + b, 0) / 5) * 10
     : 0;
   const verdict = getVerdict(score);
-  const capitalBarWidth = clientState ? Math.min(100, (clientState.capital / 50000) * 100) : 0;
+  // Guard against negative capital: Math.max(0,...) prevents invalid negative width values.
+  const capitalBarWidth = clientState ? Math.max(0, Math.min(100, (clientState.capital / 50000) * 100)) : 0;
 
   const handlePlayAgain = () => {
     resetGame();
@@ -141,6 +154,62 @@ const Results = () => {
                 />
               </div>
             </div>
+
+            {/* Compare toggle */}
+            {archivedSessions.length >= 2 && (
+              <div className="text-center">
+                <button
+                  onClick={() => setShowCompare(!showCompare)}
+                  className="px-8 py-4 bg-white text-navy rounded-full font-headline font-black uppercase tracking-widest text-sm hover:bg-navy hover:text-white transition-all border-4 border-transparent hover:border-white shadow-sm"
+                >
+                  {showCompare ? "Hide Compare" : "Compare Last Run"}
+                </button>
+              </div>
+            )}
+
+            {showCompare && archivedSessions.length >= 2 && (() => {
+              const current = archivedSessions[0];
+              const previous = archivedSessions[1];
+              if (!current || !previous) return null;
+
+              const dims = ["autonomy", "innovativeness", "riskTaking", "proactiveness", "competitiveAggressiveness"] as const;
+
+              return (
+                <div className="bg-white rounded-[3.5rem] p-10 shadow-[0_20px_60px_rgba(30,58,138,0.1)] border-4 border-white space-y-8">
+                  <h3 className="font-headline font-black text-xl text-navy uppercase tracking-[0.2em] text-center">
+                    Run <span className="text-electric-cyan italic">Comparison</span>
+                  </h3>
+
+                  {/* EO dimension diff */}
+                  <div className="space-y-4">
+                    {dims.map((dim) => {
+                      const curr = current.eoProfile[dim];
+                      const prev = previous.eoProfile[dim];
+                      const diff = curr - prev;
+                      return (
+                        <div key={dim} className="flex items-center gap-4">
+                          <span className="font-headline font-black text-xs uppercase tracking-widest text-navy/50 w-32 shrink-0">
+                            {dim.replace(/([A-Z])/g, " $1").toLowerCase()}
+                          </span>
+                          <div className="flex-1 flex gap-2 items-center">
+                            <div className="h-3 bg-electric-cyan rounded-full" style={{ width: `${(curr / 10) * 100}%`, transition: "width 0.7s" }} />
+                            <div className="h-3 bg-white/30 rounded-full border-2 border-navy/20" style={{ width: `${(prev / 10) * 100}%`, transition: "width 0.7s" }} />
+                          </div>
+                          <span className={`font-headline font-black text-sm w-12 text-right ${diff > 0 ? "text-lime" : diff < 0 ? "text-hot-pink" : "text-navy/30"}`}>
+                            {diff > 0 ? `+${diff.toFixed(1)}` : diff.toFixed(1)}
+                          </span>
+                        </div>
+                      );
+                    })}
+                  </div>
+
+                  <div className="flex gap-6 text-xs font-headline font-bold uppercase tracking-widest text-navy/40">
+                    <span className="flex items-center gap-2"><span className="w-4 h-1 bg-electric-cyan rounded-full inline-block" /> This run</span>
+                    <span className="flex items-center gap-2"><span className="w-4 h-1 bg-navy/20 border border-navy/20 rounded-full inline-block" /> Last run</span>
+                  </div>
+                </div>
+              );
+            })()}
 
             {/* Final Resources */}
             <div className="bg-white rounded-[3.5rem] p-10 md:p-12 shadow-[0_20px_60px_rgba(30,58,138,0.1)] border-4 border-white">

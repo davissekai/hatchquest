@@ -29,3 +29,4 @@ export type {
   Choice,
 } from "./types/api.js";
 export type { ScenarioSkeleton, ChoiceArchetype, NarrativeSkin } from "./types/skeleton.js";
+export type { WorldEvent, WorldEventLogEntry } from "./types/world.js";
