@@ -11,6 +11,7 @@ import { classifyRoutes } from "./routes/classify.js";
 import { choiceRoutes } from "./routes/choice.js";
 import { sessionRoutes } from "./routes/session.js";
 import { resultsRoutes } from "./routes/results.js";
+import { debugRoutes } from "./routes/debug.js";
 import type { ISessionStore } from "./store/types.js";
 
 export interface BuildAppOptions {
@@ -127,6 +128,7 @@ export async function buildApp(
   });
   app.register(sessionRoutes, { prefix, store, getNode: getNodeFromSkeleton });
   app.register(resultsRoutes, { prefix, store });
+  app.register(debugRoutes);
 
   return app;
 }

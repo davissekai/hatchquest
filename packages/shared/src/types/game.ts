@@ -1,4 +1,5 @@
 import type { PlayerContext } from "./context.js";
+import type { WorldEventLogEntry } from "./world.js";
 
 // EO framework dimensions (Lumpkin & Dess, 1996)
 export type EODimension =
@@ -39,10 +40,10 @@ export type BusinessFormality = "unregistered" | "soleProprietorship" | "limited
 export interface WorldState {
   // --- Meta ---
   seed: number; // JS PRNG seed — determines procedural market parameters
-  layer: number; // Current layer (0–5)
+  layer: number; // Current layer (0–10)
   currentNodeId: string | null; // Which event node the player is on
   turnsElapsed: number; // Total decisions made
-  isComplete: boolean; // True at layer 5
+  isComplete: boolean; // True at layer 10
 
   // --- Financial (GHS) ---
   capital: number; // Starting: 10,000 GHS
@@ -74,4 +75,13 @@ export interface WorldState {
 
   // --- EO Profile (hidden from client during gameplay) ---
   eoProfile: EOProfile;
+
+  // --- World event flags (set by world events, reset each session) ---
+  capitalAccessOpen: boolean; // BoG rate cut unlocked cheaper capital
+  underAudit: boolean; // Regulatory audit in progress
+  vcWindowOpen: boolean; // VC roadshow season active
+  hiringDifficulty: number; // [0-100] labour market tightness
+
+  // --- World event history ---
+  worldEventHistory: WorldEventLogEntry[];
 }

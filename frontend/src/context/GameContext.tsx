@@ -138,7 +138,9 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
-  // ── submitQ2 — submit Q2, advance to Layer 1 ──────────────────────────────────
+  // ── submitQ2 — submit Q2, advance to Layer 1, then hydrate session ───────────
+  // Immediately fetches the session after classification so /play gets the first
+  // node without requiring a separate loading round-trip.
 
   const submitQ2 = async (q2Response: string): Promise<void> => {
     if (!state.sessionId) throw new Error("No active session");
@@ -146,6 +148,13 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
     setError(null);
     try {
       await api.classifyQ2({ sessionId: state.sessionId, q2Response });
+      // Hydrate session immediately so /play gets the first node without a loading page
+      const session = await api.session(state.sessionId);
+      patch({
+        clientState: session.clientState,
+        currentNode: session.currentNode,
+        isComplete: session.clientState.isComplete,
+      });
     } catch (err) {
       const msg = err instanceof Error ? err.message : "Failed to submit Q2";
       setError(msg);

@@ -11,7 +11,9 @@ export default defineConfig({
       // Barrel re-export file — no executable logic, nothing to cover
       // Classifier wraps an external LLM call (callClaudeClassifier). The pure
       // logic functions are tested, but the API-call branches are external by design.
-      exclude: ["src/engine/index.ts", "src/engine/classifier.ts"],
+      // index.ts and rng.ts are barrel re-exports — no executable logic.
+      // classifier.ts wraps an external LLM call tested via integration only.
+      exclude: ["src/engine/index.ts", "src/engine/classifier.ts", "src/engine/rng.ts"],
       thresholds: {
         lines: 100,
         functions: 100,

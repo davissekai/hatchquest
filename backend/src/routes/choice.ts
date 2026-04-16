@@ -5,18 +5,32 @@ import type {
   PlayerContext,
   ScenarioSkeleton,
   NarrativeSkin,
+  EODimension,
 } from "@hatchquest/shared";
 import type { ISessionStore } from "../store/types.js";
 import type { RegisteredSkeleton } from "../skeletons/registry.js";
 import { applyEffect } from "../engine/apply-choice.js";
+import { propagateWorldStocks, drawWorldEvent, applyWorldEvent } from "../engine/world-engine.js";
+import { computeDifficulty, updatePosterior } from "../engine/eo-bayes.js";
+import type { EOPosterior } from "../engine/eo-bayes.js";
+import { recordTurn } from "../engine/trace.js";
+import type { TurnTrace, EODimensionUpdate } from "../engine/trace.js";
+import type { NarrationWorldContext } from "../engine/narrator-ai.js";
+import { createPRNG } from "../engine/prng.js";
 import { toClientState } from "./helpers.js";
 import { SessionLock } from "./session-lock.js";
+
+export type GenerateSkinFn = (
+  skeleton: ScenarioSkeleton,
+  context: PlayerContext,
+  worldCtx?: NarrationWorldContext
+) => Promise<[NarrativeSkin, "llm" | "fallback" | "validator-rejected"]>;
 
 // Options injected when registering this plugin.
 export interface ChoiceRouteOptions {
   store: ISessionStore;
   getSkeleton: (id: string) => RegisteredSkeleton | null;
-  generateSkin: (skeleton: ScenarioSkeleton, context: PlayerContext) => Promise<NarrativeSkin>;
+  generateSkin: GenerateSkinFn;
   selectNextNodeId?: (state: WorldState) => string | null;
 }
 
@@ -26,12 +40,63 @@ interface ChoiceBody {
   choiceIndex: number;
 }
 
+const EO_DIMENSIONS: EODimension[] = [
+  "autonomy",
+  "innovativeness",
+  "riskTaking",
+  "proactiveness",
+  "competitiveAggressiveness",
+];
+
 function isValidChoiceIndex(v: unknown): v is 0 | 1 | 2 {
   return v === 0 || v === 1 || v === 2;
 }
 
 function isNonEmptyString(v: unknown): v is string {
   return typeof v === "string" && v.length > 0;
+}
+
+/**
+ * Computes variance for a given turn: starts at 2.5, tightens as evidence accumulates.
+ * Approximates a conjugate prior without storing variance in WorldState.
+ */
+function turnVariance(turnsElapsed: number): number {
+  return 2.5 / (turnsElapsed + 1);
+}
+
+/**
+ * Applies Bayesian EO updates to a WorldState given the effect's eoDeltas.
+ * Uses originalProfile as the prior (pre-applyEffect values) so the Bayesian
+ * update is not double-applied on top of the flat delta from applyEffect.
+ * Returns the updated WorldState with new eoProfile means.
+ */
+function applyBayesianEO(
+  state: WorldState,
+  originalProfile: WorldState["eoProfile"],
+  eoDeltas: Partial<Record<EODimension, number>>,
+  difficulty: number,
+  turnsElapsed: number
+): { state: WorldState; eoUpdates: Record<EODimension, EODimensionUpdate> } {
+  const variance = turnVariance(turnsElapsed);
+  const updatedProfile = { ...state.eoProfile };
+  const eoUpdates = {} as Record<EODimension, EODimensionUpdate>;
+
+  for (const dim of EO_DIMENSIONS) {
+    const priorMean = originalProfile[dim]; // use pre-choice value as prior
+    const prior: EOPosterior = { mean: priorMean, variance };
+    const delta = eoDeltas[dim] ?? 0;
+    const evidenceMean = priorMean + delta;
+    const posterior = updatePosterior(prior, evidenceMean, difficulty);
+    updatedProfile[dim] = posterior.mean;
+    eoUpdates[dim] = {
+      priorMean,
+      posteriorMean: posterior.mean,
+      priorVar: variance,
+      posteriorVar: posterior.variance,
+    };
+  }
+
+  return { state: { ...state, eoProfile: updatedProfile }, eoUpdates };
 }
 
 /**
@@ -91,19 +156,62 @@ async function handleChoice(
     }
     const effect = currentEntry.effects[choiceIndex];
 
-    const intermediateState = applyEffect(worldState, effect);
-    const candidateNextNodeId = selectNextNodeId(intermediateState);
+    // Capture world state before for trace
+    const worldStateBefore = worldState;
+
+    // 1. Apply choice effects (financial, social, boolean flags, flat EO)
+    const afterEffect = applyEffect(worldState, effect);
+
+    // 2. Propagate world stocks (marketDemand, competitorAggression, infrastructureReliability drift)
+    const rng = createPRNG(worldState.seed ^ worldState.turnsElapsed ^ 0xdeadbeef);
+    const afterStocks = propagateWorldStocks(afterEffect, rng);
+
+    // 3. Draw and apply world event (max 1 per turn)
+    const drawnEvent = drawWorldEvent(afterStocks, rng);
+    const afterEvent = drawnEvent ? applyWorldEvent(afterStocks, drawnEvent.eventId) : afterStocks;
+    const eventsFired = drawnEvent ? [{ id: drawnEvent.eventId, weight: 1.0 }] : [];
+
+    // 4. Append event to history if fired
+    const worldEventHistory = drawnEvent
+      ? [
+          ...afterEvent.worldEventHistory,
+          {
+            turn: worldState.turnsElapsed + 1,
+            eventId: drawnEvent.eventId,
+            label: drawnEvent.label,
+            narrativeHook: drawnEvent.narrativeHook,
+          },
+        ]
+      : afterEvent.worldEventHistory;
+    const afterHistory = { ...afterEvent, worldEventHistory };
+
+    // 5. Bayesian EO update (replaces flat eoDeltas application)
     const turnsElapsed = worldState.turnsElapsed + 1;
+    const difficulty = computeDifficulty(
+      afterHistory.capital,
+      afterHistory.competitorAggression,
+      afterHistory.layer
+    );
+    const { state: afterEO, eoUpdates } = applyBayesianEO(
+      afterHistory,
+      worldState.eoProfile, // original prior, before applyEffect flat deltas
+      effect.eoDeltas,
+      difficulty,
+      turnsElapsed
+    );
+
+    // 6. Advance routing meta
+    const candidateNextNodeId = selectNextNodeId(afterEO);
     const exhaustedContent = candidateNextNodeId === null;
-    const reachedTurnCap = turnsElapsed >= 5;
+    const reachedTurnCap = turnsElapsed >= 10;
     const gameOver = reachedTurnCap || exhaustedContent;
-    const advancedLayer = Math.min(5, worldState.layer + 1);
+    const advancedLayer = Math.min(10, worldState.layer + 1);
 
     const newState: WorldState = {
-      ...intermediateState,
+      ...afterEO,
       currentNodeId: gameOver ? null : candidateNextNodeId,
       turnsElapsed,
-      layer: gameOver && worldState.layer === 5 ? 5 : advancedLayer,
+      layer: gameOver && worldState.layer === 10 ? 10 : advancedLayer,
       isComplete: gameOver,
     };
 
@@ -115,12 +223,13 @@ async function handleChoice(
     // --- Build the next node via Narrator AI ---
     // If no skeleton exists for the next id (e.g., empty registry during migration),
     // nextNode stays null — the client renders a game-over or waiting state.
+    const narrationStart = Date.now();
+    let narrationSource: TurnTrace["narrationSource"] = "llm";
     let nextNode: ScenarioNode | null = null;
+
     if (!gameOver) {
-      // currentNodeId may be null if selector returned null — guard before lookup
       const nextEntry = newState.currentNodeId ? getSkeleton(newState.currentNodeId) : null;
       if (nextEntry) {
-        // Use a fallback context if playerContext not yet set (e.g., legacy /classify path)
         const ctx: PlayerContext = newState.playerContext ?? {
           businessDescription: "your business",
           motivation: "to build something meaningful in Accra",
@@ -128,7 +237,18 @@ async function handleChoice(
           rawQ2Response: "",
           q2Prompt: "",
         };
-        const skin = await generateSkin(nextEntry.skeleton, ctx);
+        const worldCtx: NarrationWorldContext = {
+          marketHeat: newState.marketDemand,
+          competitorThreat: newState.competitorAggression,
+          infrastructureStability: newState.infrastructureReliability,
+          capital: newState.capital,
+          lastEventNarrativeHook:
+            newState.worldEventHistory.length > 0
+              ? (newState.worldEventHistory[newState.worldEventHistory.length - 1]?.narrativeHook ?? null)
+              : null,
+        };
+        const [skin, source] = await generateSkin(nextEntry.skeleton, ctx, worldCtx);
+        narrationSource = source;
         nextNode = {
           id: nextEntry.skeleton.id,
           layer: nextEntry.skeleton.layer,
@@ -141,6 +261,22 @@ async function handleChoice(
         };
       }
     }
+
+    // 7. Record trace for observability
+    const trace: TurnTrace = {
+      turn: turnsElapsed,
+      layer: newState.layer,
+      nodeId,
+      worldStateBefore,
+      worldStateAfter: newState,
+      eventsFired,
+      choiceIndex,
+      difficulty,
+      eoUpdates,
+      narrationSource,
+      narrationLatencyMs: Date.now() - narrationStart,
+    };
+    recordTurn(sessionId, trace);
 
     return reply.status(200).send({
       sessionId,

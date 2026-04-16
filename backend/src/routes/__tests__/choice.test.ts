@@ -51,7 +51,7 @@ function buildApp(store: SessionStore): FastifyInstance {
     store,
     getSkeleton: (id: string) =>
       id === "L1-node-1" || id === "L2-node-1" ? STUB_SKELETON_ENTRY : null,
-    generateSkin: async () => STUB_SKIN,
+    generateSkin: async () => [STUB_SKIN, "fallback" as const],
     // Stub Director AI — always returns L2-node-1 so route tests stay hermetic
     selectNextNodeId: () => "L2-node-1",
   });

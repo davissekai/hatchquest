@@ -51,7 +51,7 @@ const Layer0Page = () => {
     e.preventDefault();
     try {
       await submitQ2(q2Response.trim());
-      router.push("/layer0/loading");
+      router.push("/play");
     } catch {
       // error surfaced via context
     }
@@ -126,117 +126,54 @@ You have GHS 10,000 and an idea. That is where your story starts.`;
       {/* ── Step 2: Q1 ───────────────────────────────────────────────────────── */}
       {step === "q1" && (
         <main className="relative z-10 flex flex-col items-center justify-center min-h-screen px-6 pt-28 pb-12">
-          <div className="max-w-4xl w-full grid grid-cols-1 md:grid-cols-12 gap-8 items-center bg-white/60 backdrop-blur-xl p-10 rounded-[3rem] shadow-[0_20px_60px_rgba(30,58,138,0.1)] border-4 border-white">
-
-            {/* Left — context */}
-            <div className="md:col-span-7 flex flex-col gap-6">
-              <div className="inline-flex items-center px-6 py-3 bg-electric-cyan text-navy rounded-full w-fit shadow-md">
-                <span
-                  className="material-symbols-outlined text-sm mr-2"
-                  style={{ fontVariationSettings: "'FILL' 1" }}
-                >
-                  emergency
+          <div className="max-w-2xl w-full bg-white/60 backdrop-blur-xl p-10 rounded-[3rem] shadow-[0_20px_60px_rgba(30,58,138,0.1)] border-4 border-white">
+            <form onSubmit={handleQ1Submit} className="flex flex-col gap-6">
+              <label
+                htmlFor="q1-response"
+                className="text-navy font-headline font-bold text-lg tracking-tight"
+              >
+                {state.layer0Question ?? "What is the business, and what is it really about for you?"}
+              </label>
+              <textarea
+                id="q1-response"
+                value={q1Response}
+                onChange={(e) => setQ1Response(e.target.value)}
+                placeholder="Write freely — there are no right answers."
+                disabled={isLoading}
+                rows={6}
+                className="w-full bg-cream border-2 border-transparent focus:border-electric-cyan focus:ring-4 focus:ring-electric-cyan/20 rounded-3xl text-navy font-body text-base p-5 placeholder:text-navy/40 transition-all resize-none outline-none disabled:opacity-50"
+              />
+              <div className="flex justify-between items-center px-2">
+                <span className="font-label text-xs text-navy/60 font-medium">
+                  {q1Response.trim().length === 0 ? "Start typing to proceed" : "✓ Ready to submit"}
                 </span>
-                <span className="font-label text-xs font-bold tracking-widest uppercase drop-shadow-sm">
-                  Chapter 0: The Incubation
-                </span>
+                <span className="font-label text-xs text-navy/60 font-medium">{q1Response.length} chars</span>
               </div>
 
-              <h2 className="text-5xl md:text-7xl font-headline font-extrabold text-navy leading-tight tracking-tighter">
-                Accra{" "}
-                <span className="text-hot-pink italic drop-shadow-md">Pulse</span>
-              </h2>
-
-              <div className="space-y-4">
-                <p className="text-2xl md:text-3xl font-body italic text-navy/90 leading-relaxed">
-                  &ldquo;The deal is laid bare — equity, influence, and the keys to the
-                  District. Before the game begins, we read you.&rdquo;
+              {error && (
+                <p className="font-body text-sm text-hot-pink bg-hot-pink/10 rounded-2xl px-5 py-3 border border-hot-pink/20">
+                  {error}
                 </p>
-                <p className="text-lg font-body text-navy/70 leading-relaxed max-w-xl font-medium">
-                  There are no right answers. Your instinct is the data.
-                </p>
-              </div>
-            </div>
+              )}
 
-            {/* Right — Q1 input panel */}
-            <div className="md:col-span-5 w-full">
-              <div className="bg-white p-8 rounded-[2.5rem] shadow-[0_10px_40px_rgba(30,58,138,0.08)] border-4 border-cream flex flex-col gap-6">
-                <form onSubmit={handleQ1Submit} className="flex flex-col gap-6">
-                  <div className="flex flex-col gap-2">
-                    <label
-                      htmlFor="q1-response"
-                      className="text-navy font-headline font-bold text-sm tracking-widest uppercase"
-                    >
-                      {state.layer0Question ?? "What is the business, and what is it really about for you?"}
-                    </label>
-                    <textarea
-                      id="q1-response"
-                      value={q1Response}
-                      onChange={(e) => setQ1Response(e.target.value)}
-                      placeholder="Write freely — there are no right answers."
-                      disabled={isLoading}
-                      rows={5}
-                      className="w-full bg-cream border-2 border-transparent focus:border-electric-cyan focus:ring-4 focus:ring-electric-cyan/20 rounded-3xl text-navy font-body text-base p-5 placeholder:text-navy/40 transition-all resize-none outline-none disabled:opacity-50"
-                    />
-                    <div className="flex justify-between items-center px-2 pt-2">
-                      <span className="font-label text-xs text-navy/60 font-medium">
-                        {q1Response.trim().length === 0
-                          ? "Start typing to proceed"
-                          : "✓ Ready to submit"}
-                      </span>
-                      <span className="font-label text-xs text-navy/60 font-medium">
-                        {q1Response.length} chars
-                      </span>
-                    </div>
-                  </div>
-
-                  {error && (
-                    <p className="font-body text-sm text-hot-pink bg-hot-pink/10 rounded-2xl px-5 py-3 border border-hot-pink/20">
-                      {error}
-                    </p>
-                  )}
-
-                  <button
-                    type="submit"
-                    disabled={q1Response.trim().length === 0 || isLoading}
-                    className="w-full py-5 bg-navy text-white rounded-full font-headline font-extrabold text-lg shadow-[0_10px_30px_rgba(30,58,138,0.3)] hover:bg-navy/90 hover:scale-105 active:scale-95 transition-all duration-300 flex items-center justify-center gap-3 group disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 disabled:hover:bg-navy"
-                  >
-                    {isLoading ? (
-                      <>
-                        <div className="w-5 h-5 rounded-full border-2 border-white/30 border-t-white animate-spin" />
-                        Reading instincts...
-                      </>
-                    ) : (
-                      <>
-                        Continue
-                        <span className="material-symbols-outlined group-hover:translate-x-2 transition-transform">
-                          east
-                        </span>
-                      </>
-                    )}
-                  </button>
-                </form>
-              </div>
-
-              <div className="mt-6 flex items-center gap-4 bg-white/50 backdrop-blur-md p-4 rounded-full border-2 border-white shadow-sm">
-                <div className="w-12 h-12 rounded-full bg-vibrant-orange flex items-center justify-center text-white flex-shrink-0 shadow-md">
-                  <span
-                    className="material-symbols-outlined text-xl"
-                    style={{ fontVariationSettings: "'FILL' 1" }}
-                  >
-                    trending_up
-                  </span>
-                </div>
-                <div className="flex flex-col">
-                  <span className="text-navy font-headline font-bold text-xs tracking-wide uppercase">
-                    Market Tension
-                  </span>
-                  <span className="text-vibrant-orange text-sm font-extrabold">
-                    Critical · 88%
-                  </span>
-                </div>
-              </div>
-            </div>
+              <button
+                type="submit"
+                disabled={q1Response.trim().length === 0 || isLoading}
+                className="w-full py-5 bg-navy text-white rounded-full font-headline font-extrabold text-lg shadow-[0_10px_30px_rgba(30,58,138,0.3)] hover:bg-navy/90 hover:scale-105 active:scale-95 transition-all duration-300 flex items-center justify-center gap-3 group disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 disabled:hover:bg-navy"
+              >
+                {isLoading ? (
+                  <>
+                    <div className="w-5 h-5 rounded-full border-2 border-white/30 border-t-white animate-spin" />
+                    Reading instincts...
+                  </>
+                ) : (
+                  <>
+                    Continue
+                    <span className="material-symbols-outlined group-hover:translate-x-2 transition-transform">east</span>
+                  </>
+                )}
+              </button>
+            </form>
           </div>
         </main>
       )}
@@ -244,105 +181,51 @@ You have GHS 10,000 and an idea. That is where your story starts.`;
       {/* ── Step 3: Q2 ───────────────────────────────────────────────────────── */}
       {step === "q2" && (
         <main className="relative z-10 flex flex-col items-center justify-center min-h-screen px-6 pt-28 pb-12">
-          <div className="max-w-4xl w-full grid grid-cols-1 md:grid-cols-12 gap-8 items-center bg-white/60 backdrop-blur-xl p-10 rounded-[3rem] shadow-[0_20px_60px_rgba(30,58,138,0.1)] border-4 border-white">
-
-            {/* Left — context */}
-            <div className="md:col-span-7 flex flex-col gap-6">
-              <div className="inline-flex items-center px-6 py-3 bg-bubblegum text-white rounded-full w-fit shadow-md">
-                <span
-                  className="material-symbols-outlined text-sm mr-2"
-                  style={{ fontVariationSettings: "'FILL' 1" }}
-                >
-                  psychology
+          <div className="max-w-2xl w-full bg-white/60 backdrop-blur-xl p-10 rounded-[3rem] shadow-[0_20px_60px_rgba(30,58,138,0.1)] border-4 border-white">
+            <form onSubmit={handleQ2Submit} className="flex flex-col gap-6">
+              <p className="text-navy/90 font-body text-lg leading-relaxed italic bg-cream rounded-2xl p-5 border-2 border-white">
+                {q2Prompt}
+              </p>
+              <textarea
+                id="q2-response"
+                value={q2Response}
+                onChange={(e) => setQ2Response(e.target.value)}
+                placeholder="What do you do?"
+                disabled={isLoading}
+                rows={5}
+                className="w-full bg-cream border-2 border-transparent focus:border-bubblegum focus:ring-4 focus:ring-bubblegum/20 rounded-3xl text-navy font-body text-base p-5 placeholder:text-navy/40 transition-all resize-none outline-none disabled:opacity-50"
+              />
+              <div className="flex justify-between items-center px-2">
+                <span className="font-label text-xs text-navy/60 font-medium">
+                  {q2Response.trim().length === 0 ? "Start typing to proceed" : "✓ Ready to submit"}
                 </span>
-                <span className="font-label text-xs font-bold tracking-widest uppercase drop-shadow-sm">
-                  Week One Challenge
-                </span>
+                <span className="font-label text-xs text-navy/60 font-medium">{q2Response.length} chars</span>
               </div>
 
-              <h2 className="text-5xl md:text-7xl font-headline font-extrabold text-navy leading-tight tracking-tighter">
-                First{" "}
-                <span className="text-lime italic drop-shadow-md">Test</span>
-              </h2>
-
-              <div className="space-y-4">
-                <p className="text-lg font-body text-navy/80 leading-relaxed max-w-xl font-medium">
-                  Before the game begins, one final question — grounded in your specific situation.
+              {error && (
+                <p className="font-body text-sm text-hot-pink bg-hot-pink/10 rounded-2xl px-5 py-3 border border-hot-pink/20">
+                  {error}
                 </p>
-              </div>
-            </div>
+              )}
 
-            {/* Right — Q2 input panel */}
-            <div className="md:col-span-5 w-full">
-              <div className="bg-white p-8 rounded-[2.5rem] shadow-[0_10px_40px_rgba(30,58,138,0.08)] border-4 border-cream flex flex-col gap-6">
-                <form onSubmit={handleQ2Submit} className="flex flex-col gap-6">
-                  <div className="flex flex-col gap-2">
-                    <label
-                      htmlFor="q2-response"
-                      className="text-navy font-headline font-bold text-sm tracking-widest uppercase"
-                    >
-                      Your First Challenge
-                    </label>
-                    {/* AI-generated Q2 prompt */}
-                    <p className="text-navy/90 font-body text-base leading-relaxed italic bg-cream rounded-2xl p-5 border-2 border-white">
-                      {q2Prompt}
-                    </p>
-                    <textarea
-                      id="q2-response"
-                      value={q2Response}
-                      onChange={(e) => setQ2Response(e.target.value)}
-                      placeholder="What do you do?"
-                      disabled={isLoading}
-                      rows={4}
-                      className="w-full bg-cream border-2 border-transparent focus:border-bubblegum focus:ring-4 focus:ring-bubblegum/20 rounded-3xl text-navy font-body text-base p-5 placeholder:text-navy/40 transition-all resize-none outline-none disabled:opacity-50"
-                    />
-                    <div className="flex justify-between items-center px-2 pt-2">
-                      <span className="font-label text-xs text-navy/60 font-medium">
-                        {q2Response.trim().length === 0
-                          ? "Start typing to proceed"
-                          : "✓ Ready to submit"}
-                      </span>
-                      <span className="font-label text-xs text-navy/60 font-medium">
-                        {q2Response.length} chars
-                      </span>
-                    </div>
-                  </div>
-
-                  {error && (
-                    <p className="font-body text-sm text-hot-pink bg-hot-pink/10 rounded-2xl px-5 py-3 border border-hot-pink/20">
-                      {error}
-                    </p>
-                  )}
-
-                  <button
-                    type="submit"
-                    disabled={q2Response.trim().length === 0 || isLoading}
-                    className="w-full py-5 bg-navy text-white rounded-full font-headline font-extrabold text-lg shadow-[0_10px_30px_rgba(30,58,138,0.3)] hover:bg-navy/90 hover:scale-105 active:scale-95 transition-all duration-300 flex items-center justify-center gap-3 group disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 disabled:hover:bg-navy"
-                  >
-                    {isLoading ? (
-                      <>
-                        <div className="w-5 h-5 rounded-full border-2 border-white/30 border-t-white animate-spin" />
-                        Deciding path...
-                      </>
-                    ) : (
-                      <>
-                        Decide
-                        <span className="material-symbols-outlined group-hover:translate-x-2 transition-transform">
-                          east
-                        </span>
-                      </>
-                    )}
-                  </button>
-                </form>
-              </div>
-
-              {/* Step indicator */}
-              <div className="mt-6 flex items-center justify-center gap-3">
-                <div className="w-3 h-3 rounded-full bg-navy/20" />
-                <div className="w-3 h-3 rounded-full bg-navy/20" />
-                <div className="w-4 h-4 rounded-full bg-lime shadow-md" />
-              </div>
-            </div>
+              <button
+                type="submit"
+                disabled={q2Response.trim().length === 0 || isLoading}
+                className="w-full py-5 bg-navy text-white rounded-full font-headline font-extrabold text-lg shadow-[0_10px_30px_rgba(30,58,138,0.3)] hover:bg-navy/90 hover:scale-105 active:scale-95 transition-all duration-300 flex items-center justify-center gap-3 group disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 disabled:hover:bg-navy"
+              >
+                {isLoading ? (
+                  <>
+                    <div className="w-5 h-5 rounded-full border-2 border-white/30 border-t-white animate-spin" />
+                    Deciding path...
+                  </>
+                ) : (
+                  <>
+                    Decide
+                    <span className="material-symbols-outlined group-hover:translate-x-2 transition-transform">east</span>
+                  </>
+                )}
+              </button>
+            </form>
           </div>
         </main>
       )}
