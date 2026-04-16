@@ -16,6 +16,7 @@ export type SessionPhase = 'idle' | 'layer0' | 'active' | 'complete';
 interface GameState {
   playerName: string | null;
   sessionId: string | null;
+  preamble: string | null;
   layer0Question: string | null;
   clientState: ClientWorldState | null;
   currentNode: ScenarioNode | null;
@@ -29,10 +30,12 @@ interface GameContextType {
   phase: SessionPhase;
   isLoading: boolean;
   error: string | null;
-  /** Create a new session. Stores session meta in localStorage, sets layer0Question. */
+  /** Create a new session. Stores session meta in localStorage, sets preamble + layer0Question. */
   startGame: (playerName: string, email: string, password: string) => Promise<void>;
-  /** Submit the Layer 0 free-text response. Updates state; caller handles navigation. */
-  classifyLayer0: (response: string) => Promise<void>;
+  /** Submit Q1 response. Returns the AI-generated Q2 prompt. */
+  submitQ1: (q1Response: string) => Promise<string>;
+  /** Submit Q2 response. Advances session to Layer 1. */
+  submitQ2: (q2Response: string) => Promise<void>;
   /** Submit a choice by index. Returns isComplete flag. */
   makeChoice: (nodeId: string, choiceIndex: 0 | 1 | 2) => Promise<boolean>;
   /** Hydrate state from an existing sessionId (resume flow). Returns the phase. */
@@ -55,6 +58,7 @@ interface SessionMeta {
 const initialState: GameState = {
   playerName: null,
   sessionId: null,
+  preamble: null,
   layer0Question: null,
   clientState: null,
   currentNode: null,
@@ -99,6 +103,7 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
       patch({
         playerName,
         sessionId: res.sessionId,
+        preamble: res.preamble,
         layer0Question: res.layer0Question,
         clientState: null,
         currentNode: null,
@@ -115,16 +120,34 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
-  // ── classifyLayer0 ────────────────────────────────────────────────────────────
+  // ── submitQ1 — submit Q1, receive AI-generated Q2 prompt ─────────────────────
 
-  const classifyLayer0 = async (response: string): Promise<void> => {
+  const submitQ1 = async (q1Response: string): Promise<string> => {
     if (!state.sessionId) throw new Error("No active session");
     setIsLoading(true);
     setError(null);
     try {
-      await api.classify({ sessionId: state.sessionId, response });
+      const res = await api.classifyQ1({ sessionId: state.sessionId, q1Response });
+      return res.q2Prompt;
     } catch (err) {
-      const msg = err instanceof Error ? err.message : "Classification failed";
+      const msg = err instanceof Error ? err.message : "Failed to submit Q1";
+      setError(msg);
+      throw err;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // ── submitQ2 — submit Q2, advance to Layer 1 ──────────────────────────────────
+
+  const submitQ2 = async (q2Response: string): Promise<void> => {
+    if (!state.sessionId) throw new Error("No active session");
+    setIsLoading(true);
+    setError(null);
+    try {
+      await api.classifyQ2({ sessionId: state.sessionId, q2Response });
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "Failed to submit Q2";
       setError(msg);
       throw err;
     } finally {
@@ -263,7 +286,8 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
         isLoading,
         error,
         startGame,
-        classifyLayer0,
+        submitQ1,
+        submitQ2,
         makeChoice,
         resumeSession,
         loadResults,

@@ -1,8 +1,10 @@
 import type {
   StartRequest,
   StartResponse,
-  ClassifyRequest,
-  ClassifyResponse,
+  ClassifyQ1Request,
+  ClassifyQ1Response,
+  ClassifyQ2Request,
+  ClassifyQ2Response,
   ChoiceRequest,
   ChoiceResponse,
   SessionResponse,
@@ -37,9 +39,16 @@ export const api = {
       body: JSON.stringify(body),
     }),
 
-  /** POST /api/game/classify — submit free-text Layer 0 response, route to Layer 1 node. */
-  classify: (body: ClassifyRequest): Promise<ClassifyResponse> =>
-    request<ClassifyResponse>("/api/game/classify", {
+  /** POST /api/game/classify-q1 — submit Q1 response, receive AI-generated Q2 prompt. */
+  classifyQ1: (body: ClassifyQ1Request): Promise<ClassifyQ1Response> =>
+    request<ClassifyQ1Response>("/api/game/classify-q1", {
+      method: "POST",
+      body: JSON.stringify(body),
+    }),
+
+  /** POST /api/game/classify-q2 — submit Q2 response, route to Layer 1 node. */
+  classifyQ2: (body: ClassifyQ2Request): Promise<ClassifyQ2Response> =>
+    request<ClassifyQ2Response>("/api/game/classify-q2", {
       method: "POST",
       body: JSON.stringify(body),
     }),
