@@ -182,8 +182,11 @@ describe("buildTurnContextBlock", () => {
 describe("validateNarration", () => {
   function validFirstTurnSkin(): NarrativeSkin {
     return {
+      // Realistic LLM output: paraphrases storyMemory rather than quoting verbatim.
+      // Content words from "supplier disruption still threatening your first momentum"
+      // appear at >40% overlap, satisfying hasFirstTurnContinuity.
       narrative:
-        "Two days after supplier disruption still threatening your first momentum, the unresolved supplier disruption is still hanging over Market Ops App while rival pressure builds.",
+        "Two days after your supplier backed out, the disruption is still threatening your first wave of traders. Rivals have noticed the gap and are circling. You need to decide whether to patch the supply chain fast or use this pressure as a forcing function.",
       choices: ["invest now", "slow down", "ask partners for cover"],
       tensionHints: ["Speed vs runway", "Stability vs momentum", "Control vs support"],
     };

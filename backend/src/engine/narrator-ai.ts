@@ -80,18 +80,36 @@ function startsWithTimeMarker(narrative: string): boolean {
   );
 }
 
+function contentWords(text: string): Set<string> {
+  return new Set(
+    normalizeForComparison(text).split(" ").filter((w) => w.length > 3)
+  );
+}
+
+function wordOverlapRatio(signal: string, narrative: string): number {
+  const signalWords = contentWords(signal);
+  if (signalWords.size === 0) return 0;
+  const narrativeWords = contentWords(narrative);
+  let matches = 0;
+  for (const word of signalWords) {
+    if (narrativeWords.has(word)) matches++;
+  }
+  return matches / signalWords.size;
+}
+
+// Passes when ≥40% of content words from any storyMemory signal appear in
+// the narrative — tolerant of LLM paraphrasing while still blocking drift.
 function hasFirstTurnContinuity(
   narrative: string,
   storyMemory: StoryMemory
 ): boolean {
-  const normalizedNarrative = normalizeForComparison(narrative);
   const signals = [
-    normalizeForComparison(storyMemory.openThread),
-    normalizeForComparison(storyMemory.continuityAnchor),
-    normalizeForComparison(storyMemory.lastBeatSummary),
-  ].filter((signal) => signal.length >= 10);
+    storyMemory.openThread,
+    storyMemory.continuityAnchor,
+    storyMemory.lastBeatSummary,
+  ].filter((s) => s.length >= 10);
 
-  return signals.some((signal) => normalizedNarrative.includes(signal));
+  return signals.some((signal) => wordOverlapRatio(signal, narrative) >= 0.4);
 }
 
 const NARRATOR_SYSTEM_PROMPT = `You are a business simulation narrator set in Accra, Ghana, 2026.
