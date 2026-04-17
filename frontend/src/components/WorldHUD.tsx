@@ -3,6 +3,9 @@
 import { useMemo } from "react";
 import type { ClientWorldState } from "@hatchquest/shared";
 
+// Intentional: in-game HUD does NOT show Current Business or EO Profile.
+// Those belong on the results page only.
+
 interface WorldHUDProps {
   clientState: ClientWorldState;
 }
@@ -25,11 +28,7 @@ function PulseBar({ label, value, barClass }: { label: string; value: number; ba
 }
 
 export function WorldHUD({ clientState }: WorldHUDProps) {
-  const { worldSignals, playerBusinessName } = clientState;
-
-  const currentBusiness = useMemo(() => {
-    return playerBusinessName || "Local Commerce";
-  }, [playerBusinessName]);
+  const { worldSignals } = clientState;
 
   const activeCrisis = useMemo(() => {
     return worldSignals?.lastEventLabel || null;
@@ -42,19 +41,6 @@ export function WorldHUD({ clientState }: WorldHUDProps) {
       <h2 className="font-headline font-black text-2xl uppercase tracking-tighter text-slate-900 border-b-8 border-slate-900 pb-2">
         World Data
       </h2>
-
-      {/* Sector Panel */}
-      <div className="bg-lime border-4 border-slate-900 rounded-[1.5rem] p-5 shadow-[4px_4px_0px_#0f172a] relative overflow-hidden">
-        <div className="absolute -top-3 -right-3 w-16 h-16 bg-[#FFC107] border-4 border-slate-900 rounded-full opacity-50" />
-        <div className="relative z-10 flex flex-col gap-1">
-          <span className="font-headline font-black text-xs uppercase tracking-widest text-slate-800">
-            Current Business
-          </span>
-          <span className="font-headline font-black text-2xl text-slate-900 drop-shadow-sm leading-none mt-1">
-            {currentBusiness}
-          </span>
-        </div>
-      </div>
 
       {/* World Pulse — the three fixed signal bars */}
       <div className="bg-white border-4 border-slate-900 rounded-[1.5rem] p-5 shadow-[4px_4px_0px_#0f172a] flex flex-col gap-4">

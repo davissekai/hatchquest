@@ -22,8 +22,26 @@ import { isMockLLM, mockGenerateSkin } from "../lib/mock-anthropic.js";
 const NARRATOR_TIMEOUT_MS = 12_000;
 const ANTHROPIC_MODEL = process.env.ANTHROPIC_MODEL ?? "claude-haiku-4-5";
 
-// Accra-specific proper nouns always valid in narration
-const GLOBAL_PROPER_NOUN_WHITELIST = ["Accra", "Ghana", "ECG", "BoG", "GHS", "Cedi", "Ghana Cedi"];
+// Hard-banned proper nouns the narrator must never use (foreign brands, off-setting names).
+// We allow any other capitalised word — the whitelist approach was too strict and was
+// silently knocking nearly every LLM response into the fallback path.
+const BANNED_PROPER_NOUNS = new Set([
+  "Apple",
+  "Google",
+  "Amazon",
+  "Microsoft",
+  "Stripe",
+  "Shopify",
+]);
+
+// Cap on businessDescription chars sent to the LLM. Q1 paragraphs can be long;
+// pasting the whole thing into the prompt causes the LLM to echo it verbatim.
+const BUSINESS_DESCRIPTION_PROMPT_CAP = 140;
+
+function decapitalise(s: string): string {
+  if (s.length === 0) return s;
+  return s[0].toLowerCase() + s.slice(1);
+}
 
 const NARRATOR_SYSTEM_PROMPT = `You are a business simulation narrator set in Accra, Ghana, 2026.
 
@@ -49,10 +67,12 @@ Rules:
   Never introduce physical-retail framing (shop space, shelves, packaging) for
   a 'tech' sector player. Never introduce software-only framing for a 'retail',
   'food', or 'agri' player. Use the sector you are given.
-- If IS_FIRST_SCENARIO_TURN is true, open with a brief time-bridge sentence
-  or short paragraph that references the BUSINESS DESCRIPTION and marks the
-  passage of real time since Layer 0 (e.g., "Four months in, your inventory
-  app has its first twenty shop owners..."). Only on the first scenario turn.
+- If IS_FIRST_SCENARIO_TURN is true, open with a SHORT time-bridge phrase
+  (e.g., "A few weeks into building your business,..." or "A few months in,...").
+  Do NOT quote, paste, or paraphrase the player's business description verbatim —
+  keep the opener under 15 words. Use "your business" or a short sector noun
+  ("your app", "your shop", "your farm") instead of restating Q1. Only on the
+  first scenario turn.
 - If IS_FIRST_SCENARIO_TURN is false and RECENT CHOICES are present, open
   with a single-sentence callback to the most recent choice (RECENT[0])
   BEFORE the new scenario seed, so the player feels continuity.
@@ -142,20 +162,18 @@ export function validateNarration(
     return { ok: false, reason: `narrative too long: ${output.narrative.length} chars` };
   }
 
-  // Proper-noun check: all words starting with a capital letter must be whitelisted
-  // or be the player's business name words
-  const allowed = new Set([
-    ...GLOBAL_PROPER_NOUN_WHITELIST,
-    ...skeleton.choiceArchetypes.flatMap((a) => a.archetypeDescription.split(/\s+/)),
-    ...(playerBusinessName ? playerBusinessName.split(/\s+/) : []),
-  ]);
-
+  // Reject only on hard-banned brand/foreign names. Anything else (Accra street names,
+  // local first names, market names) is allowed — the previous whitelist was so narrow
+  // that almost every LLM output was rejected and the player only ever saw skeleton seeds.
   const capitalised = output.narrative.match(/\b[A-Z][a-z]{2,}/g) ?? [];
-  const violations = capitalised.filter((w) => !allowed.has(w));
+  const violations = capitalised.filter((w) => BANNED_PROPER_NOUNS.has(w));
   if (violations.length > 0) {
-    return { ok: false, reason: `unrecognised proper nouns: ${violations.slice(0, 3).join(", ")}` };
+    return { ok: false, reason: `banned proper nouns: ${violations.slice(0, 3).join(", ")}` };
   }
 
+  // Reference args are kept for signature stability with callers/tests.
+  void skeleton;
+  void playerBusinessName;
   return { ok: true };
 }
 
@@ -181,10 +199,15 @@ export async function generateNarrativeSkin(
     ? `\n\n${buildWorldConditionsBlock(worldCtx)}\n\n${buildTurnContextBlock(worldCtx)}`
     : "";
 
+  const businessShort =
+    context.businessDescription.length > BUSINESS_DESCRIPTION_PROMPT_CAP
+      ? `${context.businessDescription.slice(0, BUSINESS_DESCRIPTION_PROMPT_CAP).trim()}…`
+      : context.businessDescription;
+
   const userPrompt = `SITUATION SEED: ${skeleton.situationSeed}
 
 PLAYER CONTEXT:
-- Business: ${context.businessDescription}
+- Business (summary, do NOT quote verbatim): ${businessShort}
 - Motivation: ${context.motivation}${worldBlock}
 
 CHOICE ARCHETYPES:
@@ -252,10 +275,13 @@ export function buildFallbackSkin(
   _context: PlayerContext,
   worldCtx?: NarrationWorldContext
 ): NarrativeSkin {
-  const prefix =
-    worldCtx?.isFirstScenarioTurn && worldCtx.businessDescription
-      ? `A few weeks into building ${worldCtx.businessDescription.trim()}, a real decision has arrived. `
-      : "";
+  let prefix = "";
+  if (worldCtx?.isFirstScenarioTurn) {
+    prefix = `A few weeks into building your business, a real decision has arrived. `;
+  } else if (worldCtx && worldCtx.choiceHistory.length > 0) {
+    const last = worldCtx.choiceHistory[0];
+    prefix = `After choosing to ${decapitalise(last.choiceLabel)} (${last.effectSummary}), the next moment lands. `;
+  }
   return {
     narrative: `${prefix}${skeleton.situationSeed}`,
     choices: skeleton.choiceArchetypes.map(

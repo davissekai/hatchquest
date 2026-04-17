@@ -95,34 +95,53 @@ describe("buildFallbackSkin", () => {
     expect(skin.tensionHints[2]).toBe(TEST_SKELETON.choiceArchetypes[2].tensionAxis);
   });
 
-  it("prepends a time-bridge prefix on the first scenario turn when businessDescription is present", () => {
+  it("prepends a generic time-bridge prefix on the first scenario turn (does NOT quote businessDescription)", () => {
     const skin = buildFallbackSkin(
       TEST_SKELETON,
       TEST_CONTEXT,
       ctx({ isFirstScenarioTurn: true, businessDescription: "a cocoa export business" })
     );
-    expect(skin.narrative.startsWith("A few weeks into building a cocoa export business,")).toBe(
-      true
-    );
+    expect(skin.narrative.startsWith("A few weeks into building your business,")).toBe(true);
+    expect(skin.narrative).not.toContain("a cocoa export business");
     expect(skin.narrative).toContain(TEST_SKELETON.situationSeed);
   });
 
-  it("does NOT prepend the time-bridge when isFirstScenarioTurn is true but businessDescription is empty", () => {
+  it("still prepends the time-bridge when isFirstScenarioTurn is true and businessDescription is empty", () => {
     const skin = buildFallbackSkin(
       TEST_SKELETON,
       TEST_CONTEXT,
       ctx({ isFirstScenarioTurn: true, businessDescription: "" })
     );
-    expect(skin.narrative).toBe(TEST_SKELETON.situationSeed);
+    expect(skin.narrative.startsWith("A few weeks into building your business,")).toBe(true);
   });
 
-  it("does NOT prepend the time-bridge when isFirstScenarioTurn is false", () => {
+  it("does NOT prepend any prefix when isFirstScenarioTurn is false and choiceHistory is empty", () => {
     const skin = buildFallbackSkin(
       TEST_SKELETON,
       TEST_CONTEXT,
-      ctx({ isFirstScenarioTurn: false })
+      ctx({ isFirstScenarioTurn: false, choiceHistory: [] })
     );
     expect(skin.narrative).toBe(TEST_SKELETON.situationSeed);
+  });
+
+  it("prepends a continuity callback when choiceHistory is non-empty (fallback path)", () => {
+    const skin = buildFallbackSkin(
+      TEST_SKELETON,
+      TEST_CONTEXT,
+      ctx({
+        isFirstScenarioTurn: false,
+        choiceHistory: [
+          {
+            nodeId: "L1-node-1",
+            choiceLabel: "Hire a part-time helper",
+            effectSummary: "-2k capital, +network",
+          },
+        ],
+      })
+    );
+    expect(skin.narrative.startsWith("After choosing to hire a part-time helper")).toBe(true);
+    expect(skin.narrative).toContain("-2k capital, +network");
+    expect(skin.narrative).toContain(TEST_SKELETON.situationSeed);
   });
 });
 
@@ -280,33 +299,20 @@ describe("validateNarration", () => {
     expect(result.ok).toBe(true);
   });
 
-  it("returns { ok: false } for unrecognised proper nouns in narrative", () => {
-    // "Xyzzy" starts with capital, has 4+ letters, is not in any whitelist
+  it("rejects narratives containing banned brand names", () => {
     const skin: NarrativeSkin = {
       ...validSkin(),
-      narrative: "Xyzzy has arrived in town and disrupted the market.",
+      narrative: "Apple has arrived in town and disrupted the market.",
     };
     const result = validateNarration(skin, TEST_SKELETON, TEST_CONTEXT.businessDescription);
     expect(result.ok).toBe(false);
-    expect(result.reason).toMatch(/unrecognised proper nouns/);
+    expect(result.reason).toMatch(/banned proper nouns/);
   });
 
-  it("whitelists globally recognised Accra proper nouns (Accra, Ghana)", () => {
-    // "Accra" and "Ghana" are in GLOBAL_PROPER_NOUN_WHITELIST
+  it("accepts arbitrary local proper nouns (Accra street/person names)", () => {
     const skin: NarrativeSkin = {
       ...validSkin(),
-      narrative: "Accra and Ghana are home to many businesses.",
-    };
-    const result = validateNarration(skin, TEST_SKELETON, TEST_CONTEXT.businessDescription);
-    expect(result.ok).toBe(true);
-  });
-
-  it("whitelists words from the player business name", () => {
-    // businessDescription = "mobile food delivery service in Osu"
-    // "Osu" is a word in the business name, so it should be whitelisted
-    const skin: NarrativeSkin = {
-      ...validSkin(),
-      narrative: "the Osu market is highly competitive.",
+      narrative: "Kwame from Spintex Road dropped by Osu yesterday.",
     };
     const result = validateNarration(skin, TEST_SKELETON, TEST_CONTEXT.businessDescription);
     expect(result.ok).toBe(true);
@@ -315,18 +321,6 @@ describe("validateNarration", () => {
   it("handles empty playerBusinessName without error", () => {
     const skin: NarrativeSkin = { ...validSkin(), narrative: "Accra is the capital." };
     const result = validateNarration(skin, TEST_SKELETON, "");
-    expect(result.ok).toBe(true);
-  });
-
-  it("whitelists words from archetype descriptions", () => {
-    // archetypeDescription[1] starts with "Pivot"
-    const archetypeWord = TEST_SKELETON.choiceArchetypes[1].archetypeDescription.split(/\s+/)[0];
-    // archetypeWord = "Pivot"
-    const skin: NarrativeSkin = {
-      ...validSkin(),
-      narrative: `${archetypeWord} the approach when the market shifts.`,
-    };
-    const result = validateNarration(skin, TEST_SKELETON, TEST_CONTEXT.businessDescription);
     expect(result.ok).toBe(true);
   });
 });
