@@ -9,18 +9,10 @@ export default function LandingPage() {
   return (
     <div className="min-h-screen bg-[#F5F2EB] font-body text-slate-900 overflow-hidden relative selection:bg-hot-pink selection:text-white">
       
-      {/* ── Decorative Background Elements ── */}
+      {/* ── Decorative Background Elements (kept deliberately sparse) ── */}
       <Starburst className="w-32 h-32 -top-10 left-1/4 rotate-12" fill="var(--color-pill-red)" />
       <Starburst className="w-48 h-48 bottom-[-5%] left-[25%] -rotate-12" fill="#FFC107" />
-      <Starburst className="w-24 h-24 top-[30%] right-[5%] rotate-45 z-20" fill="var(--color-hot-pink)" />
-      
-      <Sparkle className="w-12 h-12 top-[15%] left-[10%]" fill="var(--color-pill-red)" />
       <Sparkle className="w-16 h-16 bottom-[30%] right-[10%]" fill="#FFC107" />
-      <Sparkle className="w-8 h-8 top-[40%] left-[45%]" fill="var(--color-sky-blue)" />
-
-      {/* A solid circle decoration */}
-      <div className="absolute bottom-[10%] right-[30%] w-8 h-8 bg-pill-red rounded-full border-4 border-slate-900 shadow-[4px_4px_0px_#0f172a]" />
-      <div className="absolute top-[20%] right-[40%] w-4 h-4 bg-grass-green rounded-full border-2 border-slate-900 shadow-[2px_2px_0px_#0f172a]" />
 
       {/* ── Navigation Header ── */}
       <header className="relative z-20 w-full px-6 py-6 lg:px-12 flex items-center justify-between">
@@ -32,7 +24,7 @@ export default function LandingPage() {
               src="/assets/logo.jpg"
               alt="HatchQuest Logo"
               fill
-              className="object-cover -translate-x-1" // Slight offset to the right visually, but actually the image shifts left so the logo is right-heavy? Let's center it normally and let the user see.
+              className="object-cover"
             />
           </div>
           <span className="font-headline font-black text-2xl tracking-tight uppercase">
@@ -40,25 +32,12 @@ export default function LandingPage() {
           </span>
         </div>
 
-        {/* Middle: Links */}
-        <nav className="hidden lg:flex items-center gap-10 font-headline font-black uppercase tracking-widest text-sm">
-          <Link href="/" className="hover:text-pill-red transition-colors">Home</Link>
-          <Link href="/lore" className="hover:text-pill-red transition-colors">Lore</Link>
-          <Link href="/market" className="hover:text-pill-red transition-colors">Market</Link>
-          <Link href="/about" className="hover:text-pill-red transition-colors">About</Link>
-        </nav>
-
-        {/* Right: Search / Actions */}
-        <div className="flex items-center gap-4">
-          <div className="hidden md:flex items-center bg-white border-4 border-slate-900 rounded-full px-4 py-2 shadow-[4px_4px_0px_#0f172a] w-64">
-            <span className="material-symbols-outlined text-slate-900 mr-2 font-bold">search</span>
-            <input 
-              type="text" 
-              placeholder="Search..." 
-              className="bg-transparent border-none outline-none font-body font-bold w-full placeholder:text-slate-400"
-            />
-          </div>
-        </div>
+        <Link
+          href="/play"
+          className="hidden md:inline-flex font-headline font-black uppercase tracking-widest text-sm hover:text-pill-red transition-colors"
+        >
+          Play
+        </Link>
       </header>
 
       {/* ── Main Hero Section ── */}
@@ -71,9 +50,9 @@ export default function LandingPage() {
             <span className="block text-slate-900">Grow Smart</span>
           </h1>
 
-          <h2 className="font-headline font-black text-2xl md:text-3xl uppercase tracking-wider mb-6">
+          <p className="font-headline font-black text-2xl md:text-3xl uppercase tracking-wider mb-6">
             Grow your startup <br /> and rise with us
-          </h2>
+          </p>
 
           <p className="font-body font-bold text-lg text-slate-700 mb-10 max-w-lg leading-relaxed">
             Dive into the bustling markets of Accra. Trade, negotiate, and build your business empire in the ultimate street-smart entrepreneurship simulation.
@@ -95,19 +74,6 @@ export default function LandingPage() {
             </Link>
           </div>
 
-          {/* Social Icons Placeholder */}
-          <div className="mt-16 flex gap-4">
-            {["twitter", "discord", "reddit", "instagram"].map(social => (
-              <a 
-                key={social} 
-                href="#" 
-                className="w-12 h-12 bg-pill-red rounded-full border-4 border-slate-900 shadow-[4px_4px_0px_#0f172a] flex items-center justify-center hover:-translate-y-1 hover:shadow-[6px_6px_0px_#0f172a] transition-all"
-              >
-                {/* Dummy icon text for now */}
-                <span className="font-headline font-black text-white text-xs uppercase">{social[0]}</span>
-              </a>
-            ))}
-          </div>
         </div>
 
         {/* Right: Massive Pill Mask Image */}

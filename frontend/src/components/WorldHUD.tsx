@@ -12,15 +12,23 @@ interface WorldHUDProps {
 
 function PulseBar({ label, value, barClass }: { label: string; value: number; barClass: string }) {
   const pct = Math.max(0, Math.min(100, value));
+  const rounded = Math.round(pct);
   return (
     <div className="flex flex-col gap-1">
       <div className="flex items-baseline justify-between">
         <span className="font-headline font-black text-[0.7rem] uppercase tracking-widest text-slate-700">
           {label}
         </span>
-        <span className="font-headline font-black text-sm text-slate-900 tabular-nums">{Math.round(pct)}</span>
+        <span className="font-headline font-black text-sm text-slate-900 tabular-nums">{rounded}</span>
       </div>
-      <div className="h-3 bg-white border-2 border-slate-900 rounded-full overflow-hidden">
+      <div
+        role="progressbar"
+        aria-label={label}
+        aria-valuenow={rounded}
+        aria-valuemin={0}
+        aria-valuemax={100}
+        className="h-3 bg-white border-2 border-slate-900 rounded-full overflow-hidden"
+      >
         <div className={`h-full ${barClass}`} style={{ width: `${pct}%` }} />
       </div>
     </div>

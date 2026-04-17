@@ -271,18 +271,6 @@ export default function Gameplay() {
         </aside>
 
       </main>
-
-      <style dangerouslySetInnerHTML={{__html: `
-        .custom-scrollbar::-webkit-scrollbar { width: 12px; }
-        .custom-scrollbar::-webkit-scrollbar-track { background: #F5F2EB; border-left: 4px solid #0f172a; }
-        .custom-scrollbar::-webkit-scrollbar-thumb { background: #0f172a; border: 2px solid #F5F2EB; border-radius: 10px; }
-        .hide-scrollbar::-webkit-scrollbar { display: none; }
-        .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
-        @keyframes shine {
-          100% { transform: translateX(200%); }
-        }
-        .animate-shine { animation: shine 1.5s ease-in-out infinite; }
-      `}} />
     </div>
   );
 }
