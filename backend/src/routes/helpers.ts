@@ -38,9 +38,9 @@ export function toClientState(worldState: WorldState): ClientWorldState {
     layer: worldState.layer,
     turnsElapsed: worldState.turnsElapsed,
     isComplete: worldState.isComplete,
-    // playerBusinessName surfaces the player's business description for the HUD.
+    // playerBusinessName surfaces the player's business label for the HUD.
     // Full playerContext (motivation, raw responses) stays server-side.
-    playerBusinessName: worldState.playerContext?.businessDescription ?? null,
+    playerBusinessName: worldState.playerContext?.businessLabel ?? null,
     employeeCount: worldState.employeeCount,
     businessFormality: worldState.businessFormality,
     hasBackupPower: worldState.hasBackupPower,

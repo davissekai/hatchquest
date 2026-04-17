@@ -3,10 +3,16 @@
 // personalised business identity for narrative skin generation.
 
 export interface PlayerContext {
+  /** Short, display-safe paraphrase of the business (e.g., "Mobile Agri-Logistics") */
+  businessLabel: string;
+  /** Internal summary of the business model and value prop */
+  businessSummary: string;
   /** What business the player described (extracted from Q1) */
   businessDescription: string;
   /** Why they want to build it — their stated motivation (extracted from Q1) */
   motivation: string;
+  /** The unique advantage or founder-market fit stated or inferred */
+  founderEdge?: string;
   /** The raw Q1 response, preserved for re-classification if needed */
   rawQ1Response: string;
   /** The raw Q2 response */

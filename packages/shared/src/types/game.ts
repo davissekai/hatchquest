@@ -1,5 +1,6 @@
 import type { PlayerContext } from "./context.js";
 import type { WorldEventLogEntry } from "./world.js";
+import type { NarrativeSkin } from "./skeleton.js";
 
 // EO framework dimensions (Lumpkin & Dess, 1996)
 export type EODimension =
@@ -60,6 +61,19 @@ export interface RecentChoice {
 // Business formality progression
 export type BusinessFormality = "unregistered" | "soleProprietorship" | "limitedCompany";
 
+/**
+ * Story memory — captures the narrative thread and continuity anchors from the
+ * Layer 0 arc to ensure the first gameplay node continues the story perfectly.
+ */
+export interface StoryMemory {
+  /** Short summary of what just happened in the story */
+  lastBeatSummary: string;
+  /** Unresolved narrative tension or "open thread" to pull forward */
+  openThread: string;
+  /** The current narrative arc name (e.g., "The Makola Launch") */
+  currentArc: string;
+}
+
 // === WORLD STATE ===
 // The brain of the game. All game logic reads from and writes to this.
 // Director AI uses these variables to weight event selection.
@@ -80,6 +94,18 @@ export interface WorldState {
   choiceHistory: RecentChoice[];
   /** Narrative pattern tags of the last 2 scenarios — used to suppress pattern repeats. */
   recentPatterns: string[];
+
+  /**
+   * Narrative continuity memory from the Layer 0 arc.
+   * Persisted so the first gameplay node can bridge from Q2 perfectly.
+   */
+  storyMemory: StoryMemory | null;
+
+  /**
+   * The generated narrative content for the current node.
+   * Persisted so session resume returns the exact same content without re-generating.
+   */
+  currentNodeContent: NarrativeSkin | null;
 
   // --- Financial (GHS) ---
   capital: number; // Starting: 10,000 GHS

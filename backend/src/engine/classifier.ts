@@ -4,6 +4,7 @@ import type {
   EOPoleDistribution,
   EOProfile,
   PlayerContext,
+  StoryMemory,
 } from "@hatchquest/shared";
 
 export interface Layer0Assessment {
@@ -11,6 +12,7 @@ export interface Layer0Assessment {
   sector: BusinessSector;
   initialEOProfile: EOProfile;
   layer1NodeId: string;
+  storyMemory: StoryMemory;
 }
 
 const CLASSIFIER_TIMEOUT_MS = 10_000;
@@ -339,6 +341,11 @@ export function buildLayer0Assessment(
     sector: inferSectorFromText(response),
     initialEOProfile: seedEOProfileFromDistribution(distribution),
     layer1NodeId: selectLayer1NodeFromDistribution(distribution),
+    storyMemory: {
+      lastBeatSummary: "You set out to build your new venture in Accra.",
+      openThread: "initial market entry",
+      currentArc: "The Beginning",
+    },
   };
 }
 
@@ -419,12 +426,134 @@ export function extractPlayerContext(
       : "To build something meaningful in Accra.";
 
   return {
+    businessLabel: "Your Venture", // Default, will be updated by AI
+    businessSummary: businessDescription, // Default, will be updated by AI
     businessDescription,
     motivation,
     rawQ1Response: q1Response,
     rawQ2Response: q2Response,
     q2Prompt,
   };
+}
+
+const CONTEXT_GENERATOR_PROMPT = `You are a business analyst.
+The player just described their business idea (Q1) and how they handle a challenge (Q2).
+Extract a clean, display-safe context for the game engine.
+
+Return ONLY valid JSON with exactly this shape:
+{
+  "businessLabel": "<2-4 word catchy label, e.g. 'Makola Logistics Hub'>",
+  "businessSummary": "<1-sentence clear summary of what they actually do>",
+  "founderEdge": "<short phrase describing their unique advantage if any, or 'Resilient founder'>"
+}
+
+Rules:
+- No verbatim echoing of long user rants
+- Professional but grounded in Accra
+- No markdown
+- Output JSON only`;
+
+/**
+ * Uses AI to refine raw user input into display-safe context fields.
+ */
+export async function generateDisplaySafeContext(
+  q1Response: string,
+  q2Response: string
+): Promise<Partial<PlayerContext>> {
+  const client = getAnthropicClient();
+  const combined = `Q1: ${q1Response}\n\nQ2: ${q2Response}`;
+
+  if (!client) {
+    return {
+      businessLabel: "Your Venture",
+      businessSummary: q1Response.slice(0, 100),
+      founderEdge: "Resourceful founder",
+    };
+  }
+
+  try {
+    const msg = await client.messages.create({
+      model: ANTHROPIC_MODEL,
+      max_tokens: 250,
+      system: CONTEXT_GENERATOR_PROMPT,
+      messages: [{ role: "user", content: combined }],
+    });
+
+    const text = msg.content
+      .map((block) => (block.type === "text" ? block.text : ""))
+      .join("")
+      .trim();
+
+    const match = text.match(/\{[\s\S]*\}/);
+    if (!match) throw new Error("No JSON found");
+    return JSON.parse(match[0]);
+  } catch {
+    return {
+      businessLabel: "Your Venture",
+      businessSummary: q1Response.slice(0, 100),
+      founderEdge: "Resourceful founder",
+    };
+  }
+}
+
+const STORY_MEMORY_PROMPT = `You are a game storyteller.
+The player just faced a challenge (Q2 SCENARIO) and gave a response (Q2 DECISION).
+Summarize this for narrative continuity.
+
+Return ONLY valid JSON with exactly this shape:
+{
+  "lastBeatSummary": "<1-sentence summary of what happened and what the player did>",
+  "openThread": "<short phrase of an unresolved tension, e.g. 'the skeptical bank manager'>",
+  "currentArc": "<2-4 word arc title, e.g. 'The Market Launch Struggle'>"
+}
+
+Rules:
+- Do not echo raw user text verbatim
+- Focus on the story beat
+- No markdown
+- Output JSON only`;
+
+/**
+ * Uses AI to generate a StoryMemory object for narrative continuity.
+ */
+export async function generateStoryMemory(
+  q2Prompt: string,
+  q2Response: string
+): Promise<StoryMemory> {
+  const client = getAnthropicClient();
+  const combined = `Q2 SCENARIO: ${q2Prompt}\n\nQ2 DECISION: ${q2Response}`;
+
+  if (!client) {
+    return {
+      lastBeatSummary: "You launched your business and faced your first real challenge.",
+      openThread: "initial market reaction",
+      currentArc: "The Beginning",
+    };
+  }
+
+  try {
+    const msg = await client.messages.create({
+      model: ANTHROPIC_MODEL,
+      max_tokens: 250,
+      system: STORY_MEMORY_PROMPT,
+      messages: [{ role: "user", content: combined }],
+    });
+
+    const text = msg.content
+      .map((block) => (block.type === "text" ? block.text : ""))
+      .join("")
+      .trim();
+
+    const match = text.match(/\{[\s\S]*\}/);
+    if (!match) throw new Error("No JSON found");
+    return JSON.parse(match[0]);
+  } catch {
+    return {
+      lastBeatSummary: "You launched your business and faced your first real challenge.",
+      openThread: "initial market reaction",
+      currentArc: "The Beginning",
+    };
+  }
 }
 
 // ─── Public API ───────────────────────────────────────────────────────────────
