@@ -3,17 +3,11 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useGame } from "@/context/GameContext";
-import { TopAppBar } from "@/components/TopAppBar";
+import { Starburst, Sparkle } from "@/components/Decorations";
 
 type Step = "preamble" | "q1" | "q2";
 
-/**
- * Layer 0 — three-step path-defining moment.
- * Step 1: Preamble — world introduction, fills the viewport.
- * Step 2: Q1 — free-text business description + motivation.
- * Step 3: Q2 — AI-generated personalised follow-up challenge.
- */
-const Layer0Page = () => {
+export default function Layer0Page() {
   const router = useRouter();
   const { state, phase, hasActiveSession, resumeSession, isLoading, error, submitQ1, submitQ2 } = useGame();
 
@@ -64,47 +58,37 @@ But the fundamentals have not changed. Capital is still hard to access without t
 You have GHS 10,000 and an idea. That is where your story starts.`;
 
   return (
-    <div className="bg-cream text-navy min-h-screen relative overflow-hidden">
-      <TopAppBar />
+    <div className="bg-[#F5F2EB] text-slate-900 min-h-screen relative overflow-hidden selection:bg-hot-pink selection:text-white">
+      
+      {/* ── Decorative Background Elements ── */}
+      <Starburst className="w-64 h-64 -top-20 -left-20 rotate-45" fill="var(--color-pill-blue)" />
+      <Starburst className="w-48 h-48 bottom-[5%] -right-10 -rotate-12" fill="var(--color-lime)" />
+      <Sparkle className="w-20 h-20 top-[15%] right-[20%]" fill="var(--color-hot-pink)" />
+      <Sparkle className="w-16 h-16 bottom-[30%] left-[10%]" fill="#FFC107" />
 
-      {/* Bright patterned background */}
-      <div className="fixed inset-0 z-0">
-        <div className="w-full h-full bg-cream" />
-        <div className="absolute inset-0 adinkra-pattern" />
-      </div>
+      {/* Header Bar */}
+      <header className="relative z-20 w-full px-6 py-6 lg:px-12 flex justify-between items-center border-b-8 border-slate-900 bg-white">
+        <div className="font-headline font-black text-2xl uppercase tracking-tighter">HatchQuest</div>
+        <div className="px-4 py-2 bg-[#FFC107] border-4 border-slate-900 rounded-full font-headline font-black text-xs uppercase shadow-[4px_4px_0px_#0f172a]">
+          Layer 0
+        </div>
+      </header>
 
-      {/* Colorful glows */}
-      <div className="fixed top-0 right-0 w-[500px] h-[500px] opacity-20 pointer-events-none z-0">
-        <div className="absolute inset-0 bg-hot-pink rounded-full blur-[120px] translate-x-1/3 -translate-y-1/3" />
-      </div>
-      <div className="fixed bottom-0 left-0 w-[500px] h-[500px] opacity-20 pointer-events-none z-0">
-        <div className="absolute inset-0 bg-electric-cyan rounded-full blur-[120px] -translate-x-1/3 translate-y-1/3" />
-      </div>
-
-      {/* ── Step 1: Preamble ──────────────────────────────────────────────────── */}
+      {/* ── Step 1: Preamble ── */}
       {step === "preamble" && (
-        <main className="relative z-10 flex flex-col items-center justify-center min-h-screen px-6 pt-28 pb-12">
-          <div className="max-w-3xl w-full flex flex-col gap-8 bg-white/60 backdrop-blur-xl p-10 rounded-[3rem] shadow-[0_20px_60px_rgba(30,58,138,0.1)] border-4 border-white">
-            <div className="inline-flex items-center px-6 py-3 bg-bubblegum text-white rounded-full w-fit shadow-md">
-              <span
-                className="material-symbols-outlined text-sm mr-2"
-                style={{ fontVariationSettings: "'FILL' 1" }}
-              >
-                public
-              </span>
-              <span className="font-label text-xs font-bold tracking-widest uppercase drop-shadow-sm">
-                Accra, Ghana — 2026
-              </span>
+        <main className="relative z-10 flex flex-col items-center justify-center px-6 pt-16 pb-20 min-h-[90vh]">
+          <div className="max-w-4xl w-full bg-white p-10 md:p-16 rounded-[2rem] shadow-[16px_16px_0px_#0f172a] border-[8px] border-slate-900 relative">
+            <div className="absolute -top-6 -left-6 bg-hot-pink text-white px-6 py-2 border-4 border-slate-900 rounded-full font-headline font-black text-sm uppercase shadow-[4px_4px_0px_#0f172a] rotate-[-5deg]">
+              Accra, Ghana — 2026
             </div>
 
-            <h1 className="text-5xl md:text-7xl font-headline font-extrabold text-navy leading-tight tracking-tighter">
-              The{" "}
-              <span className="text-electric-cyan italic drop-shadow-md">World</span>
+            <h1 className="text-6xl md:text-8xl font-headline font-black text-slate-900 leading-none tracking-tighter uppercase mb-8">
+              The <br/><span className="text-pill-blue">World</span>
             </h1>
 
-            <div className="space-y-5">
+            <div className="space-y-6">
               {preambleText.split("\n\n").map((para, i) => (
-                <p key={i} className="text-lg md:text-xl font-body text-navy/80 leading-relaxed font-medium">
+                <p key={i} className="text-lg md:text-xl font-body text-slate-800 leading-relaxed font-bold">
                   {para}
                 </p>
               ))}
@@ -112,26 +96,21 @@ You have GHS 10,000 and an idea. That is where your story starts.`;
 
             <button
               onClick={() => setStep("q1")}
-              className="mt-4 w-full md:w-auto px-10 py-5 bg-lime text-navy rounded-full font-headline font-extrabold text-xl shadow-[0_10px_30px_rgba(57,255,20,0.3)] hover:scale-105 active:scale-95 transition-all duration-300 flex items-center justify-center gap-3 group border-4 border-white"
+              className="mt-12 w-full md:w-auto px-12 py-6 bg-lime text-slate-900 rounded-full font-headline font-black text-2xl uppercase tracking-widest shadow-[8px_8px_0px_#0f172a] border-[6px] border-slate-900 hover:-translate-y-1 hover:shadow-[12px_12px_0px_#0f172a] active:translate-y-1 active:shadow-[2px_2px_0px_#0f172a] transition-all flex items-center justify-center gap-4"
             >
-              Begin
-              <span className="material-symbols-outlined group-hover:translate-x-2 transition-transform">
-                east
-              </span>
+              Enter Market
+              <span className="material-symbols-outlined font-black text-3xl">east</span>
             </button>
           </div>
         </main>
       )}
 
-      {/* ── Step 2: Q1 ───────────────────────────────────────────────────────── */}
+      {/* ── Step 2: Q1 ── */}
       {step === "q1" && (
-        <main className="relative z-10 flex flex-col items-center justify-center min-h-screen px-6 pt-28 pb-12">
-          <div className="max-w-2xl w-full bg-white/60 backdrop-blur-xl p-10 rounded-[3rem] shadow-[0_20px_60px_rgba(30,58,138,0.1)] border-4 border-white">
-            <form onSubmit={handleQ1Submit} className="flex flex-col gap-6">
-              <label
-                htmlFor="q1-response"
-                className="text-navy font-headline font-bold text-lg tracking-tight"
-              >
+        <main className="relative z-10 flex flex-col items-center justify-center px-6 pt-16 pb-20 min-h-[90vh]">
+          <div className="max-w-3xl w-full bg-white p-10 md:p-14 rounded-[2rem] shadow-[16px_16px_0px_#0f172a] border-[8px] border-slate-900 relative">
+            <form onSubmit={handleQ1Submit} className="flex flex-col gap-8">
+              <label htmlFor="q1-response" className="text-slate-900 font-headline font-black text-2xl md:text-3xl uppercase tracking-tighter">
                 {state.layer0Question ?? "What is the business, and what is it really about for you?"}
               </label>
               <textarea
@@ -141,17 +120,17 @@ You have GHS 10,000 and an idea. That is where your story starts.`;
                 placeholder="Write freely — there are no right answers."
                 disabled={isLoading}
                 rows={6}
-                className="w-full bg-cream border-2 border-transparent focus:border-electric-cyan focus:ring-4 focus:ring-electric-cyan/20 rounded-3xl text-navy font-body text-base p-5 placeholder:text-navy/40 transition-all resize-none outline-none disabled:opacity-50"
+                className="w-full bg-[#F5F2EB] border-[6px] border-slate-900 focus:border-pill-blue rounded-3xl text-slate-900 font-body text-lg p-6 placeholder:text-slate-400 transition-all resize-none outline-none disabled:opacity-50 shadow-inner focus:shadow-[6px_6px_0px_#0f172a] focus:-translate-y-1"
               />
               <div className="flex justify-between items-center px-2">
-                <span className="font-label text-xs text-navy/60 font-medium">
-                  {q1Response.trim().length === 0 ? "Start typing to proceed" : "✓ Ready to submit"}
+                <span className="font-headline font-black text-xs text-slate-500 uppercase tracking-widest">
+                  {q1Response.trim().length === 0 ? "Start typing to proceed" : "Ready to submit"}
                 </span>
-                <span className="font-label text-xs text-navy/60 font-medium">{q1Response.length} chars</span>
+                <span className="font-headline font-black text-xs text-slate-500 uppercase">{q1Response.length} chars</span>
               </div>
 
               {error && (
-                <p className="font-body text-sm text-hot-pink bg-hot-pink/10 rounded-2xl px-5 py-3 border border-hot-pink/20">
+                <p className="font-headline font-bold text-sm text-white uppercase bg-pill-red rounded-xl px-6 py-4 border-4 border-slate-900 shadow-[4px_4px_0px_#0f172a] animate-shake">
                   {error}
                 </p>
               )}
@@ -159,17 +138,17 @@ You have GHS 10,000 and an idea. That is where your story starts.`;
               <button
                 type="submit"
                 disabled={q1Response.trim().length === 0 || isLoading}
-                className="w-full py-5 bg-navy text-white rounded-full font-headline font-extrabold text-lg shadow-[0_10px_30px_rgba(30,58,138,0.3)] hover:bg-navy/90 hover:scale-105 active:scale-95 transition-all duration-300 flex items-center justify-center gap-3 group disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 disabled:hover:bg-navy"
+                className="w-full py-6 bg-slate-900 text-white rounded-full font-headline font-black text-xl uppercase tracking-widest shadow-[8px_8px_0px_var(--color-pill-blue)] border-4 border-slate-900 hover:-translate-y-1 hover:shadow-[12px_12px_0px_var(--color-pill-blue)] active:translate-y-1 active:shadow-[2px_2px_0px_var(--color-pill-blue)] transition-all flex items-center justify-center gap-3 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:translate-y-0"
               >
                 {isLoading ? (
                   <>
-                    <div className="w-5 h-5 rounded-full border-2 border-white/30 border-t-white animate-spin" />
+                    <div className="w-6 h-6 rounded-full border-4 border-white/30 border-t-white animate-spin" />
                     Reading instincts...
                   </>
                 ) : (
                   <>
                     Continue
-                    <span className="material-symbols-outlined group-hover:translate-x-2 transition-transform">east</span>
+                    <span className="material-symbols-outlined font-black">east</span>
                   </>
                 )}
               </button>
@@ -178,12 +157,12 @@ You have GHS 10,000 and an idea. That is where your story starts.`;
         </main>
       )}
 
-      {/* ── Step 3: Q2 ───────────────────────────────────────────────────────── */}
+      {/* ── Step 3: Q2 ── */}
       {step === "q2" && (
-        <main className="relative z-10 flex flex-col items-center justify-center min-h-screen px-6 pt-28 pb-12">
-          <div className="max-w-2xl w-full bg-white/60 backdrop-blur-xl p-10 rounded-[3rem] shadow-[0_20px_60px_rgba(30,58,138,0.1)] border-4 border-white">
-            <form onSubmit={handleQ2Submit} className="flex flex-col gap-6">
-              <p className="text-navy/90 font-body text-lg leading-relaxed italic bg-cream rounded-2xl p-5 border-2 border-white">
+        <main className="relative z-10 flex flex-col items-center justify-center px-6 pt-16 pb-20 min-h-[90vh]">
+          <div className="max-w-3xl w-full bg-white p-10 md:p-14 rounded-[2rem] shadow-[16px_16px_0px_#0f172a] border-[8px] border-slate-900 relative">
+            <form onSubmit={handleQ2Submit} className="flex flex-col gap-8">
+              <p className="text-slate-900 font-headline font-black text-2xl uppercase tracking-tighter bg-[#FFC107] border-4 border-slate-900 rounded-[1.5rem] p-6 shadow-[6px_6px_0px_#0f172a]">
                 {q2Prompt}
               </p>
               <textarea
@@ -193,17 +172,17 @@ You have GHS 10,000 and an idea. That is where your story starts.`;
                 placeholder="What do you do?"
                 disabled={isLoading}
                 rows={5}
-                className="w-full bg-cream border-2 border-transparent focus:border-bubblegum focus:ring-4 focus:ring-bubblegum/20 rounded-3xl text-navy font-body text-base p-5 placeholder:text-navy/40 transition-all resize-none outline-none disabled:opacity-50"
+                className="w-full bg-[#F5F2EB] border-[6px] border-slate-900 focus:border-pill-red rounded-3xl text-slate-900 font-body text-lg p-6 placeholder:text-slate-400 transition-all resize-none outline-none disabled:opacity-50 shadow-inner focus:shadow-[6px_6px_0px_#0f172a] focus:-translate-y-1"
               />
               <div className="flex justify-between items-center px-2">
-                <span className="font-label text-xs text-navy/60 font-medium">
-                  {q2Response.trim().length === 0 ? "Start typing to proceed" : "✓ Ready to submit"}
+                <span className="font-headline font-black text-xs text-slate-500 uppercase tracking-widest">
+                  {q2Response.trim().length === 0 ? "Start typing to proceed" : "Ready to submit"}
                 </span>
-                <span className="font-label text-xs text-navy/60 font-medium">{q2Response.length} chars</span>
+                <span className="font-headline font-black text-xs text-slate-500 uppercase">{q2Response.length} chars</span>
               </div>
 
               {error && (
-                <p className="font-body text-sm text-hot-pink bg-hot-pink/10 rounded-2xl px-5 py-3 border border-hot-pink/20">
+                <p className="font-headline font-bold text-sm text-white uppercase bg-pill-red rounded-xl px-6 py-4 border-4 border-slate-900 shadow-[4px_4px_0px_#0f172a] animate-shake">
                   {error}
                 </p>
               )}
@@ -211,17 +190,17 @@ You have GHS 10,000 and an idea. That is where your story starts.`;
               <button
                 type="submit"
                 disabled={q2Response.trim().length === 0 || isLoading}
-                className="w-full py-5 bg-navy text-white rounded-full font-headline font-extrabold text-lg shadow-[0_10px_30px_rgba(30,58,138,0.3)] hover:bg-navy/90 hover:scale-105 active:scale-95 transition-all duration-300 flex items-center justify-center gap-3 group disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 disabled:hover:bg-navy"
+                className="w-full py-6 bg-slate-900 text-white rounded-full font-headline font-black text-xl uppercase tracking-widest shadow-[8px_8px_0px_var(--color-pill-red)] border-4 border-slate-900 hover:-translate-y-1 hover:shadow-[12px_12px_0px_var(--color-pill-red)] active:translate-y-1 active:shadow-[2px_2px_0px_var(--color-pill-red)] transition-all flex items-center justify-center gap-3 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:translate-y-0"
               >
                 {isLoading ? (
                   <>
-                    <div className="w-5 h-5 rounded-full border-2 border-white/30 border-t-white animate-spin" />
+                    <div className="w-6 h-6 rounded-full border-4 border-white/30 border-t-white animate-spin" />
                     Deciding path...
                   </>
                 ) : (
                   <>
                     Decide
-                    <span className="material-symbols-outlined group-hover:translate-x-2 transition-transform">east</span>
+                    <span className="material-symbols-outlined font-black">east</span>
                   </>
                 )}
               </button>
@@ -230,20 +209,6 @@ You have GHS 10,000 and an idea. That is where your story starts.`;
         </main>
       )}
 
-      {/* Left district pill */}
-      <div className="fixed left-0 bottom-12 hidden lg:flex flex-col gap-4 z-20">
-        <div className="bg-navy text-white py-4 pl-8 pr-12 rounded-r-[2rem] shadow-[0_10px_30px_rgba(30,58,138,0.3)] border-y-4 border-r-4 border-white flex items-center gap-4 hover:translate-x-2 transition-transform">
-          <span className="material-symbols-outlined text-electric-cyan">location_on</span>
-          <div>
-            <p className="font-headline font-bold text-xs tracking-tighter opacity-70 uppercase">
-              Current District
-            </p>
-            <p className="font-body italic text-lg leading-none">Accra Central</p>
-          </div>
-        </div>
-      </div>
     </div>
   );
-};
-
-export default Layer0Page;
+}

@@ -265,8 +265,8 @@ describe("validateNarration", () => {
     expect(result.reason).toMatch(/3 choices/);
   });
 
-  it("returns { ok: false } when narrative exceeds 600 characters", () => {
-    const longNarrative = "a".repeat(601); // lowercase so no proper noun violations
+  it("rejects output with excessively long narratives", () => {
+    const longNarrative = "A".repeat(1501);
     const skin: NarrativeSkin = { ...validSkin(), narrative: longNarrative };
     const result = validateNarration(skin, TEST_SKELETON, TEST_CONTEXT.businessDescription);
     expect(result.ok).toBe(false);

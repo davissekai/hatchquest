@@ -57,8 +57,8 @@ Rules:
   with a single-sentence callback to the most recent choice (RECENT[0])
   BEFORE the new scenario seed, so the player feels continuity.
 - Use Accra-specific details (locations, currency in GHS, local business culture)
-- Narrative must be ≤600 characters
-- Choices must be 1-2 sentences each, action-oriented
+- Narrative must be rich and immersive, around 3 paragraphs long, to take advantage of a wide desktop reading format. Up to 1500 characters.
+- Choices must be substantive (1-3 sentences each), action-oriented, and highly descriptive.
 - Tension hints must describe the dilemma without using EO terminology
 - No markdown, no code fence, JSON only`;
 
@@ -138,7 +138,7 @@ export function validateNarration(
   if (output.choices.length !== 3) {
     return { ok: false, reason: "expected exactly 3 choices" };
   }
-  if (output.narrative.length > 600) {
+  if (output.narrative.length > 1500) {
     return { ok: false, reason: `narrative too long: ${output.narrative.length} chars` };
   }
 
@@ -195,7 +195,7 @@ CHOICE ARCHETYPES:
   try {
     const msg = await client.messages.create({
       model: ANTHROPIC_MODEL,
-      max_tokens: 600,
+      max_tokens: 1000,
       system: NARRATOR_SYSTEM_PROMPT,
       messages: [{ role: "user", content: userPrompt }],
     });

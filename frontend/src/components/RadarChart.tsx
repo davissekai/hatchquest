@@ -1,105 +1,134 @@
-import { useMemo } from "react";
+import React from "react";
 
 interface RadarChartProps {
   dimensions: {
     autonomy: number;
     innovativeness: number;
-    proactiveness: number;
     riskTaking: number;
+    proactiveness: number;
     competitiveAggressiveness: number;
   };
   maxValue?: number;
+  size?: number;
 }
 
-const labels = ["Autonomy", "Innovative", "Proactiveness", "Risk-Taking", "Comp.\nAggressive"];
-
-// Re-themed for Vivid Desktop aesthetic
-const primary = "#FF3B30"; // pill-red
-const primaryFill = "rgba(255, 59, 48, 0.35)";
-const cardBg = "#FFFFFF";
-const fgColor = "#0f172a"; // slate-900
-
-const RadarChart = ({ dimensions, maxValue }: RadarChartProps) => {
-  const cx = 200, cy = 190, r = 110;
-  const values = [
-    dimensions.autonomy,
-    dimensions.innovativeness,
-    dimensions.proactiveness,
-    dimensions.riskTaking,
-    dimensions.competitiveAggressiveness,
+const RadarChart: React.FC<RadarChartProps> = ({
+  dimensions,
+  maxValue = 100,
+  size = 280,
+}) => {
+  const labels = [
+    { key: "autonomy", label: "AUTONOMY" },
+    { key: "innovativeness", label: "INNOVATION" },
+    { key: "riskTaking", label: "RISK" },
+    { key: "proactiveness", label: "PROACTIVE" },
+    { key: "competitiveAggressiveness", label: "COMPETE" },
   ];
-  const effectiveMax = maxValue ?? Math.max(...values, 1);
 
-  const getPoint = (index: number, value: number) => {
-    const angle = (Math.PI * 2 * index) / 5 - Math.PI / 2;
-    const ratio = Math.min(value / effectiveMax, 1);
+  const numAxes = labels.length;
+  const center = size / 2;
+  const radius = size / 2 - 40; 
+  const angleStep = (Math.PI * 2) / numAxes;
+
+  const getPoint = (value: number, index: number, offset = 0) => {
+    const r = (value / maxValue) * radius;
+    const angle = index * angleStep - Math.PI / 2 + offset;
     return {
-      x: cx + r * ratio * Math.cos(angle),
-      y: cy + r * ratio * Math.sin(angle),
+      x: center + r * Math.cos(angle),
+      y: center + r * Math.sin(angle),
     };
   };
 
-  const gridLevels = [0.2, 0.4, 0.6, 0.8, 1.0];
-
-  const dataPoints = useMemo(
-    () => values.map((v, i) => getPoint(i, v)),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [dimensions, effectiveMax]
+  const dataPoints = labels.map((dim, i) =>
+    getPoint(dimensions[dim.key as keyof typeof dimensions] ?? 0, i)
   );
 
-  const dataPath = dataPoints.map((p, i) => `${i === 0 ? "M" : "L"} ${p.x} ${p.y}`).join(" ") + " Z";
+  const dataPath =
+    dataPoints.map((p, i) => (i === 0 ? `M ${p.x} ${p.y}` : `L ${p.x} ${p.y}`)).join(" ") + " Z";
+
+  const shadowPath =
+    dataPoints.map((p, i) => (i === 0 ? `M ${p.x + 6} ${p.y + 6}` : `L ${p.x + 6} ${p.y + 6}`)).join(" ") + " Z";
 
   return (
-    <svg
-      viewBox="-20 0 440 390"
-      className="w-full max-w-[320px] mx-auto"
-      role="img"
-      aria-label="Entrepreneurial profile radar chart"
-    >
-      <title>Entrepreneurial Profile</title>
-      {gridLevels.map((level) => {
-        const pts = Array.from({ length: 5 }, (_, i) => getPoint(i, effectiveMax * level));
-        const path = pts.map((p, i) => `${i === 0 ? "M" : "L"} ${p.x} ${p.y}`).join(" ") + " Z";
+    <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} className="overflow-visible font-headline font-black">
+      
+      {/* Background Web */}
+      {[1, 0.75, 0.5, 0.25].map((scale) => {
+        const polyPoints = labels
+          .map((_, i) => getPoint(maxValue * scale, i))
+          .map((p) => `${p.x},${p.y}`)
+          .join(" ");
         return (
-          <path key={level} d={path} fill="none" stroke={fgColor} strokeWidth="1" opacity={0.1} />
+          <polygon
+            key={scale}
+            points={polyPoints}
+            fill={scale === 1 ? "#F5F2EB" : "none"}
+            stroke="#0f172a"
+            strokeWidth="4"
+            strokeDasharray={scale === 1 ? "none" : "6 6"}
+          />
         );
       })}
 
-      {Array.from({ length: 5 }, (_, i) => {
-        const p = getPoint(i, effectiveMax);
-        return <line key={i} x1={cx} y1={cy} x2={p.x} y2={p.y} stroke={fgColor} strokeWidth="1" opacity={0.1} />;
+      {/* Axes */}
+      {labels.map((_, i) => {
+        const p = getPoint(maxValue, i);
+        return (
+          <line
+            key={`axis-${i}`}
+            x1={center}
+            y1={center}
+            x2={p.x}
+            y2={p.y}
+            stroke="#0f172a"
+            strokeWidth="4"
+          />
+        );
       })}
 
-      <path d={dataPath} fill={primaryFill} stroke={primary} strokeWidth="4" />
+      {/* Shadow layer for the data polygon (Neo-brutalist pop) */}
+      <path d={shadowPath} fill="#0f172a" />
 
-      {dataPoints.map((p, i) => (
-        <circle key={i} cx={p.x} cy={p.y} r="6" fill={primary} stroke={cardBg} strokeWidth="3" shadow-sm="true" />
-      ))}
+      {/* Actual Data Polygon */}
+      <path
+        d={dataPath}
+        fill="var(--color-pill-blue)"
+        stroke="#0f172a"
+        strokeWidth="6"
+        strokeLinejoin="miter"
+      />
 
-      {Array.from({ length: 5 }, (_, i) => {
-        const p = getPoint(i, effectiveMax * 1.3);
-        const anchor = i === 4 ? "end" : i === 1 ? "start" : "middle";
+      {/* Labels */}
+      {labels.map((dim, i) => {
+        // Push labels slightly further out
+        const p = getPoint(maxValue + 15, i);
         return (
           <text
-            key={i}
+            key={`label-${i}`}
             x={p.x}
             y={p.y}
-            textAnchor={anchor}
-            dominantBaseline="middle"
-            fill={fgColor}
-            fontSize="11"
-            fontWeight="900"
-            fontFamily="var(--font-headline), 'Fredoka', sans-serif"
-            className="uppercase tracking-tighter"
+            textAnchor="middle"
+            alignmentBaseline="middle"
+            fill="#0f172a"
+            className="text-[10px] tracking-widest uppercase drop-shadow-[2px_2px_0px_white]"
           >
-            {labels[i].split("\n").map((line, li) => (
-              <tspan key={li} x={p.x} dy={li === 0 ? 0 : 13}>
-                {line}
-              </tspan>
-            ))}
+            {dim.label}
           </text>
         );
       })}
+
+      {/* Data Points */}
+      {dataPoints.map((p, i) => (
+        <circle
+          key={`point-${i}`}
+          cx={p.x}
+          cy={p.y}
+          r="6"
+          fill="#FFC107"
+          stroke="#0f172a"
+          strokeWidth="4"
+        />
+      ))}
     </svg>
   );
 };
