@@ -115,6 +115,30 @@ describe("buildFallbackSkin", () => {
     expect(skin.narrative.startsWith("A few weeks into building your business,")).toBe(true);
   });
 
+  it("uses Q2 decision continuation prefix on first turn when q2Response is present", () => {
+    const skin = buildFallbackSkin(
+      TEST_SKELETON,
+      TEST_CONTEXT,
+      ctx({
+        isFirstScenarioTurn: true,
+        q2Prompt: "Your app is launching on Monday with 50 beta users...",
+        q2Response: "I would delay the launch by one week to fix the offline bug.",
+      })
+    );
+    expect(skin.narrative).not.toContain("A few weeks into building your business");
+    expect(skin.narrative).toContain("Following your decision");
+    expect(skin.narrative).toContain(TEST_SKELETON.situationSeed);
+  });
+
+  it("falls back to generic time-bridge when q2Response is absent even if q2Prompt is set", () => {
+    const skin = buildFallbackSkin(
+      TEST_SKELETON,
+      TEST_CONTEXT,
+      ctx({ isFirstScenarioTurn: true, q2Prompt: "Some Q2 prompt", q2Response: undefined })
+    );
+    expect(skin.narrative.startsWith("A few weeks into building your business,")).toBe(true);
+  });
+
   it("does NOT prepend any prefix when isFirstScenarioTurn is false and choiceHistory is empty", () => {
     const skin = buildFallbackSkin(
       TEST_SKELETON,
@@ -242,6 +266,47 @@ describe("buildTurnContextBlock", () => {
   it("falls back to '(not provided)' when business description is empty", () => {
     const block = buildTurnContextBlock(ctx({ businessDescription: "" }));
     expect(block).toContain("(not provided)");
+  });
+
+  it("truncates long businessDescription to 140 chars in the block", () => {
+    const long = "x".repeat(200);
+    const block = buildTurnContextBlock(ctx({ businessDescription: long }));
+    // Block should contain truncated form (140 chars + ellipsis), not the full 200-char string
+    expect(block).not.toContain(long);
+    expect(block).toContain("x".repeat(140) + "…");
+  });
+
+  it("appends Q2 scenario and decision on first scenario turn when both are present", () => {
+    const block = buildTurnContextBlock(
+      ctx({
+        isFirstScenarioTurn: true,
+        q2Prompt: "Your app is set to launch Monday with 50 beta users...",
+        q2Response: "I would delay the launch by one week.",
+      })
+    );
+    expect(block).toContain("Your app is set to launch Monday with 50 beta users");
+    expect(block).toContain("I would delay the launch by one week");
+    expect(block).toContain("Q2 SCENARIO");
+    expect(block).toContain("Q2 DECISION");
+  });
+
+  it("omits Q2 block when isFirstScenarioTurn is false even if Q2 fields are present", () => {
+    const block = buildTurnContextBlock(
+      ctx({
+        isFirstScenarioTurn: false,
+        q2Prompt: "Some scenario",
+        q2Response: "Some decision",
+      })
+    );
+    expect(block).not.toContain("Some scenario");
+    expect(block).not.toContain("Some decision");
+  });
+
+  it("omits Q2 block when q2Response is absent", () => {
+    const block = buildTurnContextBlock(
+      ctx({ isFirstScenarioTurn: true, q2Prompt: "Some prompt", q2Response: undefined })
+    );
+    expect(block).not.toContain("Some prompt");
   });
 });
 

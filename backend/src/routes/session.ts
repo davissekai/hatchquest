@@ -94,6 +94,10 @@ async function renderCurrentNode(
         // Critical: this is the L1 opening — the narrator must emit
         // a time-bridge opener referencing the player's business.
         isFirstScenarioTurn: true,
+        // Pass Q2 story so the narrator can continue directly from the
+        // Layer 0 arc instead of generating a disconnected new opening.
+        q2Prompt: ctx.q2Prompt || undefined,
+        q2Response: ctx.rawQ2Response || undefined,
       };
       const [skin] = await generateSkin(entry.skeleton, ctx, worldCtx);
       return {

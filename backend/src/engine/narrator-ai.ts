@@ -50,8 +50,9 @@ You will receive:
 2. A PLAYER CONTEXT — their specific business and motivation
 3. Three CHOICE ARCHETYPES — the structural choices available
 4. WORLD CONDITIONS — current market signals the player can feel
-5. TURN CONTEXT — how far into the game we are, recent choices, and whether
-   this is the very first scenario after Layer 0 classification.
+5. TURN CONTEXT — sector, a short business hint, recent choices, and whether
+   this is the very first scenario after Layer 0 classification. On the first
+   turn, Q2 SCENARIO and Q2 DECISION may also be provided.
 
 Your job: generate a personalised scenario that feels like it is happening to THIS player's specific business, in THIS player's specific market, in Accra.
 
@@ -67,18 +68,23 @@ Rules:
   Never introduce physical-retail framing (shop space, shelves, packaging) for
   a 'tech' sector player. Never introduce software-only framing for a 'retail',
   'food', or 'agri' player. Use the sector you are given.
-- If IS_FIRST_SCENARIO_TURN is true, open with a SHORT time-bridge phrase
-  (e.g., "A few weeks into building your business,..." or "A few months in,...").
-  Do NOT quote, paste, or paraphrase the player's business description verbatim —
-  keep the opener under 15 words. Use "your business" or a short sector noun
-  ("your app", "your shop", "your farm") instead of restating Q1. Only on the
-  first scenario turn.
-- If IS_FIRST_SCENARIO_TURN is false and RECENT CHOICES are present, open
+- NEVER quote, copy, or closely paraphrase the raw business description text.
+  Use only short sector nouns: "your app", "your shop", "your farm", "your business".
+- If IS_FIRST_SCENARIO_TURN is YES and Q2 SCENARIO + Q2 DECISION are provided:
+  the narrative MUST be the direct next chapter of that exact story — the next
+  day, week, or beat after the Q2 decision. Reference the specific situation
+  they faced and the path they chose. Do NOT start with a random new event.
+  The 3 choices must emerge naturally from that Q2 outcome.
+  Open with a short time-marker ("A week after...", "The day after your decision...").
+- If IS_FIRST_SCENARIO_TURN is YES and no Q2 context is provided:
+  open with a short time-bridge phrase only ("A few weeks into building your app,..."
+  or "A few months in,..."). Keep the opener under 15 words.
+- If IS_FIRST_SCENARIO_TURN is no and RECENT CHOICES are present, open
   with a single-sentence callback to the most recent choice (RECENT[0])
   BEFORE the new scenario seed, so the player feels continuity.
 - Use Accra-specific details (locations, currency in GHS, local business culture)
 - Narrative must be rich and immersive, around 3 paragraphs long, to take advantage of a wide desktop reading format. Up to 1500 characters.
-- Choices must be substantive (1-3 sentences each), action-oriented, and highly descriptive.
+- Choices must be substantive (1-3 sentences each), action-oriented, specific to the scenario.
 - Tension hints must describe the dilemma without using EO terminology
 - No markdown, no code fence, JSON only`;
 
@@ -90,7 +96,7 @@ export interface NarrationWorldContext {
   lastEventNarrativeHook: string | null;
   /** Player's business sector — drives framing ("tech" vs "retail" vs ...). */
   sector: BusinessSector;
-  /** Verbatim Q1 free-text — the player's own description of their business. */
+  /** Q1 free-text — used as a short paraphrase hint, never echoed verbatim. */
   businessDescription: string;
   /** Most recent choices (newest first, max 3) for continuity callbacks. */
   choiceHistory: RecentChoice[];
@@ -98,6 +104,10 @@ export interface NarrationWorldContext {
   turnNumber: number;
   /** True iff this is the very first scenario turn after Layer 0 classify. */
   isFirstScenarioTurn: boolean;
+  /** The AI-generated Q2 scenario text — used on the first playable turn for story continuity. */
+  q2Prompt?: string;
+  /** The player's raw Q2 response — their decision in the Layer 0 story scenario. */
+  q2Response?: string;
 }
 
 /* c8 ignore start */
@@ -126,6 +136,11 @@ export function buildWorldConditionsBlock(ctx: NarrationWorldContext): string {
 /**
  * Formats the turn + continuity block for the narrator prompt.
  * Exposed so it is coverable and stable across LLM/mock paths.
+ *
+ * businessDescription is capped at BUSINESS_DESCRIPTION_PROMPT_CAP and labeled
+ * as a paraphrase hint — never as "verbatim" — to prevent LLM from echoing Q1.
+ * On the first scenario turn, Q2 scenario + decision are appended when present
+ * so the LLM can continue the story directly from the player's Layer 0 arc.
  */
 export function buildTurnContextBlock(ctx: NarrationWorldContext): string {
   const recent =
@@ -138,12 +153,32 @@ export function buildTurnContextBlock(ctx: NarrationWorldContext): string {
           )
           .join("; ");
 
+  const businessShort =
+    ctx.businessDescription.length > BUSINESS_DESCRIPTION_PROMPT_CAP
+      ? `${ctx.businessDescription.slice(0, BUSINESS_DESCRIPTION_PROMPT_CAP).trim()}…`
+      : ctx.businessDescription;
+
+  let q2Block = "";
+  if (ctx.isFirstScenarioTurn && ctx.q2Prompt && ctx.q2Response) {
+    const q2PromptShort =
+      ctx.q2Prompt.length > 300
+        ? `${ctx.q2Prompt.slice(0, 300).trim()}…`
+        : ctx.q2Prompt;
+    const q2RespShort =
+      ctx.q2Response.length > 250
+        ? `${ctx.q2Response.slice(0, 250).trim()}…`
+        : ctx.q2Response;
+    q2Block =
+      `\n- Q2 SCENARIO the player just faced: "${q2PromptShort}"` +
+      `\n- Q2 DECISION the player made: "${q2RespShort}"`;
+  }
+
   return `TURN CONTEXT:
 - Sector: ${ctx.sector}
-- Business description (verbatim): ${ctx.businessDescription || "(not provided)"}
+- Business (paraphrase hint, never echo verbatim): ${businessShort || "(not provided)"}
 - Turn number: ${ctx.turnNumber}
 - Is first scenario turn: ${ctx.isFirstScenarioTurn ? "YES" : "no"}
-- Recent choices: ${recent}`;
+- Recent choices: ${recent}${q2Block}`;
 }
 
 /**
@@ -277,7 +312,16 @@ export function buildFallbackSkin(
 ): NarrativeSkin {
   let prefix = "";
   if (worldCtx?.isFirstScenarioTurn) {
-    prefix = `A few weeks into building your business, a real decision has arrived. `;
+    if (worldCtx.q2Response) {
+      // Continue from Q2 decision rather than opening cold
+      const respShort =
+        worldCtx.q2Response.length > 80
+          ? `${worldCtx.q2Response.slice(0, 80).trim()}…`
+          : worldCtx.q2Response;
+      prefix = `Following your decision — ${decapitalise(respShort)} — things move quickly. `;
+    } else {
+      prefix = `A few weeks into building your business, a real decision has arrived. `;
+    }
   } else if (worldCtx && worldCtx.choiceHistory.length > 0) {
     const last = worldCtx.choiceHistory[0];
     prefix = `After choosing to ${decapitalise(last.choiceLabel)} (${last.effectSummary}), the next moment lands. `;
