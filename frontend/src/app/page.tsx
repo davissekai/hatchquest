@@ -21,10 +21,11 @@ export default function LandingPage() {
         <div className="flex items-center gap-3">
           <div className="w-14 h-14 rounded-full border-4 border-slate-900 overflow-hidden relative shadow-[4px_4px_0px_#0f172a] hover:-translate-y-1 hover:shadow-[6px_6px_0px_#0f172a] transition-all bg-white">
             <Image
-              src="/assets/logo.jpg"
-              alt="HatchQuest Logo"
+              src="/assets/ugbs-nest.png"
+              alt="UGBS Nest"
               fill
-              className="object-cover"
+              sizes="56px"
+              className="object-contain p-1"
             />
           </div>
           <span className="font-headline font-black text-2xl tracking-tight uppercase">
@@ -76,20 +77,20 @@ export default function LandingPage() {
 
         </div>
 
-        {/* Right: Massive Pill Mask Image */}
-        <div className="relative w-full h-[600px] md:h-[700px] flex items-center justify-center lg:justify-end z-10 perspective-1000">
-          
-          {/* Background Yellow Offset Circle (Like the reference) */}
-          <div className="absolute top-1/2 -translate-y-1/2 left-[10%] w-[400px] h-[400px] bg-[#FFC107] rounded-full border-4 border-slate-900 shadow-[8px_8px_0px_#0f172a] -z-10 hidden md:block" />
+        {/* Right: Landscape market panel */}
+        <div className="relative w-full flex items-center justify-center lg:justify-end z-10">
 
-          {/* The Main Pill Container */}
-          <div className="relative w-[90%] md:w-[80%] max-w-[450px] h-full rounded-t-full rounded-b-full border-[8px] border-slate-900 shadow-[16px_16px_0px_#0f172a] overflow-hidden bg-white transform-gpu rotate-2 hover:rotate-0 transition-transform duration-500">
+          {/* Background offset block for neo-brutalist depth */}
+          <div className="absolute -bottom-6 -left-6 w-[75%] h-[60%] bg-[#FFC107] rounded-[2rem] border-4 border-slate-900 shadow-[8px_8px_0px_#0f172a] -z-10 hidden md:block" />
+
+          {/* Landscape picture frame — portrait stays tall on narrow screens, goes landscape on md+ */}
+          <div className="relative w-full max-w-[640px] aspect-[4/5] md:aspect-[16/10] rounded-[2.5rem] border-[8px] border-slate-900 shadow-[16px_16px_0px_#0f172a] overflow-hidden bg-white transform-gpu rotate-1 hover:rotate-0 transition-transform duration-500">
             <Image
-              src="/assets/nest_cover.jpg"
-              alt="HatchQuest Cover"
+              src="/assets/accra-market.png"
+              alt="Accra street market — trotros, traders, stalls"
               fill
               className="object-cover"
-              sizes="(max-width: 768px) 90vw, 450px"
+              sizes="(max-width: 768px) 90vw, 640px"
               priority
             />
           </div>

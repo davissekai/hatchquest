@@ -25,6 +25,8 @@ frontend/out/
 *.jpg
 *.jpeg
 !public/**
+!frontend/public/**
+!**/public/**
 
 # production
 /build
