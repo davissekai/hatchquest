@@ -1,22 +1,21 @@
 import type { Metadata } from "next";
-import { Plus_Jakarta_Sans, Newsreader } from "next/font/google";
+import { Fredoka, Nunito } from "next/font/google";
 import { Providers } from "./providers";
 import OfflineBanner from "@/components/OfflineBanner";
 import "./globals.css";
 
-/* Plus Jakarta Sans — headlines, labels, buttons (the "Accra street energy" voice) */
-const plusJakartaSans = Plus_Jakarta_Sans({
-  variable: "--font-plus-jakarta",
-  subsets: ["latin"],
-  weight: ["400", "500", "600", "700", "800"],
-  style: ["normal", "italic"],
-});
-
-/* Newsreader — narrative body text (the "scholarly" voice) */
-const newsreader = Newsreader({
-  variable: "--font-newsreader",
+/* Fredoka — playful headlines, buttons */
+const fredoka = Fredoka({
+  variable: "--font-fredoka",
   subsets: ["latin"],
   weight: ["400", "500", "600", "700"],
+});
+
+/* Nunito — clean, rounded body text */
+const nunito = Nunito({
+  variable: "--font-nunito",
+  subsets: ["latin"],
+  weight: ["400", "500", "600", "700", "800"],
   style: ["normal", "italic"],
 });
 
@@ -33,7 +32,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className={`${plusJakartaSans.variable} ${newsreader.variable}`}>
+    <html lang="en" className={`${fredoka.variable} ${nunito.variable}`}>
       <head>
         {/* Material Symbols Outlined — used for icons throughout the Stitch design */}
         <link

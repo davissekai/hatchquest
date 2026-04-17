@@ -10,6 +10,10 @@ const L8_SK_1: ScenarioSkeleton = {
   theme: "networking",
   baseWeight: 1.0,
   eoTargetDimensions: ["autonomy", "proactiveness"],
+  narrativePattern: "partnership",
+  // "Distribution across three regions / packaging" is a physical-goods framing.
+  // Tech plays should not get this exact skeleton often; services are mid.
+  sectorAffinities: { tech: 0.3, services: 0.7 },
   situationSeed:
     "A well-established Accra brand — larger than you, with distribution across three regions — has approached you about a co-branding partnership. They want to put their logo alongside yours, sell through their network, and expand your reach significantly. In return, they want input on your product quality standards, pricing, and packaging. The deal would triple your distribution overnight. But you would no longer be working entirely on your own terms.",
   choiceArchetypes: [
@@ -40,8 +44,8 @@ const L8_SK_1_EFFECTS: [ChoiceEffect, ChoiceEffect, ChoiceEffect] = [
     revenue: 6_000,
     debt: 0,
     monthlyBurn: 1_500,
-    reputation: 15,
-    networkStrength: 25,
+    reputation: 7,
+    networkStrength: 10,
     eoDeltas: { proactiveness: 2, autonomy: -3, competitiveAggressiveness: 1 },
   },
   {
@@ -49,8 +53,8 @@ const L8_SK_1_EFFECTS: [ChoiceEffect, ChoiceEffect, ChoiceEffect] = [
     revenue: 3_000,
     debt: 0,
     monthlyBurn: 600,
-    reputation: 10,
-    networkStrength: 15,
+    reputation: 6,
+    networkStrength: 8,
     eoDeltas: { autonomy: 1, proactiveness: 2, riskTaking: 1 },
   },
   {

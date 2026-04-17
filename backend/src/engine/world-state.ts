@@ -32,6 +32,12 @@ export function createInitialWorldState(
     revenue: 0,
     debt: 0,
 
+    // Identity — populated during Layer 0 classify
+    sector: "other",
+    businessDescription: "",
+    choiceHistory: [],
+    recentPatterns: [],
+
     // Business — playerContext set to null until Layer 0 classify runs
     playerContext: null,
     employeeCount: 0,

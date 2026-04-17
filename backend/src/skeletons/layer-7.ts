@@ -10,6 +10,7 @@ const L7_SK_1: ScenarioSkeleton = {
   theme: "general",
   baseWeight: 1.0,
   eoTargetDimensions: ["innovativeness", "riskTaking"],
+  narrativePattern: "customer_concentration",
   situationSeed:
     "Your biggest customer — the one who accounts for roughly 35 percent of your monthly revenue — has come to you with an unusual request. They want a version of what you do that is quite different from your current offering: adjusted inputs, a different format, a different delivery model. They say they will sign a six-month contract if you can make it work. If you chase this, you are partly pivoting. If you refuse, you risk losing them to someone willing to adapt.",
   choiceArchetypes: [

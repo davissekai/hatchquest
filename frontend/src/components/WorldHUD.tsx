@@ -65,6 +65,18 @@ export const WorldHUD = ({ clientState }: WorldHUDProps) => {
           ⚡ {lastEvent}
         </p>
       )}
+      {signals.secondarySignals.length > 0 && (
+        <div className="flex flex-wrap gap-1 pt-1 border-t-2 border-white/60">
+          {signals.secondarySignals.map((signal) => (
+            <span
+              key={signal}
+              className="font-headline font-bold text-[9px] uppercase tracking-wider text-navy/70 bg-white/60 rounded-full px-2 py-0.5"
+            >
+              {signal}
+            </span>
+          ))}
+        </div>
+      )}
     </div>
   );
 };

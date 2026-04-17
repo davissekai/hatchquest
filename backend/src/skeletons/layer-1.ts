@@ -18,6 +18,7 @@ const L1_SK_1: ScenarioSkeleton = {
   theme: "competition",
   baseWeight: 1.0,
   eoTargetDimensions: ["riskTaking", "competitiveAggressiveness"],
+  narrativePattern: "supply_chain_stretch",
   situationSeed:
     "It is your third week. A distributor offers a bulk order — but the quantity exceeds your current capacity. Fulfilling it means stretching your capital thin and hiring help you cannot yet afford. Declining means losing the opportunity to someone else.",
   choiceArchetypes: [
@@ -78,6 +79,7 @@ const L1_SK_2: ScenarioSkeleton = {
   id: "L1-node-2",
   layer: 1,
   theme: "networking",
+  narrativePattern: "fundraising",
   baseWeight: 1.0,
   eoTargetDimensions: ["proactiveness", "riskTaking"],
   situationSeed:
@@ -111,8 +113,8 @@ const L1_SK_2_EFFECTS: [ChoiceEffect, ChoiceEffect, ChoiceEffect] = [
     revenue: 0,
     debt: 0,
     monthlyBurn: 0,
-    reputation: 8,
-    networkStrength: 15,
+    reputation: 6,
+    networkStrength: 8,
     eoDeltas: { proactiveness: 2, riskTaking: 1 },
   },
   {
@@ -143,6 +145,7 @@ const L1_SK_3: ScenarioSkeleton = {
   id: "L1-node-3",
   layer: 1,
   theme: "hiring",
+  narrativePattern: "team_dilemma",
   baseWeight: 1.0,
   eoTargetDimensions: ["autonomy", "innovativeness"],
   situationSeed:
@@ -176,7 +179,7 @@ const L1_SK_3_EFFECTS: [ChoiceEffect, ChoiceEffect, ChoiceEffect] = [
     debt: 0,
     monthlyBurn: 800,
     reputation: 5,
-    networkStrength: 12,
+    networkStrength: 6,
     eoDeltas: { autonomy: -1, innovativeness: 1 },
     flags: { mentorAccess: false },
   },
@@ -206,6 +209,7 @@ const L1_SK_4: ScenarioSkeleton = {
   id: "L1-node-4",
   layer: 1,
   theme: "financing",
+  narrativePattern: "price_pressure",
   baseWeight: 1.0,
   eoTargetDimensions: ["competitiveAggressiveness", "riskTaking"],
   situationSeed:
@@ -268,6 +272,10 @@ const L1_SK_5: ScenarioSkeleton = {
   id: "L1-node-5",
   layer: 1,
   theme: "operations",
+  narrativePattern: "partnership",
+  // Physical-workspace partnership — heavily penalised for pure-software/tech
+  // and remote-services plays where a shared shop floor is nonsensical.
+  sectorAffinities: { tech: 0.3, services: 0.7 },
   baseWeight: 1.0,
   eoTargetDimensions: ["autonomy", "proactiveness"],
   situationSeed:

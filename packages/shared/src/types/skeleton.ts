@@ -1,4 +1,4 @@
-import type { EODimension } from "./game.js";
+import type { BusinessSector, EODimension } from "./game.js";
 
 /**
  * A choice archetype — the EO-valid structure of a choice without player-specific text.
@@ -31,6 +31,19 @@ export interface ScenarioSkeleton {
   situationSeed: string;
   /** The three choice archetypes — Narrator AI generates player-specific text for each */
   choiceArchetypes: [ChoiceArchetype, ChoiceArchetype, ChoiceArchetype];
+  /**
+   * Narrative pattern tag — coarse category used by Director AI to avoid
+   * repeating the same narrative shape back-to-back (e.g., 'price_pressure',
+   * 'team_dilemma', 'expansion', 'pivot', 'exit', 'supply_chain',
+   * 'regulatory', 'partnership', 'hiring', 'fundraising').
+   */
+  narrativePattern?: string;
+  /**
+   * Per-sector affinity multipliers in [0.2, 2.0]. Unlisted sectors default to 1.0.
+   * Used by Director AI to suppress skeletons that don't fit the player's business
+   * (e.g., a physical-retail rent scenario should have tech: 0.2).
+   */
+  sectorAffinities?: Partial<Record<BusinessSector, number>>;
   /** Hard eligibility conditions checked before the Director AI can select this skeleton */
   conditions?: {
     capitalMin?: number;

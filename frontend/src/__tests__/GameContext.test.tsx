@@ -27,6 +27,7 @@ const mockClientState: ClientWorldState = {
     competitorThreat: 50,
     infrastructureStability: 50,
     lastEventLabel: null,
+    secondarySignals: [],
   },
 };
 

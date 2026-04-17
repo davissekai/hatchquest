@@ -10,6 +10,7 @@ const L2_SK_1: ScenarioSkeleton = {
   theme: "financing",
   baseWeight: 1.0,
   eoTargetDimensions: ["riskTaking", "proactiveness"],
+  narrativePattern: "fundraising",
   situationSeed:
     "A microfinance officer has noticed your operation and is offering a GHS 5,000 loan at 15% annual interest. Six weeks in, your revenue is growing but slowly. The capital could unlock inventory, hire part-time help, or improve your setup — but if growth stalls, the repayments will eat your margin.",
   choiceArchetypes: [
@@ -70,6 +71,7 @@ const L2_SK_2: ScenarioSkeleton = {
   id: "L2-node-2",
   layer: 2,
   theme: "competition",
+  narrativePattern: "competition_entry",
   baseWeight: 1.0,
   eoTargetDimensions: ["competitiveAggressiveness", "innovativeness"],
   situationSeed:
@@ -132,6 +134,10 @@ const L2_SK_3: ScenarioSkeleton = {
   id: "L2-node-3",
   layer: 2,
   theme: "operations",
+  narrativePattern: "infrastructure_shock",
+  // Dumsor / generator framing — assumes on-premises operations.
+  // Pure-software businesses mostly live in the cloud, so down-weight.
+  sectorAffinities: { tech: 0.5 },
   baseWeight: 1.0,
   eoTargetDimensions: ["autonomy", "riskTaking"],
   situationSeed:
@@ -195,6 +201,7 @@ const L2_SK_4: ScenarioSkeleton = {
   id: "L2-node-4",
   layer: 2,
   theme: "networking",
+  narrativePattern: "mentorship",
   baseWeight: 1.0,
   eoTargetDimensions: ["autonomy", "proactiveness"],
   situationSeed:
@@ -227,8 +234,8 @@ const L2_SK_4_EFFECTS: [ChoiceEffect, ChoiceEffect, ChoiceEffect] = [
     revenue: 400,
     debt: 0,
     monthlyBurn: 200,
-    reputation: 12,
-    networkStrength: 20,
+    reputation: 7,
+    networkStrength: 10,
     eoDeltas: { proactiveness: 2, autonomy: -2 },
     flags: { mentorAccess: true },
   },
@@ -237,8 +244,8 @@ const L2_SK_4_EFFECTS: [ChoiceEffect, ChoiceEffect, ChoiceEffect] = [
     revenue: 200,
     debt: 0,
     monthlyBurn: 100,
-    reputation: 8,
-    networkStrength: 12,
+    reputation: 6,
+    networkStrength: 6,
     eoDeltas: { autonomy: 1, proactiveness: 1, innovativeness: -1 },
     flags: { mentorAccess: true },
   },
@@ -259,6 +266,7 @@ const L2_SK_5: ScenarioSkeleton = {
   id: "L2-node-5",
   layer: 2,
   theme: "hiring",
+  narrativePattern: "hiring",
   baseWeight: 1.0,
   eoTargetDimensions: ["innovativeness", "proactiveness"],
   situationSeed:

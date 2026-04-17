@@ -10,6 +10,7 @@ const L5_SK_1: ScenarioSkeleton = {
   theme: "general",
   baseWeight: 1.0,
   eoTargetDimensions: ["autonomy", "innovativeness"],
+  narrativePattern: "formalisation",
   situationSeed:
     "A year in. The business is real. Decisions you make now will shape what it becomes — not just financially, but structurally. You can formalise and register as a limited company, bringing in accountability and legitimacy. You can bring on a co-founder to share the weight and accelerate growth. Or you can stay exactly as you are: lean, profitable, and entirely yours.",
   choiceArchetypes: [
@@ -40,8 +41,8 @@ const L5_SK_1_EFFECTS: [ChoiceEffect, ChoiceEffect, ChoiceEffect] = [
     revenue: 2_000,
     debt: 0,
     monthlyBurn: 1_500,
-    reputation: 20,
-    networkStrength: 15,
+    reputation: 12,
+    networkStrength: 8,
     eoDeltas: { proactiveness: 2, innovativeness: 2, autonomy: -1 },
   },
   {
@@ -49,8 +50,8 @@ const L5_SK_1_EFFECTS: [ChoiceEffect, ChoiceEffect, ChoiceEffect] = [
     revenue: 4_000,
     debt: 0,
     monthlyBurn: 2_000,
-    reputation: 15,
-    networkStrength: 25,
+    reputation: 7,
+    networkStrength: 10,
     eoDeltas: { proactiveness: 2, innovativeness: 2, autonomy: -3 },
   },
   {
@@ -70,6 +71,7 @@ const L5_SK_2: ScenarioSkeleton = {
   id: "L5-node-2",
   layer: 5,
   theme: "competition",
+  narrativePattern: "strategic_inflection",
   baseWeight: 1.0,
   eoTargetDimensions: ["riskTaking", "competitiveAggressiveness"],
   situationSeed:
@@ -102,8 +104,8 @@ const L5_SK_2_EFFECTS: [ChoiceEffect, ChoiceEffect, ChoiceEffect] = [
     revenue: 5_000,
     debt: 2_000,
     monthlyBurn: 2_000,
-    reputation: 12,
-    networkStrength: 15,
+    reputation: 6,
+    networkStrength: 8,
     eoDeltas: { riskTaking: 3, competitiveAggressiveness: 2, autonomy: -1 },
   },
   {

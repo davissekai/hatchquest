@@ -1,8 +1,16 @@
-import { describe, it, expect, beforeEach, afterEach } from "vitest";
+import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import Fastify, { type FastifyInstance } from "fastify";
 import { SessionStore } from "../../store/session-store.js";
 import { sessionRoutes } from "../session.js";
-import type { SessionResponse } from "@hatchquest/shared";
+import type {
+  NarrativeSkin,
+  ScenarioSkeleton,
+  SessionResponse,
+} from "@hatchquest/shared";
+import type { RegisteredSkeleton } from "../../skeletons/registry.js";
+import type { GenerateSkinFn } from "../choice.js";
+import type { NarrationWorldContext } from "../../engine/narrator-ai.js";
+import type { ChoiceEffect } from "../../engine/apply-choice.js";
 
 // Minimal stub node returned when currentNodeId matches.
 const STUB_NODE = {
@@ -143,5 +151,145 @@ describe("GET /session/:sessionId", () => {
     });
 
     expect(res.statusCode).toBe(404);
+  });
+});
+
+// ── L1-opening narration path — Item 1 plumbing ──────────────────────────
+//
+// When /session renders the L1 opening (layer=1, choiceHistory empty), it
+// must route through the skin pipeline with isFirstScenarioTurn=true so
+// the Narrator AI emits the time-bridge prefix referencing the player's
+// business. On turn 2+ the flag must be false.
+
+const FAKE_SKELETON: ScenarioSkeleton = {
+  id: "L1-node-1",
+  layer: 1,
+  theme: "competition",
+  baseWeight: 1.0,
+  eoTargetDimensions: ["riskTaking"],
+  narrativePattern: "fake",
+  situationSeed: "Fake seed.",
+  choiceArchetypes: [
+    { eoPoleSignal: "a", archetypeDescription: "A", tensionAxis: "t1" },
+    { eoPoleSignal: "b", archetypeDescription: "B", tensionAxis: "t2" },
+    { eoPoleSignal: "c", archetypeDescription: "C", tensionAxis: "t3" },
+  ],
+};
+
+const FAKE_EFFECTS: [ChoiceEffect, ChoiceEffect, ChoiceEffect] = [
+  { capital: 0, revenue: 0, debt: 0, monthlyBurn: 0, reputation: 0, networkStrength: 0, eoDeltas: {} },
+  { capital: 0, revenue: 0, debt: 0, monthlyBurn: 0, reputation: 0, networkStrength: 0, eoDeltas: {} },
+  { capital: 0, revenue: 0, debt: 0, monthlyBurn: 0, reputation: 0, networkStrength: 0, eoDeltas: {} },
+];
+
+const FAKE_REGISTERED: RegisteredSkeleton = {
+  skeleton: FAKE_SKELETON,
+  effects: FAKE_EFFECTS,
+};
+
+function buildSkinnedApp(
+  store: SessionStore,
+  generateSkin: GenerateSkinFn
+): FastifyInstance {
+  const app = Fastify({ logger: false });
+  app.register(sessionRoutes, {
+    store,
+    getNode: (id: string | null) =>
+      id === "L1-node-1" ? STUB_NODE : null,
+    getSkeleton: (id: string) =>
+      id === "L1-node-1" ? FAKE_REGISTERED : null,
+    generateSkin,
+  });
+  return app;
+}
+
+describe("GET /session/:sessionId — L1-opening narration", () => {
+  it("calls generateSkin with isFirstScenarioTurn=true on the L1 opening", async () => {
+    const skinSpy = vi.fn<GenerateSkinFn>().mockResolvedValue([
+      {
+        narrative: "SKINNED_L1_OPENING",
+        choices: ["c1", "c2", "c3"],
+        tensionHints: ["h1", "h2", "h3"],
+      } satisfies NarrativeSkin,
+      "fallback",
+    ]);
+
+    const s = new SessionStore();
+    const session = await s.createSession("Ama", "ama@example.com");
+    await s.updateSession(session.id, {
+      worldState: {
+        ...session.worldState,
+        layer: 1,
+        currentNodeId: "L1-node-1",
+        businessDescription: "a mobile inventory app for small traders",
+        sector: "tech",
+      },
+    });
+
+    const skinnedApp = buildSkinnedApp(s, skinSpy);
+    await skinnedApp.ready();
+
+    const res = await skinnedApp.inject({
+      method: "GET",
+      url: `/session/${session.id}`,
+    });
+
+    expect(res.statusCode).toBe(200);
+    expect(skinSpy).toHaveBeenCalledOnce();
+    const args = skinSpy.mock.calls[0];
+    expect(args[0].id).toBe("L1-node-1");
+    const worldCtx = args[2] as NarrationWorldContext;
+    expect(worldCtx.isFirstScenarioTurn).toBe(true);
+    expect(worldCtx.businessDescription).toBe(
+      "a mobile inventory app for small traders"
+    );
+    expect(worldCtx.sector).toBe("tech");
+
+    const body = res.json<SessionResponse>();
+    expect(body.currentNode?.narrative).toBe("SKINNED_L1_OPENING");
+  });
+
+  it("does NOT invoke the skin pipeline once a choice has been applied", async () => {
+    const skinSpy = vi.fn<GenerateSkinFn>().mockResolvedValue([
+      {
+        narrative: "SHOULD_NOT_BE_USED",
+        choices: ["c1", "c2", "c3"],
+        tensionHints: ["h1", "h2", "h3"],
+      } satisfies NarrativeSkin,
+      "fallback",
+    ]);
+
+    const s = new SessionStore();
+    const session = await s.createSession("Ama", "ama@example.com");
+    await s.updateSession(session.id, {
+      worldState: {
+        ...session.worldState,
+        layer: 2,
+        currentNodeId: "L1-node-1",
+        businessDescription: "a mobile inventory app",
+        sector: "tech",
+        choiceHistory: [
+          {
+            nodeId: "L1-node-1",
+            choiceLabel: "Prior choice",
+            effectSummary: "no material change",
+          },
+        ],
+      },
+    });
+
+    const skinnedApp = buildSkinnedApp(s, skinSpy);
+    await skinnedApp.ready();
+
+    const res = await skinnedApp.inject({
+      method: "GET",
+      url: `/session/${session.id}`,
+    });
+
+    expect(res.statusCode).toBe(200);
+    expect(skinSpy).not.toHaveBeenCalled();
+    const body = res.json<SessionResponse>();
+    // Deterministic fallback from narrateScenarioNode, not the skin stub
+    expect(body.currentNode?.narrative).toContain("A test scenario.");
   });
 });

@@ -3,6 +3,8 @@ import {
   passesConditions,
   computeThemeAffinity,
   computeEOAffinity,
+  computeSectorAffinity,
+  computePatternRepeatPenalty,
   weightedDraw,
   selectNextNode,
   selectNextSkeleton,
@@ -461,5 +463,87 @@ describe("selectNextSkeleton", () => {
     const noReqd = makeSkeleton("sk-noemp", 2);
     const result = selectNextSkeleton(state, [empReqd, noReqd], () => 0);
     expect(result?.skeleton.id).toBe("sk-noemp");
+  });
+
+  it("strongly favours matching-sector skeleton over a suppressed one", () => {
+    const state = { ...makeState(), layer: 1, sector: "tech" as const };
+    const favored = makeSkeleton("sk-fits-tech", 2, {
+      sectorAffinities: { tech: 2.0 },
+    });
+    const suppressed = makeSkeleton("sk-hurts-tech", 2, {
+      sectorAffinities: { tech: 0.2 },
+    });
+    // Draw ~mid-range: favored gets weight 2.0, suppressed 0.2 → favored wins.
+    const result = selectNextSkeleton(state, [favored, suppressed], () => 0.5);
+    expect(result?.skeleton.id).toBe("sk-fits-tech");
+  });
+
+  it("suppresses a skeleton whose narrativePattern is in recentPatterns", () => {
+    const state = {
+      ...makeState(),
+      layer: 1,
+      recentPatterns: ["supply_chain_stretch"],
+    };
+    const repeat = makeSkeleton("sk-repeat", 2, {
+      narrativePattern: "supply_chain_stretch",
+    });
+    const fresh = makeSkeleton("sk-fresh", 2, {
+      narrativePattern: "hiring_decision",
+    });
+    // repeat weight = 0.3, fresh = 1.0 → fresh should be picked at mid-draw.
+    const result = selectNextSkeleton(state, [repeat, fresh], () => 0.5);
+    expect(result?.skeleton.id).toBe("sk-fresh");
+  });
+});
+
+// ─── computeSectorAffinity ────────────────────────────────────────────────────
+
+describe("computeSectorAffinity", () => {
+  it("returns 1.0 when sectorAffinities is undefined", () => {
+    const state = { ...makeState(), sector: "tech" as const };
+    const skeleton = makeSkeleton("sk", 2).skeleton;
+    expect(computeSectorAffinity(skeleton, state)).toBe(1.0);
+  });
+
+  it("returns 1.0 when the player's sector is not in the affinity map", () => {
+    const state = { ...makeState(), sector: "agri" as const };
+    const skeleton = makeSkeleton("sk", 2, {
+      sectorAffinities: { tech: 0.5 },
+    }).skeleton;
+    expect(computeSectorAffinity(skeleton, state)).toBe(1.0);
+  });
+
+  it("returns the mapped affinity value when sector matches", () => {
+    const state = { ...makeState(), sector: "tech" as const };
+    const skeleton = makeSkeleton("sk", 2, {
+      sectorAffinities: { tech: 0.3, agri: 1.5 },
+    }).skeleton;
+    expect(computeSectorAffinity(skeleton, state)).toBe(0.3);
+  });
+});
+
+// ─── computePatternRepeatPenalty ──────────────────────────────────────────────
+
+describe("computePatternRepeatPenalty", () => {
+  it("returns 1.0 when the skeleton has no narrativePattern", () => {
+    const state = { ...makeState(), recentPatterns: ["fundraising"] };
+    const skeleton = makeSkeleton("sk", 2).skeleton;
+    expect(computePatternRepeatPenalty(skeleton, state)).toBe(1.0);
+  });
+
+  it("returns 1.0 when pattern is not among recentPatterns", () => {
+    const state = { ...makeState(), recentPatterns: ["fundraising"] };
+    const skeleton = makeSkeleton("sk", 2, {
+      narrativePattern: "hiring_decision",
+    }).skeleton;
+    expect(computePatternRepeatPenalty(skeleton, state)).toBe(1.0);
+  });
+
+  it("returns 0.3 when pattern matches a recentPatterns entry", () => {
+    const state = { ...makeState(), recentPatterns: ["fundraising", "pivot"] };
+    const skeleton = makeSkeleton("sk", 2, {
+      narrativePattern: "fundraising",
+    }).skeleton;
+    expect(computePatternRepeatPenalty(skeleton, state)).toBe(0.3);
   });
 });

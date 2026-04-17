@@ -10,10 +10,10 @@ import type {
 import type { ISessionStore } from "../store/types.js";
 import {
   assessLayer0,
-  classify,
   classifyFromBothResponses,
   generateQ2,
   extractPlayerContext,
+  inferSectorFromText,
 } from "../engine/classifier.js";
 
 interface ClassifyPluginOptions {
@@ -65,6 +65,8 @@ export const classifyRoutes: FastifyPluginAsync<ClassifyPluginOptions> = async (
           layer: 1,
           currentNodeId: assessment.layer1NodeId,
           eoProfile: assessment.initialEOProfile,
+          sector: assessment.sector,
+          businessDescription: response,
         },
       });
 
@@ -105,10 +107,14 @@ export const classifyRoutes: FastifyPluginAsync<ClassifyPluginOptions> = async (
       // Generate personalised Q2 from Q1 response
       const q2Prompt = await generateQ2(q1Response);
 
-      // Temporarily store Q1 in playerContext so it survives session resume
+      // Temporarily store Q1 in playerContext so it survives session resume.
+      // Also persist sector + businessDescription immediately so Narrator AI
+      // has sector-aware framing even if Q2 classification later fails.
       await store.updateSession(sessionId, {
         worldState: {
           ...session.worldState,
+          sector: inferSectorFromText(q1Response),
+          businessDescription: q1Response,
           playerContext: {
             businessDescription: q1Response,
             motivation: "",
@@ -164,13 +170,19 @@ export const classifyRoutes: FastifyPluginAsync<ClassifyPluginOptions> = async (
       // Build the final PlayerContext with full extraction
       const playerContext = extractPlayerContext(pc.rawQ1Response, q2Response, pc.q2Prompt);
 
-      // Advance to Layer 1 with full player context
+      // Advance to Layer 1 with full player context.
+      // Re-infer sector from combined Q1+Q2 text for a richer signal,
+      // but keep businessDescription = verbatim Q1 (the player's own framing).
+      const sector = inferSectorFromText(`${pc.rawQ1Response} ${q2Response}`);
+
       await store.updateSession(sessionId, {
         worldState: {
           ...session.worldState,
           layer: 1,
           currentNodeId: layer1NodeId,
           playerContext,
+          sector,
+          businessDescription: pc.rawQ1Response,
         },
       });
 

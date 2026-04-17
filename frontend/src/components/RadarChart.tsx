@@ -13,11 +13,11 @@ interface RadarChartProps {
 
 const labels = ["Autonomy", "Innovative", "Proactiveness", "Risk-Taking", "Comp.\nAggressive"];
 
-// Re-themed for Vibrant Rounded Graffiti aesthetic
-const primary = "#FF2A85"; // hot-pink
-const primaryFill = "rgba(255, 42, 133, 0.35)";
+// Re-themed for Vivid Desktop aesthetic
+const primary = "#FF3B30"; // pill-red
+const primaryFill = "rgba(255, 59, 48, 0.35)";
 const cardBg = "#FFFFFF";
-const fgColor = "#1E3A8A"; // navy
+const fgColor = "#0f172a"; // slate-900
 
 const RadarChart = ({ dimensions, maxValue }: RadarChartProps) => {
   const cx = 200, cy = 190, r = 110;
@@ -89,7 +89,7 @@ const RadarChart = ({ dimensions, maxValue }: RadarChartProps) => {
             fill={fgColor}
             fontSize="11"
             fontWeight="900"
-            fontFamily="var(--font-headline), 'Plus Jakarta Sans', sans-serif"
+            fontFamily="var(--font-headline), 'Fredoka', sans-serif"
             className="uppercase tracking-tighter"
           >
             {labels[i].split("\n").map((line, li) => (

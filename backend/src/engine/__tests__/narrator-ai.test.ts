@@ -1,6 +1,31 @@
 import { describe, it, expect } from "vitest";
-import { generateNarrativeSkin, buildFallbackSkin, validateNarration, buildWorldConditionsBlock } from "../narrator-ai.js";
+import {
+  generateNarrativeSkin,
+  buildFallbackSkin,
+  validateNarration,
+  buildWorldConditionsBlock,
+  buildTurnContextBlock,
+} from "../narrator-ai.js";
+import type { NarrationWorldContext } from "../narrator-ai.js";
 import type { ScenarioSkeleton, PlayerContext, NarrativeSkin } from "@hatchquest/shared";
+
+// Factory for NarrationWorldContext test fixtures — keeps call sites compact
+// and centralises new required fields (sector, turnNumber, etc.).
+function ctx(partial: Partial<NarrationWorldContext> = {}): NarrationWorldContext {
+  return {
+    marketHeat: 50,
+    competitorThreat: 50,
+    infrastructureStability: 50,
+    capital: 5000,
+    lastEventNarrativeHook: null,
+    sector: "tech",
+    businessDescription: "mobile food delivery service in Osu",
+    choiceHistory: [],
+    turnNumber: 0,
+    isFirstScenarioTurn: false,
+    ...partial,
+  };
+}
 
 const TEST_SKELETON: ScenarioSkeleton = {
   id: "test-skeleton",
@@ -69,6 +94,36 @@ describe("buildFallbackSkin", () => {
     expect(skin.tensionHints[1]).toBe(TEST_SKELETON.choiceArchetypes[1].tensionAxis);
     expect(skin.tensionHints[2]).toBe(TEST_SKELETON.choiceArchetypes[2].tensionAxis);
   });
+
+  it("prepends a time-bridge prefix on the first scenario turn when businessDescription is present", () => {
+    const skin = buildFallbackSkin(
+      TEST_SKELETON,
+      TEST_CONTEXT,
+      ctx({ isFirstScenarioTurn: true, businessDescription: "a cocoa export business" })
+    );
+    expect(skin.narrative.startsWith("A few weeks into building a cocoa export business,")).toBe(
+      true
+    );
+    expect(skin.narrative).toContain(TEST_SKELETON.situationSeed);
+  });
+
+  it("does NOT prepend the time-bridge when isFirstScenarioTurn is true but businessDescription is empty", () => {
+    const skin = buildFallbackSkin(
+      TEST_SKELETON,
+      TEST_CONTEXT,
+      ctx({ isFirstScenarioTurn: true, businessDescription: "" })
+    );
+    expect(skin.narrative).toBe(TEST_SKELETON.situationSeed);
+  });
+
+  it("does NOT prepend the time-bridge when isFirstScenarioTurn is false", () => {
+    const skin = buildFallbackSkin(
+      TEST_SKELETON,
+      TEST_CONTEXT,
+      ctx({ isFirstScenarioTurn: false })
+    );
+    expect(skin.narrative).toBe(TEST_SKELETON.situationSeed);
+  });
 });
 
 describe("generateNarrativeSkin", () => {
@@ -104,36 +159,70 @@ describe("generateNarrativeSkin", () => {
 
 describe("buildWorldConditionsBlock", () => {
   it("labels market heat correctly (hot/moderate/cold)", () => {
-    const hot = buildWorldConditionsBlock({ marketHeat: 80, competitorThreat: 50, infrastructureStability: 50, capital: 5000, lastEventNarrativeHook: null });
-    expect(hot).toContain("hot");
-    const moderate = buildWorldConditionsBlock({ marketHeat: 50, competitorThreat: 50, infrastructureStability: 50, capital: 5000, lastEventNarrativeHook: null });
-    expect(moderate).toContain("moderate");
-    const cold = buildWorldConditionsBlock({ marketHeat: 20, competitorThreat: 50, infrastructureStability: 50, capital: 5000, lastEventNarrativeHook: null });
-    expect(cold).toContain("cold");
+    expect(buildWorldConditionsBlock(ctx({ marketHeat: 80 }))).toContain("hot");
+    expect(buildWorldConditionsBlock(ctx({ marketHeat: 50 }))).toContain("moderate");
+    expect(buildWorldConditionsBlock(ctx({ marketHeat: 20 }))).toContain("cold");
   });
 
   it("labels competitor threat correctly (aggressive/present/quiet)", () => {
-    const aggressive = buildWorldConditionsBlock({ marketHeat: 50, competitorThreat: 80, infrastructureStability: 50, capital: 5000, lastEventNarrativeHook: null });
-    expect(aggressive).toContain("aggressive");
-    const quiet = buildWorldConditionsBlock({ marketHeat: 50, competitorThreat: 20, infrastructureStability: 50, capital: 5000, lastEventNarrativeHook: null });
-    expect(quiet).toContain("quiet");
+    expect(buildWorldConditionsBlock(ctx({ competitorThreat: 80 }))).toContain("aggressive");
+    expect(buildWorldConditionsBlock(ctx({ competitorThreat: 50 }))).toContain("present");
+    expect(buildWorldConditionsBlock(ctx({ competitorThreat: 20 }))).toContain("quiet");
   });
 
   it("labels infrastructure correctly (reliable/patchy/unreliable)", () => {
-    const reliable = buildWorldConditionsBlock({ marketHeat: 50, competitorThreat: 50, infrastructureStability: 80, capital: 5000, lastEventNarrativeHook: null });
-    expect(reliable).toContain("reliable");
-    const unreliable = buildWorldConditionsBlock({ marketHeat: 50, competitorThreat: 50, infrastructureStability: 20, capital: 5000, lastEventNarrativeHook: null });
-    expect(unreliable).toContain("unreliable");
+    expect(buildWorldConditionsBlock(ctx({ infrastructureStability: 80 }))).toContain("reliable");
+    expect(buildWorldConditionsBlock(ctx({ infrastructureStability: 50 }))).toContain("patchy");
+    expect(buildWorldConditionsBlock(ctx({ infrastructureStability: 20 }))).toContain("unreliable");
   });
 
   it("includes lastEventNarrativeHook when provided", () => {
-    const block = buildWorldConditionsBlock({ marketHeat: 50, competitorThreat: 50, infrastructureStability: 50, capital: 5000, lastEventNarrativeHook: "ECG outage hit Accra." });
-    expect(block).toContain("ECG outage hit Accra.");
+    expect(
+      buildWorldConditionsBlock(ctx({ lastEventNarrativeHook: "ECG outage hit Accra." }))
+    ).toContain("ECG outage hit Accra.");
   });
 
   it("outputs 'none' when lastEventNarrativeHook is null", () => {
-    const block = buildWorldConditionsBlock({ marketHeat: 50, competitorThreat: 50, infrastructureStability: 50, capital: 5000, lastEventNarrativeHook: null });
-    expect(block).toContain("none");
+    expect(buildWorldConditionsBlock(ctx({ lastEventNarrativeHook: null }))).toContain("none");
+  });
+});
+
+// ─── buildTurnContextBlock ────────────────────────────────────────────────────
+
+describe("buildTurnContextBlock", () => {
+  it("reports sector, business description, and 'none yet' when no choices", () => {
+    const block = buildTurnContextBlock(
+      ctx({ sector: "retail", businessDescription: "inventory app for shop owners" })
+    );
+    expect(block).toContain("retail");
+    expect(block).toContain("inventory app for shop owners");
+    expect(block).toContain("none yet");
+    expect(block).toContain("Is first scenario turn: no");
+  });
+
+  it("marks first scenario turn when isFirstScenarioTurn is true", () => {
+    const block = buildTurnContextBlock(ctx({ isFirstScenarioTurn: true }));
+    expect(block).toContain("Is first scenario turn: YES");
+  });
+
+  it("labels MOST RECENT choice and prior choices correctly", () => {
+    const block = buildTurnContextBlock(
+      ctx({
+        choiceHistory: [
+          { nodeId: "L2-node-1", choiceLabel: "Took the loan", effectSummary: "+5k capital, +2k debt" },
+          { nodeId: "L1-node-1", choiceLabel: "Took the deal", effectSummary: "-3k capital" },
+        ],
+      })
+    );
+    expect(block).toContain("MOST RECENT");
+    expect(block).toContain("Took the loan");
+    expect(block).toContain("prior 1");
+    expect(block).toContain("Took the deal");
+  });
+
+  it("falls back to '(not provided)' when business description is empty", () => {
+    const block = buildTurnContextBlock(ctx({ businessDescription: "" }));
+    expect(block).toContain("(not provided)");
   });
 });
 

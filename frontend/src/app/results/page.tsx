@@ -57,6 +57,20 @@ const Results = () => {
   const verdict = getVerdict(score);
   // Guard against negative capital: Math.max(0,...) prevents invalid negative width values.
   const capitalBarWidth = clientState ? Math.max(0, Math.min(100, (clientState.capital / 50000) * 100)) : 0;
+  // Capital color conditional: red for shortfall, yellow for thin runway, lime for healthy.
+  const capitalAmount = clientState?.capital ?? 0;
+  const capitalTextClass =
+    capitalAmount < 0
+      ? "text-hot-pink"
+      : capitalAmount < 10_000
+        ? "text-electric-yellow"
+        : "text-lime";
+  const capitalFillClass =
+    capitalAmount < 0
+      ? "bg-hot-pink shadow-[0_0_10px_rgba(255,42,133,0.4)]"
+      : capitalAmount < 10_000
+        ? "bg-electric-yellow shadow-[0_0_10px_rgba(255,230,0,0.4)]"
+        : "bg-lime shadow-[0_0_10px_rgba(57,255,20,0.4)]";
 
   const handlePlayAgain = () => {
     resetGame();
@@ -221,13 +235,13 @@ const Results = () => {
                 <div className="bg-cream p-6 rounded-[2.5rem] border-4 border-white shadow-sm">
                   <div className="flex justify-between items-end mb-4 px-2">
                     <span className="font-headline font-black text-navy/40 text-xs uppercase tracking-widest">Capital</span>
-                    <span className="font-headline font-black text-3xl text-lime drop-shadow-sm">
-                      GHS {(clientState?.capital ?? 0).toLocaleString()}
+                    <span className={`font-headline font-black text-3xl drop-shadow-sm ${capitalTextClass}`}>
+                      GHS {capitalAmount.toLocaleString()}
                     </span>
                   </div>
                   <div className="h-6 w-full rounded-full bg-white border-2 border-cream overflow-hidden shadow-inner p-1.5">
                     <div
-                      className="h-full bg-lime rounded-full transition-all duration-1000 shadow-[0_0_10px_rgba(57,255,20,0.4)]"
+                      className={`h-full rounded-full transition-all duration-1000 ${capitalFillClass}`}
                       style={{ width: `${capitalBarWidth}%` }}
                     />
                   </div>

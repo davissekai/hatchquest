@@ -10,6 +10,7 @@ const L6_SK_1: ScenarioSkeleton = {
   theme: "competition",
   baseWeight: 1.0,
   eoTargetDimensions: ["competitiveAggressiveness", "innovativeness"],
+  narrativePattern: "price_pressure",
   situationSeed:
     "A competitor from Tema has moved into your patch of Accra and dropped their prices by 20 percent below yours. They are new, they are loud, and your regulars are listening. You have been here long enough to know that price wars rarely end well for anyone — but standing still is also a choice. You have relationships, local knowledge, and a product they have not had time to understand.",
   choiceArchetypes: [

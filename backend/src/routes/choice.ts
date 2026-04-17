@@ -9,7 +9,7 @@ import type {
 } from "@hatchquest/shared";
 import type { ISessionStore } from "../store/types.js";
 import type { RegisteredSkeleton } from "../skeletons/registry.js";
-import { applyEffect } from "../engine/apply-choice.js";
+import { applyEffect, recordChoiceOnState } from "../engine/apply-choice.js";
 import { propagateWorldStocks, drawWorldEvent, applyWorldEvent } from "../engine/world-engine.js";
 import { computeDifficulty, updatePosterior } from "../engine/eo-bayes.js";
 import type { EOPosterior } from "../engine/eo-bayes.js";
@@ -160,7 +160,18 @@ async function handleChoice(
     const worldStateBefore = worldState;
 
     // 1. Apply choice effects (financial, social, boolean flags, flat EO)
-    const afterEffect = applyEffect(worldState, effect);
+    const afterEffectRaw = applyEffect(worldState, effect);
+
+    // 1b. Record choice metadata (history + recent patterns) for narrator continuity
+    //     and director pattern-repeat suppression on the next turn.
+    const choiceLabel =
+      currentEntry.skeleton.choiceArchetypes[choiceIndex]?.archetypeDescription ??
+      `choice ${choiceIndex + 1}`;
+    const afterEffect = recordChoiceOnState(afterEffectRaw, effect, {
+      nodeId: currentEntry.skeleton.id,
+      choiceLabel,
+      narrativePattern: currentEntry.skeleton.narrativePattern,
+    });
 
     // 2. Propagate world stocks (marketDemand, competitorAggression, infrastructureReliability drift)
     const rng = createPRNG(worldState.seed ^ worldState.turnsElapsed ^ 0xdeadbeef);
@@ -246,6 +257,14 @@ async function handleChoice(
             newState.worldEventHistory.length > 0
               ? (newState.worldEventHistory[newState.worldEventHistory.length - 1]?.narrativeHook ?? null)
               : null,
+          sector: newState.sector,
+          businessDescription: newState.businessDescription,
+          choiceHistory: newState.choiceHistory,
+          turnNumber: turnsElapsed,
+          // /choice only fires after the player has already seen and answered at least
+          // one scenario, so this narration is never the first scenario turn. The L1
+          // opening narration is produced by /session → narrateScenarioNode.
+          isFirstScenarioTurn: false,
         };
         const [skin, source] = await generateSkin(nextEntry.skeleton, ctx, worldCtx);
         narrationSource = source;
