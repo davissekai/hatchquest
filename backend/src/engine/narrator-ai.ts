@@ -16,6 +16,7 @@ import type {
   PlayerContext,
   RecentChoice,
   ScenarioSkeleton,
+  StoryMemory,
 } from "@hatchquest/shared";
 import { isMockLLM, mockGenerateSkin } from "../lib/mock-anthropic.js";
 
@@ -49,9 +50,8 @@ You will receive:
 1. A SITUATION SEED — the abstract scenario structure
 2. Three CHOICE ARCHETYPES — the structural choices available
 3. WORLD CONDITIONS — current market signals the player can feel
-4. TURN CONTEXT — the player's sector, recent choices, turn number, and whether
-   this is the very first scenario after Layer 0 classification. On the first
-   turn, Q2 SCENARIO and Q2 DECISION are provided so you can continue the story.
+4. TURN CONTEXT — the player's sector, business label, story memory, recent
+   choices, turn number, and whether this is the very first scenario turn.
 
 Your job: generate a scenario that feels like it is happening to THIS player's specific business, in THIS sector, in Accra.
 
@@ -72,19 +72,20 @@ Sector framing rules — use the EXACT sector label from TURN CONTEXT:
 Never mix sector framings. An agri player never deals with app bugs. A tech player never handles a harvest.
 
 Continuity rules:
-- If IS_FIRST_SCENARIO_TURN is YES and Q2 SCENARIO + Q2 DECISION are provided:
-  the narrative MUST be the direct next chapter of that exact story — the next
-  day, week, or beat after the Q2 decision. Reference the specific situation and
-  what the player chose. Do NOT start a random new event.
-  The 3 choices must emerge naturally from the Q2 outcome.
+- If IS_FIRST_SCENARIO_TURN is YES and STORY_MEMORY is provided:
+  the narrative MUST be the direct next chapter of the story described in
+  STORY_MEMORY. Reference the 'last beat' and continue from the 'open thread'
+  within the 'current arc'. Do NOT start a random new event.
+  The 3 choices must emerge naturally from this exact narrative thread.
   Open with a short time-marker: "A week after...", "Two days after your decision...".
-- If IS_FIRST_SCENARIO_TURN is YES and no Q2 context is provided:
-  open with a short time-bridge only: "A few weeks into building your platform,..."
+- If IS_FIRST_SCENARIO_TURN is YES and no STORY_MEMORY is provided:
+  open with a short time-bridge only: "A few weeks into building ${businessLabel},..."
   Keep it under 15 words.
 - If IS_FIRST_SCENARIO_TURN is no and RECENT CHOICES are present:
   open with one sentence recalling RECENT[0] before the new situation.
 
 Other rules:
+- Use the provided BUSINESS_LABEL to refer to the player's business.
 - Use Accra-specific details: locations, GHS currency, local business culture.
 - Narrative must be rich and immersive, ~3 paragraphs. Up to 1500 characters.
 - Choices must be 1–3 sentences each, action-oriented, specific to this exact scenario.
@@ -99,8 +100,12 @@ export interface NarrationWorldContext {
   lastEventNarrativeHook: string | null;
   /** Player's business sector — drives framing ("tech" vs "retail" vs ...). */
   sector: BusinessSector;
-  /** Q1 free-text — used as a short paraphrase hint, never echoed verbatim. */
-  businessDescription: string;
+  /** Clean, display-safe label for the business (e.g., "Makola Logistics Hub"). */
+  businessLabel: string;
+  /** Short summary of the business. */
+  businessSummary: string;
+  /** Narrative continuity memory from the Layer 0 arc. */
+  storyMemory: StoryMemory | null;
   /** Most recent choices (newest first, max 3) for continuity callbacks. */
   choiceHistory: RecentChoice[];
   /** Number of scenario turns completed so far. 0 means we are heading into the first. */
@@ -140,10 +145,10 @@ export function buildWorldConditionsBlock(ctx: NarrationWorldContext): string {
  * Formats the turn + continuity block for the narrator prompt.
  * Exposed so it is coverable and stable across LLM/mock paths.
  *
- * businessDescription is capped at BUSINESS_DESCRIPTION_PROMPT_CAP and labeled
- * as a paraphrase hint — never as "verbatim" — to prevent LLM from echoing Q1.
- * On the first scenario turn, Q2 scenario + decision are appended when present
- * so the LLM can continue the story directly from the player's Layer 0 arc.
+ * businessLabel and businessSummary provide the identity context without
+ * raw user text leakage.
+ * On the first scenario turn, storyMemory is provided so the LLM can
+ * continue the story directly from the player's Layer 0 arc.
  */
 export function buildTurnContextBlock(ctx: NarrationWorldContext): string {
   const recent =
@@ -156,32 +161,19 @@ export function buildTurnContextBlock(ctx: NarrationWorldContext): string {
           )
           .join("; ");
 
-  const businessShort =
-    ctx.businessDescription.length > BUSINESS_DESCRIPTION_PROMPT_CAP
-      ? `${ctx.businessDescription.slice(0, BUSINESS_DESCRIPTION_PROMPT_CAP).trim()}…`
-      : ctx.businessDescription || "(not provided)";
-
-  let q2Block = "";
-  if (ctx.isFirstScenarioTurn && ctx.q2Prompt && ctx.q2Response) {
-    const q2PromptShort =
-      ctx.q2Prompt.length > 300
-        ? `${ctx.q2Prompt.slice(0, 300).trim()}…`
-        : ctx.q2Prompt;
-    const q2RespShort =
-      ctx.q2Response.length > 250
-        ? `${ctx.q2Response.slice(0, 250).trim()}…`
-        : ctx.q2Response;
-    q2Block =
-      `\n- Q2 SCENARIO the player just faced: "${q2PromptShort}"` +
-      `\n- Q2 DECISION the player made: "${q2RespShort}"`;
+  let storyBlock = "";
+  if (ctx.isFirstScenarioTurn && ctx.storyMemory) {
+    storyBlock =
+      `\n- STORY_MEMORY: { lastBeat: "${ctx.storyMemory.lastBeatSummary}", openThread: "${ctx.storyMemory.openThread}", arc: "${ctx.storyMemory.currentArc}" }`;
   }
 
   return `TURN CONTEXT:
 - Sector: ${ctx.sector}
-- Business (paraphrase hint, never echo verbatim): ${businessShort}
+- BUSINESS_LABEL: ${ctx.businessLabel}
+- BUSINESS_SUMMARY: ${ctx.businessSummary}
 - Turn number: ${ctx.turnNumber}
 - Is first scenario turn: ${ctx.isFirstScenarioTurn ? "YES" : "no"}
-- Recent choices: ${recent}${q2Block}`;
+- Recent choices: ${recent}${storyBlock}`;
 }
 
 /**
@@ -311,15 +303,10 @@ export function buildFallbackSkin(
 ): NarrativeSkin {
   let prefix = "";
   if (worldCtx?.isFirstScenarioTurn) {
-    if (worldCtx.q2Response) {
-      // Continue from Q2 decision rather than opening cold
-      const respShort =
-        worldCtx.q2Response.length > 80
-          ? `${worldCtx.q2Response.slice(0, 80).trim()}…`
-          : worldCtx.q2Response;
-      prefix = `Following your decision — ${decapitalise(respShort)} — things move quickly. `;
+    if (worldCtx.storyMemory) {
+      prefix = `Following your decision — ${decapitalise(worldCtx.storyMemory.lastBeatSummary)} — things move quickly. `;
     } else {
-      prefix = `A few weeks into building your business, a real decision has arrived. `;
+      prefix = `A few weeks into building ${worldCtx.businessLabel || "your business"}, a real decision has arrived. `;
     }
   } else if (worldCtx && worldCtx.choiceHistory.length > 0) {
     const last = worldCtx.choiceHistory[0];

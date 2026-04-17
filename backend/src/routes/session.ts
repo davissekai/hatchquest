@@ -62,6 +62,34 @@ async function renderCurrentNode(
 ): Promise<ScenarioNode | null> {
   if (worldState.currentNodeId === null) return null;
 
+  // 1. If we have persisted content, return it immediately.
+  // This ensures session resume is deterministic and doesn't re-roll or re-generate.
+  if (worldState.currentNodeContent) {
+    return {
+      id: worldState.currentNodeId,
+      layer: worldState.layer,
+      narrative: worldState.currentNodeContent.narrative,
+      choices: [
+        {
+          index: 0,
+          text: worldState.currentNodeContent.choices[0],
+          tensionHint: worldState.currentNodeContent.tensionHints[0],
+        },
+        {
+          index: 1,
+          text: worldState.currentNodeContent.choices[1],
+          tensionHint: worldState.currentNodeContent.tensionHints[1],
+        },
+        {
+          index: 2,
+          text: worldState.currentNodeContent.choices[2],
+          tensionHint: worldState.currentNodeContent.tensionHints[2],
+        },
+      ],
+    };
+  }
+
+  // 2. Fallback: if no persisted content, check if we can skin (mainly for legacy/edge cases)
   const canSkin =
     isL1OpeningTurn(worldState) &&
     typeof getSkeleton === "function" &&
@@ -71,6 +99,8 @@ async function renderCurrentNode(
     const entry = getSkeleton(worldState.currentNodeId);
     if (entry) {
       const ctx: PlayerContext = worldState.playerContext ?? {
+        businessLabel: "Your Venture",
+        businessSummary: "Your business in Accra",
         businessDescription: worldState.businessDescription || "your business",
         motivation: "to build something meaningful in Accra",
         rawQ1Response: "",
@@ -88,7 +118,9 @@ async function renderCurrentNode(
                 ?.narrativeHook ?? null)
             : null,
         sector: worldState.sector,
-        businessDescription: worldState.businessDescription,
+        businessLabel: ctx.businessLabel,
+        businessSummary: ctx.businessSummary,
+        storyMemory: worldState.storyMemory,
         choiceHistory: worldState.choiceHistory,
         turnNumber: 0,
         // Critical: this is the L1 opening — the narrator must emit

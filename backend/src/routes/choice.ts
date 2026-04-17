@@ -249,6 +249,8 @@ async function handleChoice(
       const nextEntry = newState.currentNodeId ? getSkeleton(newState.currentNodeId) : null;
       if (nextEntry) {
         const ctx: PlayerContext = newState.playerContext ?? {
+          businessLabel: "Your Venture",
+          businessSummary: "Your business in Accra",
           businessDescription: "your business",
           motivation: "to build something meaningful in Accra",
           rawQ1Response: "",
@@ -265,7 +267,9 @@ async function handleChoice(
               ? (newState.worldEventHistory[newState.worldEventHistory.length - 1]?.narrativeHook ?? null)
               : null,
           sector: newState.sector,
-          businessDescription: newState.businessDescription,
+          businessLabel: ctx.businessLabel || "your business",
+          businessSummary: ctx.businessSummary || "your business",
+          storyMemory: newState.storyMemory,
           choiceHistory: newState.choiceHistory,
           turnNumber: turnsElapsed,
           // /choice only fires after the player has already seen and answered at least
@@ -275,6 +279,7 @@ async function handleChoice(
         };
         const [skin, source] = await generateSkin(nextEntry.skeleton, ctx, worldCtx);
         narrationSource = source;
+        newState.currentNodeContent = skin; // Persist the skin
         nextNode = {
           id: nextEntry.skeleton.id,
           layer: nextEntry.skeleton.layer,

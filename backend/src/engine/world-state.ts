@@ -37,6 +37,8 @@ export function createInitialWorldState(
     businessDescription: "",
     choiceHistory: [],
     recentPatterns: [],
+    storyMemory: null,
+    currentNodeContent: null,
 
     // Business — playerContext set to null until Layer 0 classify runs
     playerContext: null,

@@ -95,8 +95,9 @@ function dimensionLabel(dimension: keyof EOProfile): string {
 }
 
 export function buildScenarioWorldStateBrief(state: WorldState): string {
+  const business = state.playerContext?.businessLabel || state.playerContext?.businessDescription || "undisclosed";
   return [
-    state.playerContext ? `Business: ${state.playerContext.businessDescription}` : "Business: undisclosed",
+    `Business: ${business}`,
     `Capital: ${formatCurrency(state.capital)}`,
     `Monthly burn: ${formatCurrency(state.monthlyBurn)}`,
     `Revenue: ${formatCurrency(state.revenue)}`,
@@ -209,7 +210,7 @@ export async function narrateResultsSummary(
   const aiSummary = await callAnthropicNarration(
     RESULTS_SYSTEM_PROMPT,
     [
-      `Business: ${state.businessDescription || state.playerContext?.businessDescription || "undisclosed"}`,
+      `Business: ${state.playerContext?.businessLabel || "undisclosed"}`,
       `Sector: ${state.sector}`,
       `Final capital: ${formatCurrency(state.capital)}${state.capital < 0 ? " (NEGATIVE — cash shortfall)" : ""}`,
       `Final revenue: ${formatCurrency(state.revenue)}`,

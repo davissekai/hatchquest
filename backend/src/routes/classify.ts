@@ -6,6 +6,9 @@ import type {
   ClassifyQ1Response,
   ClassifyQ2Request,
   ClassifyQ2Response,
+  PlayerContext,
+  ScenarioSkeleton,
+  NarrativeSkin,
 } from "@hatchquest/shared";
 import type { ISessionStore } from "../store/types.js";
 import {
@@ -14,10 +17,22 @@ import {
   generateQ2,
   extractPlayerContext,
   inferSectorFromText,
+  generateDisplaySafeContext,
+  generateStoryMemory,
 } from "../engine/classifier.js";
+import type { RegisteredSkeleton } from "../skeletons/registry.js";
+import type { NarrationWorldContext } from "../engine/narrator-ai.js";
+
+type GenerateSkinFn = (
+  skeleton: ScenarioSkeleton,
+  context: PlayerContext,
+  worldCtx?: NarrationWorldContext
+) => Promise<[NarrativeSkin, "llm" | "fallback" | "validator-rejected"]>;
 
 interface ClassifyPluginOptions {
   store: ISessionStore;
+  getSkeleton: (id: string) => RegisteredSkeleton | null;
+  generateSkin: GenerateSkinFn;
 }
 
 /** Registers all Layer 0 classify routes against the injected ISessionStore. */
@@ -25,7 +40,7 @@ export const classifyRoutes: FastifyPluginAsync<ClassifyPluginOptions> = async (
   fastify,
   opts
 ) => {
-  const { store } = opts;
+  const { store, getSkeleton, generateSkin } = opts;
 
   // ─── Legacy: POST /classify (single-step, kept for backward compat) ──────────
 
@@ -167,13 +182,45 @@ export const classifyRoutes: FastifyPluginAsync<ClassifyPluginOptions> = async (
       // Classify using both responses for richer EO signal
       const layer1NodeId = await classifyFromBothResponses(pc.rawQ1Response, q2Response);
 
-      // Build the final PlayerContext with full extraction
-      const playerContext = extractPlayerContext(pc.rawQ1Response, q2Response, pc.q2Prompt);
+      // Build the final PlayerContext with full extraction and AI refinement
+      const basePC = extractPlayerContext(pc.rawQ1Response, q2Response, pc.q2Prompt);
+      const refinedContext = await generateDisplaySafeContext(pc.rawQ1Response, q2Response);
+      const playerContext: PlayerContext = {
+        ...basePC,
+        businessLabel: refinedContext.businessLabel ?? basePC.businessLabel,
+        businessSummary: refinedContext.businessSummary ?? basePC.businessSummary,
+        founderEdge: refinedContext.founderEdge ?? "Resourceful founder",
+      };
+
+      // Generate StoryMemory from Q2 arc
+      const storyMemory = await generateStoryMemory(pc.q2Prompt, q2Response);
 
       // Advance to Layer 1 with full player context.
-      // Re-infer sector from combined Q1+Q2 text for a richer signal,
-      // but keep businessDescription = verbatim Q1 (the player's own framing).
       const sector = inferSectorFromText(`${pc.rawQ1Response} ${q2Response}`);
+
+      // Generate the skin for the first node immediately and persist it.
+      let currentNodeContent: NarrativeSkin | null = null;
+      const nextEntry = getSkeleton(layer1NodeId);
+      if (nextEntry) {
+        const worldCtx: NarrationWorldContext = {
+          marketHeat: session.worldState.marketDemand,
+          competitorThreat: session.worldState.competitorAggression,
+          infrastructureStability: session.worldState.infrastructureReliability,
+          capital: session.worldState.capital,
+          lastEventNarrativeHook: null,
+          sector,
+          businessLabel: playerContext.businessLabel,
+          businessSummary: playerContext.businessSummary,
+          storyMemory,
+          choiceHistory: [],
+          turnNumber: 0,
+          isFirstScenarioTurn: true,
+          q2Prompt: pc.q2Prompt,
+          q2Response,
+        };
+        const [skin] = await generateSkin(nextEntry.skeleton, playerContext, worldCtx);
+        currentNodeContent = skin;
+      }
 
       await store.updateSession(sessionId, {
         worldState: {
@@ -183,6 +230,8 @@ export const classifyRoutes: FastifyPluginAsync<ClassifyPluginOptions> = async (
           playerContext,
           sector,
           businessDescription: pc.rawQ1Response,
+          storyMemory,
+          currentNodeContent,
         },
       });
 
