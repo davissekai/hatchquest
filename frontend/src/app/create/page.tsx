@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useGame } from "@/context/GameContext";
+import { Starburst, Sparkle } from "@/components/Decorations";
 
 const PlayerCreate = () => {
   const router = useRouter();
@@ -23,24 +24,26 @@ const PlayerCreate = () => {
   };
 
   return (
-    <div className="bg-cream text-navy min-h-screen relative flex items-center justify-center py-8">
-      {/* Background — vibrant glows and patterns */}
-      <div className="absolute inset-0 z-0">
-        <div className="absolute inset-0 adinkra-pattern opacity-10" />
-        <div className="absolute top-0 right-0 w-[600px] h-[600px] bg-bubblegum rounded-full blur-[150px] opacity-20 -translate-y-1/2 translate-x-1/2" />
-        <div className="absolute bottom-0 left-0 w-[600px] h-[600px] bg-electric-cyan rounded-full blur-[150px] opacity-20 translate-y-1/2 -translate-x-1/2" />
-      </div>
+    <div className="bg-[#F5F2EB] text-slate-900 min-h-screen relative flex items-center justify-center py-8 overflow-hidden selection:bg-hot-pink selection:text-white">
+      
+      {/* ── Decorative Background Elements ── */}
+      <Starburst className="w-48 h-48 -top-10 -left-10 rotate-12" fill="var(--color-pill-blue)" />
+      <Starburst className="w-32 h-32 bottom-[10%] right-[5%] -rotate-12" fill="var(--color-pill-red)" />
+      <Sparkle className="w-16 h-16 top-[20%] right-[15%]" fill="var(--color-grass-green)" />
+      <Sparkle className="w-12 h-12 bottom-[20%] left-[10%]" fill="#FFC107" />
 
       {/* Main card */}
       <main className="relative z-10 w-full max-w-md px-6 py-12">
 
-        {/* Auth card — Tactile Graffiti */}
-        <div className="bg-white/80 backdrop-blur-xl rounded-[3rem] p-10 shadow-[0_20px_60px_rgba(30,58,138,0.1)] border-4 border-white">
+        {/* Auth card — Neo-Brutalist Pop-Art */}
+        <div className="bg-white rounded-[2rem] p-10 shadow-[12px_12px_0px_#0f172a] border-[6px] border-slate-900 relative">
+          <div className="absolute -top-6 -right-6 w-12 h-12 bg-[#FFC107] border-[4px] border-slate-900 rounded-full shadow-[4px_4px_0px_#0f172a]" />
+          
           <div className="mb-8">
-            <h2 className="font-headline text-3xl font-extrabold text-navy tracking-tight leading-none">
-              Welcome, <span className="text-hot-pink italic">Founder</span>
+            <h2 className="font-headline text-4xl font-black text-slate-900 uppercase tracking-tighter leading-none">
+              Welcome, <br/><span className="text-pill-red">Founder</span>
             </h2>
-            <p className="font-body text-navy/70 mt-3 font-medium text-lg leading-relaxed">
+            <p className="font-body text-slate-700 mt-3 font-bold text-lg leading-relaxed">
               Begin your journey through the electric rhythm of Accra.
             </p>
           </div>
@@ -50,12 +53,12 @@ const PlayerCreate = () => {
             <div className="space-y-2">
               <label
                 htmlFor="founder-name"
-                className="font-headline font-bold text-xs tracking-widest text-navy/60 uppercase ml-5 block"
+                className="font-headline font-black text-xs tracking-widest text-slate-900 uppercase ml-2 block"
               >
                 Name
               </label>
-              <div className="relative group">
-                <span className="material-symbols-outlined absolute left-6 top-1/2 -translate-y-1/2 text-navy/40 group-focus-within:text-hot-pink transition-colors">
+              <div className="relative group mt-1">
+                <span className="material-symbols-outlined absolute left-6 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-slate-900 transition-colors">
                   person
                 </span>
                 <input
@@ -67,7 +70,7 @@ const PlayerCreate = () => {
                   required
                   autoFocus
                   disabled={isLoading}
-                  className="w-full pl-16 pr-8 py-5 bg-cream border-4 border-transparent focus:border-hot-pink/20 rounded-full text-navy font-headline font-bold text-lg transition-all placeholder:text-navy/30 disabled:opacity-50 outline-none shadow-inner"
+                  className="w-full pl-16 pr-8 py-5 bg-[#F5F2EB] border-4 border-slate-900 focus:border-pill-red rounded-full text-slate-900 font-headline font-bold text-lg transition-all placeholder:text-slate-400 disabled:opacity-50 outline-none shadow-none focus:shadow-[4px_4px_0px_#0f172a] focus:-translate-y-1"
                 />
               </div>
             </div>
@@ -76,12 +79,12 @@ const PlayerCreate = () => {
             <div className="space-y-2">
               <label
                 htmlFor="email"
-                className="font-headline font-bold text-xs tracking-widest text-navy/60 uppercase ml-5 block"
+                className="font-headline font-black text-xs tracking-widest text-slate-900 uppercase ml-2 block"
               >
                 Email
               </label>
-              <div className="relative group">
-                <span className="material-symbols-outlined absolute left-6 top-1/2 -translate-y-1/2 text-navy/40 group-focus-within:text-hot-pink transition-colors">
+              <div className="relative group mt-1">
+                <span className="material-symbols-outlined absolute left-6 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-slate-900 transition-colors">
                   alternate_email
                 </span>
                 <input
@@ -92,7 +95,7 @@ const PlayerCreate = () => {
                   placeholder="ama@hatchquest.com"
                   required
                   disabled={isLoading}
-                  className="w-full pl-16 pr-8 py-5 bg-cream border-4 border-transparent focus:border-hot-pink/20 rounded-full text-navy font-headline font-bold text-lg transition-all placeholder:text-navy/30 disabled:opacity-50 outline-none shadow-inner"
+                  className="w-full pl-16 pr-8 py-5 bg-[#F5F2EB] border-4 border-slate-900 focus:border-pill-blue rounded-full text-slate-900 font-headline font-bold text-lg transition-all placeholder:text-slate-400 disabled:opacity-50 outline-none shadow-none focus:shadow-[4px_4px_0px_#0f172a] focus:-translate-y-1"
                 />
               </div>
             </div>
@@ -101,12 +104,12 @@ const PlayerCreate = () => {
             <div className="space-y-2">
               <label
                 htmlFor="password"
-                className="font-headline font-bold text-xs tracking-widest text-navy/60 uppercase ml-5 block"
+                className="font-headline font-black text-xs tracking-widest text-slate-900 uppercase ml-2 block"
               >
                 Password
               </label>
-              <div className="relative group">
-                <span className="material-symbols-outlined absolute left-6 top-1/2 -translate-y-1/2 text-navy/40 group-focus-within:text-hot-pink transition-colors">
+              <div className="relative group mt-1">
+                <span className="material-symbols-outlined absolute left-6 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-slate-900 transition-colors">
                   lock
                 </span>
                 <input
@@ -117,25 +120,25 @@ const PlayerCreate = () => {
                   placeholder="••••••••"
                   required
                   disabled={isLoading}
-                  className="w-full pl-16 pr-8 py-5 bg-cream border-4 border-transparent focus:border-hot-pink/20 rounded-full text-navy font-headline font-bold text-lg transition-all placeholder:text-navy/30 disabled:opacity-50 outline-none shadow-inner"
+                  className="w-full pl-16 pr-8 py-5 bg-[#F5F2EB] border-4 border-slate-900 focus:border-grass-green rounded-full text-slate-900 font-headline font-bold text-lg transition-all placeholder:text-slate-400 disabled:opacity-50 outline-none shadow-none focus:shadow-[4px_4px_0px_#0f172a] focus:-translate-y-1"
                 />
               </div>
             </div>
 
             {/* Error */}
             {error && (
-              <div className="rounded-[2rem] bg-hot-pink/10 border-2 border-hot-pink/20 px-6 py-4 flex items-center gap-3 animate-shake">
-                <span className="material-symbols-outlined text-hot-pink">error</span>
-                <p className="font-headline font-bold text-sm text-navy">{error}</p>
+              <div className="rounded-[1rem] bg-pill-red text-white border-4 border-slate-900 px-6 py-4 flex items-center gap-3 animate-shake shadow-[4px_4px_0px_#0f172a]">
+                <span className="material-symbols-outlined font-black">error</span>
+                <p className="font-headline font-bold text-sm uppercase tracking-wide">{error}</p>
               </div>
             )}
 
             {/* CTA */}
-            <div className="pt-4">
+            <div className="pt-6">
               <button
                 type="submit"
                 disabled={isLoading || !name.trim() || !email.trim() || !password.trim()}
-                className="w-full py-6 bg-lime text-navy font-headline font-black text-xl rounded-full shadow-[0_12px_40px_rgba(57,255,20,0.4)] border-4 border-white hover:scale-105 active:scale-95 transition-all duration-300 flex items-center justify-center gap-3 disabled:opacity-60 disabled:cursor-not-allowed disabled:hover:scale-100"
+                className="w-full py-5 bg-lime text-slate-900 font-headline font-black text-xl uppercase tracking-widest rounded-full shadow-[6px_6px_0px_#0f172a] border-4 border-slate-900 hover:-translate-y-1 hover:shadow-[10px_10px_0px_#0f172a] active:translate-y-1 active:shadow-[2px_2px_0px_#0f172a] transition-all duration-200 flex items-center justify-center gap-3 disabled:opacity-60 disabled:cursor-not-allowed disabled:hover:translate-y-0 disabled:hover:shadow-[6px_6px_0px_#0f172a]"
               >
                 {isLoading ? (
                   <>
@@ -153,18 +156,18 @@ const PlayerCreate = () => {
           </form>
 
           {/* Divider */}
-          <div className="mt-10 flex items-center gap-4">
-            <div className="h-1 flex-1 bg-cream rounded-full" />
-            <span className="font-headline font-black text-[10px] text-navy/40 uppercase tracking-[0.2em]">
+          <div className="mt-8 flex items-center gap-4">
+            <div className="h-1 flex-1 bg-slate-200" />
+            <span className="font-headline font-black text-[10px] text-slate-400 uppercase tracking-[0.2em]">
               OR
             </span>
-            <div className="h-1 flex-1 bg-cream rounded-full" />
+            <div className="h-1 flex-1 bg-slate-200" />
           </div>
 
           <div className="mt-6">
             <button
               onClick={() => router.push("/resume")}
-              className="w-full py-4 bg-white text-navy/60 rounded-full font-headline font-bold text-sm hover:text-navy border-4 border-transparent hover:border-cream transition-all uppercase tracking-widest shadow-sm"
+              className="w-full py-4 bg-[#F5F2EB] text-slate-900 rounded-full font-headline font-black text-sm uppercase tracking-widest border-4 border-slate-900 shadow-[4px_4px_0px_#0f172a] hover:-translate-y-1 hover:shadow-[6px_6px_0px_#0f172a] active:translate-y-1 active:shadow-[2px_2px_0px_#0f172a] transition-all"
             >
               Resume Existing Session
             </button>
@@ -173,12 +176,12 @@ const PlayerCreate = () => {
 
         {/* Footer links */}
         <footer className="mt-12 text-center">
-          <div className="flex justify-center gap-8 text-navy/40 font-headline font-bold text-xs uppercase tracking-widest">
-            <a href="#" className="hover:text-hot-pink transition-colors">Lore</a>
-            <a href="#" className="hover:text-hot-pink transition-colors">Compact</a>
+          <div className="flex justify-center gap-8 text-slate-500 font-headline font-black text-xs uppercase tracking-widest">
+            <a href="#" className="hover:text-pill-red transition-colors">Lore</a>
+            <a href="#" className="hover:text-pill-red transition-colors">Compact</a>
           </div>
-          <p className="mt-6 font-body italic text-navy/50 text-sm font-medium">
-            Soulfully crafted in Accra, 2026.
+          <p className="mt-6 font-body font-bold text-slate-400 text-sm">
+            Crafted in Accra, 2026.
           </p>
         </footer>
       </main>

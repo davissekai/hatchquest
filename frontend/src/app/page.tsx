@@ -1,75 +1,131 @@
+"use client";
+
 import React from "react";
 import Link from "next/link";
 import Image from "next/image";
+import { Starburst, Sparkle } from "@/components/Decorations";
 
 export default function LandingPage() {
   return (
-    <div className="min-h-screen bg-vivid-blue bg-gradient-to-b from-sky-blue to-vivid-blue font-body text-slate-900 overflow-x-hidden">
-      {/* Abstract Background Elements */}
-      <div className="fixed inset-0 pointer-events-none z-0 opacity-20">
-        <div className="absolute top-[-10%] left-[-10%] w-[50vw] h-[50vw] bg-white rounded-full blur-[100px]" />
-        <div className="absolute bottom-[-10%] right-[-10%] w-[40vw] h-[40vw] bg-lime rounded-full blur-[120px] opacity-40" />
-      </div>
+    <div className="min-h-screen bg-[#F5F2EB] font-body text-slate-900 overflow-hidden relative selection:bg-hot-pink selection:text-white">
+      
+      {/* ── Decorative Background Elements ── */}
+      <Starburst className="w-32 h-32 -top-10 left-1/4 rotate-12" fill="var(--color-pill-red)" />
+      <Starburst className="w-48 h-48 bottom-[-5%] left-[25%] -rotate-12" fill="#FFC107" />
+      <Starburst className="w-24 h-24 top-[30%] right-[5%] rotate-45 z-20" fill="var(--color-hot-pink)" />
+      
+      <Sparkle className="w-12 h-12 top-[15%] left-[10%]" fill="var(--color-pill-red)" />
+      <Sparkle className="w-16 h-16 bottom-[30%] right-[10%]" fill="#FFC107" />
+      <Sparkle className="w-8 h-8 top-[40%] left-[45%]" fill="var(--color-sky-blue)" />
 
-      <main className="relative z-10 pt-24 pb-16 px-6 lg:px-12 max-w-screen-2xl mx-auto flex flex-col items-center justify-center min-h-[90vh]">
+      {/* A solid circle decoration */}
+      <div className="absolute bottom-[10%] right-[30%] w-8 h-8 bg-pill-red rounded-full border-4 border-slate-900 shadow-[4px_4px_0px_#0f172a]" />
+      <div className="absolute top-[20%] right-[40%] w-4 h-4 bg-grass-green rounded-full border-2 border-slate-900 shadow-[2px_2px_0px_#0f172a]" />
+
+      {/* ── Navigation Header ── */}
+      <header className="relative z-20 w-full px-6 py-6 lg:px-12 flex items-center justify-between">
         
-        {/* ── Hero Content ──────────────────────────────────────────────────────── */}
-        <div className="text-center space-y-10 max-w-5xl mx-auto w-full">
-          
-          {/* Logo container */}
-          <div className="mx-auto w-64 md:w-96 relative hover:scale-105 transition-transform duration-500 ease-out drop-shadow-2xl">
-            <Image 
-              src="/assets/logo.jpg" 
-              alt="UGBS NEST Logo" 
-              width={800} 
-              height={400} 
-              className="rounded-3xl border-4 border-white shadow-xl object-contain bg-white"
-              priority
+        {/* Left: Logo + Text */}
+        <div className="flex items-center gap-3">
+          <div className="w-14 h-14 rounded-full border-4 border-slate-900 overflow-hidden relative shadow-[4px_4px_0px_#0f172a] hover:-translate-y-1 hover:shadow-[6px_6px_0px_#0f172a] transition-all bg-white">
+            <Image
+              src="/assets/logo.jpg"
+              alt="HatchQuest Logo"
+              fill
+              className="object-cover -translate-x-1" // Slight offset to the right visually, but actually the image shifts left so the logo is right-heavy? Let's center it normally and let the user see.
             />
           </div>
+          <span className="font-headline font-black text-2xl tracking-tight uppercase">
+            HatchQuest
+          </span>
+        </div>
 
-          <h1 className="text-5xl md:text-7xl lg:text-8xl font-headline font-black text-white drop-shadow-lg tracking-tight leading-tight">
-            Build Your Legacy <br/>
-            <span className="text-lime bg-slate-900/10 px-4 rounded-3xl inline-block mt-2 shadow-inner">In Accra</span>
+        {/* Middle: Links */}
+        <nav className="hidden lg:flex items-center gap-10 font-headline font-black uppercase tracking-widest text-sm">
+          <Link href="/" className="hover:text-pill-red transition-colors">Home</Link>
+          <Link href="/lore" className="hover:text-pill-red transition-colors">Lore</Link>
+          <Link href="/market" className="hover:text-pill-red transition-colors">Market</Link>
+          <Link href="/about" className="hover:text-pill-red transition-colors">About</Link>
+        </nav>
+
+        {/* Right: Search / Actions */}
+        <div className="flex items-center gap-4">
+          <div className="hidden md:flex items-center bg-white border-4 border-slate-900 rounded-full px-4 py-2 shadow-[4px_4px_0px_#0f172a] w-64">
+            <span className="material-symbols-outlined text-slate-900 mr-2 font-bold">search</span>
+            <input 
+              type="text" 
+              placeholder="Search..." 
+              className="bg-transparent border-none outline-none font-body font-bold w-full placeholder:text-slate-400"
+            />
+          </div>
+        </div>
+      </header>
+
+      {/* ── Main Hero Section ── */}
+      <main className="relative z-10 max-w-[1600px] mx-auto px-6 lg:px-12 pt-10 pb-20 grid grid-cols-1 lg:grid-cols-2 gap-16 min-h-[80vh] items-center">
+        
+        {/* Left: Typography & CTAs */}
+        <div className="flex flex-col items-start z-20">
+          <h1 className="font-headline font-black text-7xl md:text-8xl lg:text-[110px] leading-[0.9] uppercase tracking-tighter mb-8 drop-shadow-sm">
+            <span className="block text-slate-900">Hatch <span className="text-pill-red">Bold,</span></span>
+            <span className="block text-slate-900">Grow Smart</span>
           </h1>
 
-          <p className="text-xl md:text-3xl text-white/90 max-w-3xl mx-auto leading-relaxed font-body font-bold drop-shadow-md">
-            HatchQuest bridges the prestigious halls of Legon with the
-            electric rhythm of Makola. The ultimate desktop simulation experience.
+          <h2 className="font-headline font-black text-2xl md:text-3xl uppercase tracking-wider mb-6">
+            Grow your startup <br /> and rise with us
+          </h2>
+
+          <p className="font-body font-bold text-lg text-slate-700 mb-10 max-w-lg leading-relaxed">
+            Dive into the bustling markets of Accra. Trade, negotiate, and build your business empire in the ultimate street-smart entrepreneurship simulation.
           </p>
 
-          <div className="flex flex-col sm:flex-row items-center justify-center gap-6 pt-8">
-            <Link
-              href="/create"
-              className="group px-12 py-6 bg-grass-green text-white rounded-full font-headline font-black text-2xl shadow-[0_15px_30px_rgba(50,205,50,0.5)] hover:scale-110 hover:-translate-y-2 transition-all duration-300 active:scale-95 border-4 border-white flex items-center gap-3"
+          <div className="flex flex-wrap items-center gap-6">
+            <Link 
+              href="/play" 
+              className="px-8 py-4 bg-white border-4 border-slate-900 rounded-full font-headline font-black text-xl uppercase tracking-widest shadow-[6px_6px_0px_#0f172a] hover:-translate-y-1 hover:shadow-[10px_10px_0px_#0f172a] active:translate-y-1 active:shadow-[2px_2px_0px_#0f172a] transition-all flex items-center gap-3"
             >
-              <span>Start Your Quest</span>
-              <span className="material-symbols-outlined text-3xl group-hover:translate-x-2 transition-transform">
-                arrow_forward
-              </span>
+              Start Playing
             </Link>
-            <Link
-              href="/resume"
-              className="px-12 py-6 bg-white text-slate-900 rounded-full font-headline font-bold text-2xl shadow-[0_10px_20px_rgba(0,0,0,0.1)] hover:scale-105 transition-all duration-300 active:scale-95 border-4 border-transparent hover:border-slate-900"
+            
+            <Link 
+              href="/create" 
+              className="px-8 py-4 bg-transparent border-4 border-transparent rounded-full font-headline font-black text-xl uppercase tracking-widest hover:text-pill-red transition-colors underline decoration-4 underline-offset-8"
             >
-              Resume Session
+              Sign Up
             </Link>
+          </div>
+
+          {/* Social Icons Placeholder */}
+          <div className="mt-16 flex gap-4">
+            {["twitter", "discord", "reddit", "instagram"].map(social => (
+              <a 
+                key={social} 
+                href="#" 
+                className="w-12 h-12 bg-pill-red rounded-full border-4 border-slate-900 shadow-[4px_4px_0px_#0f172a] flex items-center justify-center hover:-translate-y-1 hover:shadow-[6px_6px_0px_#0f172a] transition-all"
+              >
+                {/* Dummy icon text for now */}
+                <span className="font-headline font-black text-white text-xs uppercase">{social[0]}</span>
+              </a>
+            ))}
           </div>
         </div>
 
-        {/* ── Visual Showcase (Cropped LinkedIn Cover) ────────────────────── */}
-        <div className="mt-20 w-full max-w-6xl mx-auto perspective-1000">
-          <div className="relative w-full aspect-[21/9] rounded-[3rem] overflow-hidden shadow-[0_30px_60px_rgba(0,0,0,0.4)] border-8 border-white hover:scale-[1.02] hover:-rotate-1 transition-all duration-700 ease-out bg-white">
-            {/* Using object-cover to clip off top/bottom black bars implicitly by zooming the image in slightly */}
-            <Image 
-              src="/assets/nest_cover.jpg" 
-              alt="UGBS Nest Cover" 
+        {/* Right: Massive Pill Mask Image */}
+        <div className="relative w-full h-[600px] md:h-[700px] flex items-center justify-center lg:justify-end z-10 perspective-1000">
+          
+          {/* Background Yellow Offset Circle (Like the reference) */}
+          <div className="absolute top-1/2 -translate-y-1/2 left-[10%] w-[400px] h-[400px] bg-[#FFC107] rounded-full border-4 border-slate-900 shadow-[8px_8px_0px_#0f172a] -z-10 hidden md:block" />
+
+          {/* The Main Pill Container */}
+          <div className="relative w-[90%] md:w-[80%] max-w-[450px] h-full rounded-t-full rounded-b-full border-[8px] border-slate-900 shadow-[16px_16px_0px_#0f172a] overflow-hidden bg-white transform-gpu rotate-2 hover:rotate-0 transition-transform duration-500">
+            <Image
+              src="/assets/nest_cover.jpg"
+              alt="HatchQuest Cover"
               fill
-              className="object-cover scale-110 object-center" 
+              className="object-cover"
+              sizes="(max-width: 768px) 90vw, 450px"
               priority
             />
-            {/* Overlay Gradient for polish */}
-            <div className="absolute inset-0 bg-gradient-to-t from-slate-900/40 to-transparent" />
           </div>
         </div>
 
