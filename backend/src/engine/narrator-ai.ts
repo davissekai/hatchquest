@@ -57,7 +57,11 @@ function buildLeakPhrases(raw: string): string[] {
 }
 
 function containsRawLeakage(output: NarrativeSkin, context: PlayerContext): boolean {
-  const renderedText = normalizeForComparison(
+  // Filter short words to match the same token stream buildLeakPhrases produces.
+  const filterShort = (text: string) =>
+    normalizeForComparison(text).split(" ").filter((w) => w.length > 2).join(" ");
+
+  const renderedFiltered = filterShort(
     `${output.narrative} ${output.choices.join(" ")}`
   );
   const rawSources = [context.rawQ1Response, context.rawQ2Response, context.q2Prompt];
@@ -65,7 +69,7 @@ function containsRawLeakage(output: NarrativeSkin, context: PlayerContext): bool
   return rawSources.some((source) => {
     if (!source) return false;
     return buildLeakPhrases(source).some(
-      (phrase) => phrase.length >= 28 && renderedText.includes(phrase)
+      (phrase) => phrase.length >= 28 && renderedFiltered.includes(phrase)
     );
   });
 }
@@ -195,7 +199,7 @@ export function buildTurnContextBlock(ctx: NarrationWorldContext): string {
   const storyBlock =
     ctx.isFirstScenarioTurn && ctx.storyMemory
       ? `
-- STORY_MEMORY: { lastBeat: "${ctx.storyMemory.lastBeatSummary}", openThread: "${ctx.storyMemory.openThread}", continuityAnchor: "${ctx.storyMemory.continuityAnchor}", decisionStyle: "${ctx.storyMemory.recentDecisionStyle ?? "not provided"}", arc: "${ctx.storyMemory.currentArc}" }`
+- STORY_MEMORY: { lastBeat: "${ctx.storyMemory.lastBeatSummary}", openThread: "${ctx.storyMemory.openThread}", continuityAnchor: "${ctx.storyMemory.continuityAnchor}", decisionStyle: "${ctx.storyMemory.recentDecisionStyle ?? "not provided"}", arc: "${ctx.storyMemory.currentArc}" }
 - FIRST_TURN_PRIORITY: Continue directly from STORY_MEMORY before using the situation seed.`
       : "";
 

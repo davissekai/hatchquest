@@ -43,6 +43,8 @@ const BASE_WORLD_STATE: WorldState = {
   vcWindowOpen: false,
   hiringDifficulty: 0,
   worldEventHistory: [],
+  storyMemory: null,
+  currentNodeContent: null,
 };
 
 // Build a minimal valid TurnTrace for a given turn number
