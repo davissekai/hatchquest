@@ -1,22 +1,21 @@
-// Player context — extracted from Layer 0 free-text responses.
-// Persists through all 5 game layers to give the AI narrator
-// personalised business identity for narrative skin generation.
+// Player context — extracted from Layer 0 responses into a clean, display-safe
+// identity that can safely flow through gameplay narration.
 
 export interface PlayerContext {
-  /** Short, display-safe paraphrase of the business (e.g., "Mobile Agri-Logistics") */
+  /** Short, display-safe label for the business (e.g., "Makola Logistics Hub") */
   businessLabel: string;
-  /** Internal summary of the business model and value prop */
+  /** Clean one-line summary of the venture */
   businessSummary: string;
-  /** What business the player described (extracted from Q1) */
+  /** Slightly richer display-safe description used by fallback narration */
   businessDescription: string;
-  /** Why they want to build it — their stated motivation (extracted from Q1) */
+  /** Why the founder is building this venture */
   motivation: string;
-  /** The unique advantage or founder-market fit stated or inferred */
+  /** The founder's distinctive edge or operating strength */
   founderEdge?: string;
-  /** The raw Q1 response, preserved for re-classification if needed */
-  rawQ1Response: string;
-  /** The raw Q2 response */
-  rawQ2Response: string;
-  /** AI-generated Q2 text (stored so it can be shown in session resume) */
-  q2Prompt: string;
+  /** Optional internal-only trace of the raw Q1 answer. Omit when persisting clean context. */
+  rawQ1Response?: string;
+  /** Optional internal-only trace of the raw Q2 answer. Omit when persisting clean context. */
+  rawQ2Response?: string;
+  /** Optional internal-only trace of the raw Q2 prompt. Omit when persisting clean context. */
+  q2Prompt?: string;
 }

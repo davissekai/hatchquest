@@ -55,6 +55,16 @@ describe("createSession", () => {
     expect(s.worldState.playerContext).toBeNull();
   });
 
+  it("initialises continuity cache fields as null", async () => {
+    const s = await store.createSession("Kwame", "kwame@example.com");
+    expect(s.layer0Q1Response).toBeNull();
+    expect(s.playerContext).toBeNull();
+    expect(s.storyMemory).toBeNull();
+    expect(s.generatedCurrentNode).toBeNull();
+    expect(s.generatedCurrentNodeId).toBeNull();
+    expect(s.narrationSource).toBeNull();
+  });
+
   it("produces unique ids for successive sessions", async () => {
     const s1 = await store.createSession("Kwame", "kwame@example.com");
     const s2 = await store.createSession("Ama", "ama@example.com");

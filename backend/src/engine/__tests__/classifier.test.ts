@@ -11,7 +11,7 @@ import {
   selectLayer1NodeFromDistribution,
   generateQ2,
   extractPlayerContext,
-  classifyFromBothResponses,
+  generateStoryMemory,
 } from "../classifier.js";
 
 const VALID_L1_NODES = new Set([
@@ -300,22 +300,47 @@ describe("generateQ2", () => {
 });
 
 describe("extractPlayerContext", () => {
-  it("splits Q1 into businessDescription and motivation", () => {
+  it("builds a clean display-safe context while retaining raw answers only as optional internals", () => {
     const ctx = extractPlayerContext(
       "I want to build a solar panel installation company. My goal is to make clean energy affordable.",
       "I would call my vendors immediately and negotiate.",
       "Your supplier cancelled. What do you do?"
     );
-    expect(ctx.businessDescription).toBe("I want to build a solar panel installation company");
-    expect(ctx.motivation).toBe("My goal is to make clean energy affordable");
+    expect(ctx.businessLabel.length).toBeGreaterThan(3);
+    expect(ctx.businessSummary).not.toBe(
+      "I want to build a solar panel installation company. My goal is to make clean energy affordable."
+    );
+    expect(ctx.businessDescription).toBe(ctx.businessSummary);
+    expect(ctx.motivation).toContain("build");
+    expect(ctx.founderEdge).toContain("operator");
     expect(ctx.rawQ1Response).toContain("solar");
     expect(ctx.rawQ2Response).toContain("vendors");
     expect(ctx.q2Prompt).toContain("supplier");
   });
 
-  it("uses full Q1 as businessDescription when only one sentence", () => {
+  it("uses sector heuristics to create a safe summary for short Q1 answers", () => {
     const ctx = extractPlayerContext("Mobile food delivery", "I would improvise", "Test Q2");
-    expect(ctx.businessDescription).toBe("Mobile food delivery");
-    expect(ctx.motivation).toBe("To build something meaningful in Accra.");
+    expect(ctx.businessSummary).toContain("food venture");
+    expect(ctx.businessDescription).toContain("food venture");
+    expect(ctx.motivation).toBe("To build something meaningful and resilient in Accra.");
+  });
+});
+
+describe("generateStoryMemory", () => {
+  it("creates deterministic continuity memory without echoing raw text when no API key is set", async () => {
+    const saved = process.env.ANTHROPIC_API_KEY;
+    delete process.env.ANTHROPIC_API_KEY;
+
+    const memory = await generateStoryMemory(
+      "Your supplier cannot deliver for another two weeks and a customer deadline is looming.",
+      "I would negotiate with two backup suppliers immediately."
+    );
+
+    expect(memory.lastBeatSummary).toContain("supplier disruption");
+    expect(memory.openThread).toContain("supplier disruption");
+    expect(memory.continuityAnchor).toContain("momentum");
+    expect(memory.recentDecisionStyle).toContain("operational");
+
+    if (saved !== undefined) process.env.ANTHROPIC_API_KEY = saved;
   });
 });

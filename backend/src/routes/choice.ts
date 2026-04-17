@@ -58,6 +58,33 @@ function isNonEmptyString(v: unknown): v is string {
   return typeof v === "string" && v.length > 0;
 }
 
+function defaultPlayerContext(state: WorldState): PlayerContext {
+  return {
+    businessLabel: "Your Venture",
+    businessSummary: state.businessDescription || "Your business in Accra",
+    businessDescription: state.businessDescription || "Your business in Accra",
+    motivation: "To build something meaningful in Accra.",
+    founderEdge: "Resourceful founder",
+  };
+}
+
+function buildScenarioNode(
+  id: string,
+  layer: number,
+  skin: NarrativeSkin
+): ScenarioNode {
+  return {
+    id,
+    layer,
+    narrative: skin.narrative,
+    choices: [
+      { index: 0, text: skin.choices[0], tensionHint: skin.tensionHints[0] },
+      { index: 1, text: skin.choices[1], tensionHint: skin.tensionHints[1] },
+      { index: 2, text: skin.choices[2], tensionHint: skin.tensionHints[2] },
+    ],
+  };
+}
+
 /**
  * Computes variance for a given turn: starts at 2.5, tightens as evidence accumulates.
  * Approximates a conjugate prior without storing variance in WorldState.
@@ -231,32 +258,22 @@ async function handleChoice(
       turnsElapsed,
       layer: gameOver && worldState.layer === 10 ? 10 : advancedLayer,
       isComplete: gameOver,
+      currentNodeContent: null,
+      playerContext: session.playerContext ?? afterEO.playerContext,
+      storyMemory: session.storyMemory ?? afterEO.storyMemory,
     };
 
-    await store.updateSession(sessionId, {
-      worldState: newState,
-      status: gameOver ? "complete" : "active",
-    });
-
-    // --- Build the next node via Narrator AI ---
-    // If no skeleton exists for the next id (e.g., empty registry during migration),
-    // nextNode stays null — the client renders a game-over or waiting state.
     const narrationStart = Date.now();
     let narrationSource: TurnTrace["narrationSource"] = "llm";
+    let generatedCurrentNode: NarrativeSkin | null = null;
+    let generatedCurrentNodeId: string | null = null;
+    let generatedCurrentNodeCreatedAt: string | null = null;
     let nextNode: ScenarioNode | null = null;
 
     if (!gameOver) {
       const nextEntry = newState.currentNodeId ? getSkeleton(newState.currentNodeId) : null;
       if (nextEntry) {
-        const ctx: PlayerContext = newState.playerContext ?? {
-          businessLabel: "Your Venture",
-          businessSummary: "Your business in Accra",
-          businessDescription: "your business",
-          motivation: "to build something meaningful in Accra",
-          rawQ1Response: "",
-          rawQ2Response: "",
-          q2Prompt: "",
-        };
+        const ctx: PlayerContext = session.playerContext ?? newState.playerContext ?? defaultPlayerContext(newState);
         const worldCtx: NarrationWorldContext = {
           marketHeat: newState.marketDemand,
           competitorThreat: newState.competitorAggression,
@@ -267,31 +284,33 @@ async function handleChoice(
               ? (newState.worldEventHistory[newState.worldEventHistory.length - 1]?.narrativeHook ?? null)
               : null,
           sector: newState.sector,
-          businessLabel: ctx.businessLabel || "your business",
-          businessSummary: ctx.businessSummary || "your business",
-          storyMemory: newState.storyMemory,
+          businessLabel: ctx.businessLabel || "Your Venture",
+          businessSummary: ctx.businessSummary || newState.businessDescription || "Your business in Accra",
+          storyMemory: session.storyMemory ?? newState.storyMemory,
           choiceHistory: newState.choiceHistory,
           turnNumber: turnsElapsed,
-          // /choice only fires after the player has already seen and answered at least
-          // one scenario, so this narration is never the first scenario turn. The L1
-          // opening narration is produced by /session → narrateScenarioNode.
           isFirstScenarioTurn: false,
         };
         const [skin, source] = await generateSkin(nextEntry.skeleton, ctx, worldCtx);
         narrationSource = source;
-        newState.currentNodeContent = skin; // Persist the skin
-        nextNode = {
-          id: nextEntry.skeleton.id,
-          layer: nextEntry.skeleton.layer,
-          narrative: skin.narrative,
-          choices: [
-            { index: 0, text: skin.choices[0], tensionHint: skin.tensionHints[0] },
-            { index: 1, text: skin.choices[1], tensionHint: skin.tensionHints[1] },
-            { index: 2, text: skin.choices[2], tensionHint: skin.tensionHints[2] },
-          ],
-        };
+        generatedCurrentNode = skin;
+        generatedCurrentNodeId = nextEntry.skeleton.id;
+        generatedCurrentNodeCreatedAt = new Date().toISOString();
+        newState.currentNodeContent = skin;
+        nextNode = buildScenarioNode(nextEntry.skeleton.id, nextEntry.skeleton.layer, skin);
       }
     }
+
+    await store.updateSession(sessionId, {
+      status: gameOver ? "complete" : "active",
+      playerContext: session.playerContext ?? newState.playerContext ?? null,
+      storyMemory: session.storyMemory ?? newState.storyMemory ?? null,
+      generatedCurrentNode,
+      generatedCurrentNodeId,
+      generatedCurrentNodeCreatedAt,
+      narrationSource: gameOver ? null : narrationSource,
+      worldState: newState,
+    });
 
     // 7. Record trace for observability
     const trace: TurnTrace = {

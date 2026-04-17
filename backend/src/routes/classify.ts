@@ -6,22 +6,23 @@ import type {
   ClassifyQ1Response,
   ClassifyQ2Request,
   ClassifyQ2Response,
+  GameSession,
+  NarrativeSkin,
   PlayerContext,
   ScenarioSkeleton,
-  NarrativeSkin,
 } from "@hatchquest/shared";
-import type { ISessionStore } from "../store/types.js";
+import type { NarrationWorldContext } from "../engine/narrator-ai.js";
 import {
   assessLayer0,
-  classifyFromBothResponses,
-  generateQ2,
+  assessLayer0FromBothResponses,
   extractPlayerContext,
-  inferSectorFromText,
   generateDisplaySafeContext,
+  generateQ2,
   generateStoryMemory,
+  inferSectorFromText,
 } from "../engine/classifier.js";
 import type { RegisteredSkeleton } from "../skeletons/registry.js";
-import type { NarrationWorldContext } from "../engine/narrator-ai.js";
+import type { ISessionStore } from "../store/types.js";
 
 type GenerateSkinFn = (
   skeleton: ScenarioSkeleton,
@@ -35,14 +36,30 @@ interface ClassifyPluginOptions {
   generateSkin: GenerateSkinFn;
 }
 
+function toStoredPlayerContext(context: PlayerContext): PlayerContext {
+  return {
+    businessLabel: context.businessLabel,
+    businessSummary: context.businessSummary,
+    businessDescription: context.businessDescription,
+    motivation: context.motivation,
+    founderEdge: context.founderEdge,
+  };
+}
+
+function getStoredLayer0Q1(session: GameSession): string | null {
+  return session.layer0Q1Response ?? session.worldState.playerContext?.rawQ1Response ?? null;
+}
+
+function getStoredLayer0Q2Prompt(session: GameSession): string | null {
+  return session.layer0Q2Prompt ?? session.worldState.playerContext?.q2Prompt ?? null;
+}
+
 /** Registers all Layer 0 classify routes against the injected ISessionStore. */
 export const classifyRoutes: FastifyPluginAsync<ClassifyPluginOptions> = async (
   fastify,
   opts
 ) => {
   const { store, getSkeleton, generateSkin } = opts;
-
-  // ─── Legacy: POST /classify (single-step, kept for backward compat) ──────────
 
   fastify.post<{ Body: ClassifyRequest; Reply: ClassifyResponse | { error: string } }>(
     "/classify",
@@ -71,26 +88,37 @@ export const classifyRoutes: FastifyPluginAsync<ClassifyPluginOptions> = async (
         return reply.status(409).send({ error: "Session is already classified." });
       }
 
-      // Use full assessment to seed EO profile from Layer 0 signal
       const assessment = await assessLayer0(response);
+      const cleanContext = toStoredPlayerContext(
+        extractPlayerContext(response, "", "")
+      );
 
       await store.updateSession(sessionId, {
+        layer0Q1Response: response,
+        layer0Q2Prompt: null,
+        layer0Q2Response: null,
+        playerContext: cleanContext,
+        storyMemory: assessment.storyMemory,
+        generatedCurrentNode: null,
+        generatedCurrentNodeId: null,
+        generatedCurrentNodeCreatedAt: null,
+        narrationSource: null,
         worldState: {
           ...session.worldState,
           layer: 1,
           currentNodeId: assessment.layer1NodeId,
           eoProfile: assessment.initialEOProfile,
           sector: assessment.sector,
-          businessDescription: response,
+          businessDescription: cleanContext.businessDescription,
+          playerContext: cleanContext,
+          storyMemory: assessment.storyMemory,
+          currentNodeContent: null,
         },
       });
 
       return reply.status(200).send({ sessionId, layer1NodeId: assessment.layer1NodeId });
     }
   );
-
-  // ─── Two-step: POST /classify-q1 ─────────────────────────────────────────────
-  // Player submits Q1 answer. Backend stores it in playerContext and returns Q2.
 
   fastify.post<{ Body: ClassifyQ1Request; Reply: ClassifyQ1Response | { error: string } }>(
     "/classify-q1",
@@ -119,33 +147,32 @@ export const classifyRoutes: FastifyPluginAsync<ClassifyPluginOptions> = async (
         return reply.status(409).send({ error: "Session is already classified." });
       }
 
-      // Generate personalised Q2 from Q1 response
       const q2Prompt = await generateQ2(q1Response);
+      const cleanContext = extractPlayerContext(q1Response, "", q2Prompt);
 
-      // Temporarily store Q1 in playerContext so it survives session resume.
-      // Also persist sector + businessDescription immediately so Narrator AI
-      // has sector-aware framing even if Q2 classification later fails.
       await store.updateSession(sessionId, {
+        layer0Q1Response: q1Response,
+        layer0Q2Prompt: q2Prompt,
+        layer0Q2Response: null,
+        playerContext: null,
+        storyMemory: null,
+        generatedCurrentNode: null,
+        generatedCurrentNodeId: null,
+        generatedCurrentNodeCreatedAt: null,
+        narrationSource: null,
         worldState: {
           ...session.worldState,
           sector: inferSectorFromText(q1Response),
-          businessDescription: q1Response,
-          playerContext: {
-            businessDescription: q1Response,
-            motivation: "",
-            rawQ1Response: q1Response,
-            rawQ2Response: "",
-            q2Prompt,
-          },
+          businessDescription: cleanContext.businessDescription,
+          playerContext: null,
+          storyMemory: null,
+          currentNodeContent: null,
         },
       });
 
       return reply.status(200).send({ sessionId, q2Prompt });
     }
   );
-
-  // ─── Two-step: POST /classify-q2 ─────────────────────────────────────────────
-  // Player submits Q2 answer. Backend classifies both responses → Layer 1 node.
 
   fastify.post<{ Body: ClassifyQ2Request; Reply: ClassifyQ2Response | { error: string } }>(
     "/classify-q2",
@@ -174,64 +201,81 @@ export const classifyRoutes: FastifyPluginAsync<ClassifyPluginOptions> = async (
         return reply.status(409).send({ error: "Session is already classified." });
       }
 
-      const pc = session.worldState.playerContext;
-      if (!pc?.rawQ1Response) {
+      const q1Response = getStoredLayer0Q1(session);
+      const q2Prompt = getStoredLayer0Q2Prompt(session);
+      if (!q1Response || !q2Prompt) {
         return reply.status(400).send({ error: "Q1 must be submitted before Q2." });
       }
 
-      // Classify using both responses for richer EO signal
-      const layer1NodeId = await classifyFromBothResponses(pc.rawQ1Response, q2Response);
-
-      // Build the final PlayerContext with full extraction and AI refinement
-      const basePC = extractPlayerContext(pc.rawQ1Response, q2Response, pc.q2Prompt);
-      const refinedContext = await generateDisplaySafeContext(pc.rawQ1Response, q2Response);
-      const playerContext: PlayerContext = {
-        ...basePC,
-        businessLabel: refinedContext.businessLabel ?? basePC.businessLabel,
-        businessSummary: refinedContext.businessSummary ?? basePC.businessSummary,
-        founderEdge: refinedContext.founderEdge ?? "Resourceful founder",
+      const assessment = await assessLayer0FromBothResponses(q1Response, q2Response);
+      const layer1NodeId = assessment.layer1NodeId;
+      const baseContext = extractPlayerContext(q1Response, q2Response, q2Prompt);
+      const refinedContext = await generateDisplaySafeContext(q1Response, q2Response);
+      const storedPlayerContext = toStoredPlayerContext({
+        ...baseContext,
+        businessLabel: refinedContext.businessLabel ?? baseContext.businessLabel,
+        businessSummary: refinedContext.businessSummary ?? baseContext.businessSummary,
+        businessDescription:
+          refinedContext.businessSummary ?? baseContext.businessDescription,
+        founderEdge: refinedContext.founderEdge ?? baseContext.founderEdge,
+      });
+      const narratorContext: PlayerContext = {
+        ...storedPlayerContext,
+        rawQ1Response: q1Response,
+        rawQ2Response: q2Response,
+        q2Prompt,
       };
+      const storyMemory = await generateStoryMemory(q2Prompt, q2Response);
+      const sector = assessment.sector;
 
-      // Generate StoryMemory from Q2 arc
-      const storyMemory = await generateStoryMemory(pc.q2Prompt, q2Response);
-
-      // Advance to Layer 1 with full player context.
-      const sector = inferSectorFromText(`${pc.rawQ1Response} ${q2Response}`);
-
-      // Generate the skin for the first node immediately and persist it.
-      let currentNodeContent: NarrativeSkin | null = null;
       const nextEntry = getSkeleton(layer1NodeId);
-      if (nextEntry) {
-        const worldCtx: NarrationWorldContext = {
-          marketHeat: session.worldState.marketDemand,
-          competitorThreat: session.worldState.competitorAggression,
-          infrastructureStability: session.worldState.infrastructureReliability,
-          capital: session.worldState.capital,
-          lastEventNarrativeHook: null,
-          sector,
-          businessLabel: playerContext.businessLabel,
-          businessSummary: playerContext.businessSummary,
-          storyMemory,
-          choiceHistory: [],
-          turnNumber: 0,
-          isFirstScenarioTurn: true,
-          q2Prompt: pc.q2Prompt,
-          q2Response,
-        };
-        const [skin] = await generateSkin(nextEntry.skeleton, playerContext, worldCtx);
-        currentNodeContent = skin;
+      if (!nextEntry) {
+        return reply
+          .status(500)
+          .send({ error: `No skeleton found for node "${layer1NodeId}".` });
       }
 
+      const worldCtx: NarrationWorldContext = {
+        marketHeat: session.worldState.marketDemand,
+        competitorThreat: session.worldState.competitorAggression,
+        infrastructureStability: session.worldState.infrastructureReliability,
+        capital: session.worldState.capital,
+        lastEventNarrativeHook: null,
+        sector,
+        businessLabel: storedPlayerContext.businessLabel,
+        businessSummary: storedPlayerContext.businessSummary,
+        storyMemory,
+        choiceHistory: [],
+        turnNumber: 0,
+        isFirstScenarioTurn: true,
+      };
+      const [generatedCurrentNode, narrationSource] = await generateSkin(
+        nextEntry.skeleton,
+        narratorContext,
+        worldCtx
+      );
+      const cacheCreatedAt = new Date().toISOString();
+
       await store.updateSession(sessionId, {
+        layer0Q1Response: q1Response,
+        layer0Q2Prompt: q2Prompt,
+        layer0Q2Response: q2Response,
+        playerContext: storedPlayerContext,
+        storyMemory,
+        generatedCurrentNode,
+        generatedCurrentNodeId: layer1NodeId,
+        generatedCurrentNodeCreatedAt: cacheCreatedAt,
+        narrationSource,
         worldState: {
           ...session.worldState,
           layer: 1,
           currentNodeId: layer1NodeId,
-          playerContext,
+          eoProfile: assessment.initialEOProfile,
+          playerContext: storedPlayerContext,
           sector,
-          businessDescription: pc.rawQ1Response,
+          businessDescription: storedPlayerContext.businessDescription,
           storyMemory,
-          currentNodeContent,
+          currentNodeContent: generatedCurrentNode,
         },
       });
 
