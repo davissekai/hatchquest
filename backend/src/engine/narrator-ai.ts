@@ -34,11 +34,9 @@ const BANNED_PROPER_NOUNS = new Set([
   "Shopify",
 ]);
 
-// Hard caps on PlayerContext fields sent to the LLM.
-// Q1 answers are often multi-paragraph essays. Sending them uncapped causes the
-// LLM to echo the raw text verbatim into the narrative instead of paraphrasing.
+// Cap on businessDescription chars in the turn context block.
+// worldState.businessDescription is the raw Q1 text — we only need a short hint.
 const BUSINESS_DESCRIPTION_PROMPT_CAP = 120;
-const MOTIVATION_PROMPT_CAP = 100;
 
 function decapitalise(s: string): string {
   if (s.length === 0) return s;
@@ -49,46 +47,49 @@ const NARRATOR_SYSTEM_PROMPT = `You are a business simulation narrator set in Ac
 
 You will receive:
 1. A SITUATION SEED — the abstract scenario structure
-2. A PLAYER CONTEXT — their specific business and motivation
-3. Three CHOICE ARCHETYPES — the structural choices available
-4. WORLD CONDITIONS — current market signals the player can feel
-5. TURN CONTEXT — sector, a short business hint, recent choices, and whether
+2. Three CHOICE ARCHETYPES — the structural choices available
+3. WORLD CONDITIONS — current market signals the player can feel
+4. TURN CONTEXT — the player's sector, recent choices, turn number, and whether
    this is the very first scenario after Layer 0 classification. On the first
-   turn, Q2 SCENARIO and Q2 DECISION may also be provided.
+   turn, Q2 SCENARIO and Q2 DECISION are provided so you can continue the story.
 
-Your job: generate a personalised scenario that feels like it is happening to THIS player's specific business, in THIS player's specific market, in Accra.
+Your job: generate a scenario that feels like it is happening to THIS player's specific business, in THIS sector, in Accra.
 
 Return ONLY valid JSON with this exact shape:
 {
-  "narrative": "<2-3 paragraph scenario description, grounded in the player's business>",
+  "narrative": "<2-3 paragraph scenario description, grounded in the player's sector>",
   "choices": ["<choice 1 text>", "<choice 2 text>", "<choice 3 text>"],
   "tensionHints": ["<hint 1>", "<hint 2>", "<hint 3>"]
 }
 
-Rules:
-- Frame the scenario in the player's specific SECTOR and BUSINESS DESCRIPTION.
-  Never introduce physical-retail framing (shop space, shelves, packaging) for
-  a 'tech' sector player. Never introduce software-only framing for a 'retail',
-  'food', or 'agri' player. Use the sector you are given.
-- NEVER quote, copy, or closely paraphrase the raw business description text.
-  Use only short sector nouns: "your app", "your shop", "your farm", "your business".
+Sector framing rules — use the EXACT sector label from TURN CONTEXT:
+- "tech" → mobile app / platform / software business. Frame around users, bugs, features, growth.
+- "agri" → farming, produce, supply chain, rural/peri-urban buyers and sellers. Frame around harvests, logistics, market prices, buyers.
+- "retail" → physical or online shop. Frame around stock, customers, suppliers, location.
+- "food" → restaurant, catering, street food, snacks. Frame around recipe, supply, footfall, quality.
+- "services" → consulting, cleaning, logistics, repairs. Frame around clients, capacity, reputation.
+- "other" → general small business. Frame around customers, product, operations.
+Never mix sector framings. An agri player never deals with app bugs. A tech player never handles a harvest.
+
+Continuity rules:
 - If IS_FIRST_SCENARIO_TURN is YES and Q2 SCENARIO + Q2 DECISION are provided:
   the narrative MUST be the direct next chapter of that exact story — the next
-  day, week, or beat after the Q2 decision. Reference the specific situation
-  they faced and the path they chose. Do NOT start with a random new event.
-  The 3 choices must emerge naturally from that Q2 outcome.
-  Open with a short time-marker ("A week after...", "The day after your decision...").
+  day, week, or beat after the Q2 decision. Reference the specific situation and
+  what the player chose. Do NOT start a random new event.
+  The 3 choices must emerge naturally from the Q2 outcome.
+  Open with a short time-marker: "A week after...", "Two days after your decision...".
 - If IS_FIRST_SCENARIO_TURN is YES and no Q2 context is provided:
-  open with a short time-bridge phrase only ("A few weeks into building your app,..."
-  or "A few months in,..."). Keep the opener under 15 words.
-- If IS_FIRST_SCENARIO_TURN is no and RECENT CHOICES are present, open
-  with a single-sentence callback to the most recent choice (RECENT[0])
-  BEFORE the new scenario seed, so the player feels continuity.
-- Use Accra-specific details (locations, currency in GHS, local business culture)
-- Narrative must be rich and immersive, around 3 paragraphs long, to take advantage of a wide desktop reading format. Up to 1500 characters.
-- Choices must be substantive (1-3 sentences each), action-oriented, specific to the scenario.
-- Tension hints must describe the dilemma without using EO terminology
-- No markdown, no code fence, JSON only`;
+  open with a short time-bridge only: "A few weeks into building your platform,..."
+  Keep it under 15 words.
+- If IS_FIRST_SCENARIO_TURN is no and RECENT CHOICES are present:
+  open with one sentence recalling RECENT[0] before the new situation.
+
+Other rules:
+- Use Accra-specific details: locations, GHS currency, local business culture.
+- Narrative must be rich and immersive, ~3 paragraphs. Up to 1500 characters.
+- Choices must be 1–3 sentences each, action-oriented, specific to this exact scenario.
+- Tension hints describe the dilemma without EO jargon.
+- No markdown, no code fence, JSON only.`;
 
 export interface NarrationWorldContext {
   marketHeat: number;          // [0-100]
@@ -236,21 +237,12 @@ export async function generateNarrativeSkin(
     ? `\n\n${buildWorldConditionsBlock(worldCtx)}\n\n${buildTurnContextBlock(worldCtx)}`
     : "";
 
-  const businessShort =
-    context.businessDescription.length > BUSINESS_DESCRIPTION_PROMPT_CAP
-      ? `${context.businessDescription.slice(0, BUSINESS_DESCRIPTION_PROMPT_CAP).trim()}…`
-      : context.businessDescription;
+  // Sector and story context travel through worldBlock (TURN CONTEXT).
+  // Raw Q1/Q2 text is intentionally excluded from the user prompt — the LLM
+  // should frame from sector + Q2 story arc, not echo the player's essay.
+  void context; // PlayerContext kept in signature for API stability
 
-  const motivationShort =
-    context.motivation.length > MOTIVATION_PROMPT_CAP
-      ? `${context.motivation.slice(0, MOTIVATION_PROMPT_CAP).trim()}…`
-      : context.motivation;
-
-  const userPrompt = `SITUATION SEED: ${skeleton.situationSeed}
-
-PLAYER CONTEXT (use for framing only — do NOT reproduce these fields verbatim in the narrative):
-- Business: ${businessShort}
-- Motivation: ${motivationShort}${worldBlock}
+  const userPrompt = `SITUATION SEED: ${skeleton.situationSeed}${worldBlock}
 
 CHOICE ARCHETYPES:
 1. ${skeleton.choiceArchetypes[0].archetypeDescription} (tension: ${skeleton.choiceArchetypes[0].tensionAxis})
