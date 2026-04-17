@@ -86,6 +86,9 @@ export interface ChoiceRequest {
   nodeId: string;
   choiceIndex: 0 | 1 | 2;
   freeText?: string; // optional — for free-text choice variants
+  /** LLM-generated choice text displayed to the player. Used as the narrator
+   *  continuity callback on the next turn instead of the generic archetype label. */
+  chosenText?: string;
 }
 export interface ChoiceResponse {
   sessionId: string;

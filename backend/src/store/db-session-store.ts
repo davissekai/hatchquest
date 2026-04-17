@@ -1,20 +1,37 @@
 import { eq } from "drizzle-orm";
+import type { GameSession, SessionStatus } from "@hatchquest/shared";
 import { db } from "../db/client.js";
 import { gameSessions } from "../db/schema.js";
 import { createInitialWorldState } from "../engine/index.js";
-import type { GameSession, WorldState, SessionStatus } from "@hatchquest/shared";
 import { SessionNotFoundError, type ISessionStore } from "./types.js";
+
+function toIsoString(value: Date | null): string | null {
+  return value ? value.toISOString() : null;
+}
+
+function pickUpdateValue<T>(value: T | undefined, fallback: T): T {
+  return value === undefined ? fallback : value;
+}
 
 /** Maps a game_sessions DB row to the shared GameSession type. */
 function toGameSession(row: typeof gameSessions.$inferSelect): GameSession {
   return {
     id: row.id,
     // player_id FK not wired for demo phase — auth is a separate task
-    playerId: null,
-    worldState: row.worldState as WorldState,
+    playerId: row.playerId ?? null,
+    worldState: row.worldState,
     status: row.status as SessionStatus,
     createdAt: row.createdAt.toISOString(),
     updatedAt: row.updatedAt.toISOString(),
+    layer0Q1Response: row.layer0Q1Response ?? null,
+    layer0Q2Prompt: row.layer0Q2Prompt ?? null,
+    layer0Q2Response: row.layer0Q2Response ?? null,
+    playerContext: row.playerContext ?? null,
+    storyMemory: row.storyMemory ?? null,
+    generatedCurrentNode: row.generatedCurrentNode ?? null,
+    generatedCurrentNodeId: row.generatedCurrentNodeId ?? null,
+    generatedCurrentNodeCreatedAt: toIsoString(row.generatedCurrentNodeCreatedAt),
+    narrationSource: row.narrationSource ?? null,
   };
 }
 
@@ -26,6 +43,7 @@ function toGameSession(row: typeof gameSessions.$inferSelect): GameSession {
 export class DbSessionStore implements ISessionStore {
   /** Inserts a new active session row and returns the hydrated GameSession. */
   async createSession(playerName: string, email: string): Promise<GameSession> {
+    void playerName;
     // Pre-generate id so callers get a predictable UUID without a round-trip
     const id = crypto.randomUUID();
     const seed = (Math.random() * 1_000_000) | 0;
@@ -33,9 +51,15 @@ export class DbSessionStore implements ISessionStore {
 
     const [row] = await db
       .insert(gameSessions)
-      .values({ id, worldState, status: "active" })
+      .values({
+        id,
+        playerId: null,
+        worldState,
+        status: "active",
+      })
       .returning();
 
+    void email;
     return toGameSession(row);
   }
 
@@ -61,8 +85,30 @@ export class DbSessionStore implements ISessionStore {
     const [row] = await db
       .update(gameSessions)
       .set({
-        worldState: update.worldState ?? existing.worldState,
-        status: update.status ?? existing.status,
+        worldState: pickUpdateValue(update.worldState, existing.worldState),
+        status: pickUpdateValue(update.status, existing.status),
+        layer0Q1Response: pickUpdateValue(update.layer0Q1Response, existing.layer0Q1Response),
+        layer0Q2Prompt: pickUpdateValue(update.layer0Q2Prompt, existing.layer0Q2Prompt),
+        layer0Q2Response: pickUpdateValue(update.layer0Q2Response, existing.layer0Q2Response),
+        playerContext: pickUpdateValue(update.playerContext, existing.playerContext),
+        storyMemory: pickUpdateValue(update.storyMemory, existing.storyMemory),
+        generatedCurrentNode: pickUpdateValue(
+          update.generatedCurrentNode,
+          existing.generatedCurrentNode
+        ),
+        generatedCurrentNodeId: pickUpdateValue(
+          update.generatedCurrentNodeId,
+          existing.generatedCurrentNodeId
+        ),
+        generatedCurrentNodeCreatedAt:
+          update.generatedCurrentNodeCreatedAt === undefined
+            ? existing.generatedCurrentNodeCreatedAt
+              ? new Date(existing.generatedCurrentNodeCreatedAt)
+              : null
+            : update.generatedCurrentNodeCreatedAt
+              ? new Date(update.generatedCurrentNodeCreatedAt)
+              : null,
+        narrationSource: pickUpdateValue(update.narrationSource, existing.narrationSource),
         updatedAt: new Date(),
       })
       .where(eq(gameSessions.id, id))

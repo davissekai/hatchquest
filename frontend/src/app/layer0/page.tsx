@@ -162,11 +162,15 @@ You have GHS 10,000 and an idea. That is where your story starts.`;
         <main className="relative z-10 flex flex-col items-center justify-center px-6 pt-16 pb-20 min-h-[90vh]">
           <div className="max-w-3xl w-full bg-white p-10 md:p-14 rounded-[2rem] shadow-[16px_16px_0px_#0f172a] border-[8px] border-slate-900 relative">
             <form onSubmit={handleQ2Submit} className="flex flex-col gap-8">
-              <p className="text-slate-900 font-headline font-black text-2xl uppercase tracking-tighter bg-[#FFC107] border-4 border-slate-900 rounded-[1.5rem] p-6 shadow-[6px_6px_0px_#0f172a]">
+              <p
+                id="q2-prompt"
+                className="text-slate-900 font-headline font-black text-2xl uppercase tracking-tighter bg-[#FFC107] border-4 border-slate-900 rounded-[1.5rem] p-6 shadow-[6px_6px_0px_#0f172a]"
+              >
                 {q2Prompt}
               </p>
               <textarea
                 id="q2-response"
+                aria-labelledby="q2-prompt"
                 value={q2Response}
                 onChange={(e) => setQ2Response(e.target.value)}
                 placeholder="What do you do?"

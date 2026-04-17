@@ -46,6 +46,8 @@ const BASE_STATE: WorldState = {
   vcWindowOpen: false,
   hiringDifficulty: 0,
   worldEventHistory: [],
+  storyMemory: null,
+  currentNodeContent: null,
 };
 
 // ─── propagateWorldStocks ─────────────────────────────────────────────────────

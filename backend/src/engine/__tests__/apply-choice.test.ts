@@ -277,17 +277,17 @@ describe("recordChoiceOnState", () => {
     expect(next.choiceHistory[0]?.effectSummary).toContain("-1k capital");
   });
 
-  it("trims choiceHistory to MAX_CHOICE_HISTORY=3", () => {
+  it("trims choiceHistory to MAX_CHOICE_HISTORY=5", () => {
     let state = makeState();
-    for (let i = 0; i < 5; i++) {
+    for (let i = 0; i < 7; i++) {
       state = recordChoiceOnState(state, zeroEffect, {
         nodeId: `node-${i}`,
         choiceLabel: `choice ${i}`,
       });
     }
-    expect(state.choiceHistory).toHaveLength(3);
-    expect(state.choiceHistory[0]?.nodeId).toBe("node-4"); // newest first
-    expect(state.choiceHistory[2]?.nodeId).toBe("node-2");
+    expect(state.choiceHistory).toHaveLength(5);
+    expect(state.choiceHistory[0]?.nodeId).toBe("node-6"); // newest first
+    expect(state.choiceHistory[4]?.nodeId).toBe("node-2");
   });
 
   it("prepends narrativePattern to recentPatterns and trims to 2", () => {

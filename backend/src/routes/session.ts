@@ -1,14 +1,16 @@
 import type { FastifyPluginAsync, FastifyReply, FastifyRequest } from "fastify";
 import type {
-  ScenarioNode,
+  GameSession,
+  NarrativeSkin,
   PlayerContext,
+  ScenarioNode,
   WorldState,
 } from "@hatchquest/shared";
-import type { ISessionStore } from "../store/types.js";
-import type { RegisteredSkeleton } from "../skeletons/registry.js";
-import type { GenerateSkinFn } from "./choice.js";
 import type { NarrationWorldContext } from "../engine/narrator-ai.js";
 import { narrateScenarioNode } from "../narration/narrator.js";
+import type { RegisteredSkeleton } from "../skeletons/registry.js";
+import type { ISessionStore } from "../store/types.js";
+import type { GenerateSkinFn } from "./choice.js";
 import { toClientState } from "./helpers.js";
 
 export interface SessionRegistry {
@@ -18,14 +20,7 @@ export interface SessionRegistry {
 export interface SessionRouteOptions {
   store: ISessionStore;
   getNode: SessionRegistry["getNode"];
-  /**
-   * Optional: skeleton accessor. Required for L1-opening narration via
-   * generateSkin (so isFirstScenarioTurn + businessDescription plumb into
-   * the Narrator AI prompt). If not supplied, /session falls back to the
-   * deterministic narrateScenarioNode path for all nodes.
-   */
   getSkeleton?: (id: string) => RegisteredSkeleton | null;
-  /** Optional: Narrator AI skin generator, same one /choice uses. */
   generateSkin?: GenerateSkinFn;
 }
 
@@ -33,12 +28,6 @@ interface SessionParams {
   sessionId: string;
 }
 
-/**
- * Detects whether the current render is the L1 opening scenario — the
- * very first node the player sees after Layer 0 classification. On this
- * turn and only this turn we want isFirstScenarioTurn=true so the
- * Narrator AI emits a time-bridge opener referencing businessDescription.
- */
 function isL1OpeningTurn(state: WorldState): boolean {
   return (
     state.layer === 1 &&
@@ -47,20 +36,63 @@ function isL1OpeningTurn(state: WorldState): boolean {
   );
 }
 
-/**
- * Renders the current scenario node for /session.
- * - L1 opening (no choices applied yet) AND a skin pipeline is wired up
- *   → generate a Narrator AI skin with isFirstScenarioTurn=true.
- * - Every other turn → use narrateScenarioNode (cheap deterministic
- *   rewrite that adds world-state context to the skeleton seed).
- */
+function nodeFromSkin(
+  nodeId: string,
+  layer: number,
+  skin: NarrativeSkin
+): ScenarioNode {
+  return {
+    id: nodeId,
+    layer,
+    narrative: skin.narrative,
+    choices: [
+      { index: 0, text: skin.choices[0], tensionHint: skin.tensionHints[0] },
+      { index: 1, text: skin.choices[1], tensionHint: skin.tensionHints[1] },
+      { index: 2, text: skin.choices[2], tensionHint: skin.tensionHints[2] },
+    ],
+  };
+}
+
+function getCleanPlayerContext(session: GameSession, worldState: WorldState): PlayerContext {
+  return (
+    session.playerContext ??
+    worldState.playerContext ?? {
+      businessLabel: "Your Venture",
+      businessSummary: worldState.businessDescription || "Your business in Accra",
+      businessDescription: worldState.businessDescription || "Your business in Accra",
+      motivation: "To build something meaningful in Accra.",
+      founderEdge: "Resourceful founder",
+    }
+  );
+}
+
 async function renderCurrentNode(
-  worldState: WorldState,
+  session: GameSession,
   getNode: SessionRegistry["getNode"],
   getSkeleton: SessionRouteOptions["getSkeleton"],
   generateSkin: GenerateSkinFn | undefined
 ): Promise<ScenarioNode | null> {
+  const { worldState } = session;
   if (worldState.currentNodeId === null) return null;
+
+  if (
+    session.generatedCurrentNode &&
+    session.generatedCurrentNodeId === worldState.currentNodeId
+  ) {
+    return nodeFromSkin(
+      worldState.currentNodeId,
+      worldState.layer,
+      session.generatedCurrentNode
+    );
+  }
+
+  if (worldState.currentNodeContent) {
+    return nodeFromSkin(
+      worldState.currentNodeId,
+      worldState.layer,
+      worldState.currentNodeContent
+    );
+  }
 
   const canSkin =
     isL1OpeningTurn(worldState) &&
@@ -70,13 +102,7 @@ async function renderCurrentNode(
   if (canSkin) {
     const entry = getSkeleton(worldState.currentNodeId);
     if (entry) {
-      const ctx: PlayerContext = worldState.playerContext ?? {
-        businessDescription: worldState.businessDescription || "your business",
-        motivation: "to build something meaningful in Accra",
-        rawQ1Response: "",
-        rawQ2Response: "",
-        q2Prompt: "",
-      };
+      const ctx = getCleanPlayerContext(session, worldState);
       const worldCtx: NarrationWorldContext = {
         marketHeat: worldState.marketDemand,
         competitorThreat: worldState.competitorAggression,
@@ -88,24 +114,15 @@ async function renderCurrentNode(
                 ?.narrativeHook ?? null)
             : null,
         sector: worldState.sector,
-        businessDescription: worldState.businessDescription,
+        businessLabel: ctx.businessLabel,
+        businessSummary: ctx.businessSummary,
+        storyMemory: session.storyMemory ?? worldState.storyMemory,
         choiceHistory: worldState.choiceHistory,
         turnNumber: 0,
-        // Critical: this is the L1 opening — the narrator must emit
-        // a time-bridge opener referencing the player's business.
         isFirstScenarioTurn: true,
       };
       const [skin] = await generateSkin(entry.skeleton, ctx, worldCtx);
-      return {
-        id: entry.skeleton.id,
-        layer: entry.skeleton.layer,
-        narrative: skin.narrative,
-        choices: [
-          { index: 0, text: skin.choices[0], tensionHint: skin.tensionHints[0] },
-          { index: 1, text: skin.choices[1], tensionHint: skin.tensionHints[1] },
-          { index: 2, text: skin.choices[2], tensionHint: skin.tensionHints[2] },
-        ],
-      };
+      return nodeFromSkin(entry.skeleton.id, entry.skeleton.layer, skin);
     }
   }
 
@@ -127,9 +144,8 @@ async function handleGetSession(
     return reply.status(404).send({ error: `Session not found: ${sessionId}` });
   }
 
-  const { worldState } = session;
   const currentNode = await renderCurrentNode(
-    worldState,
+    session,
     getNode,
     getSkeleton,
     generateSkin
@@ -137,7 +153,7 @@ async function handleGetSession(
 
   return reply.status(200).send({
     sessionId,
-    clientState: toClientState(worldState),
+    clientState: toClientState(session.worldState),
     currentNode,
   });
 }

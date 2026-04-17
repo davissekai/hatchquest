@@ -3,21 +3,32 @@
 import { useMemo } from "react";
 import type { ClientWorldState } from "@hatchquest/shared";
 
+// Intentional: in-game HUD does NOT show Current Business or EO Profile.
+// Those belong on the results page only.
+
 interface WorldHUDProps {
   clientState: ClientWorldState;
 }
 
 function PulseBar({ label, value, barClass }: { label: string; value: number; barClass: string }) {
   const pct = Math.max(0, Math.min(100, value));
+  const rounded = Math.round(pct);
   return (
     <div className="flex flex-col gap-1">
       <div className="flex items-baseline justify-between">
         <span className="font-headline font-black text-[0.7rem] uppercase tracking-widest text-slate-700">
           {label}
         </span>
-        <span className="font-headline font-black text-sm text-slate-900 tabular-nums">{Math.round(pct)}</span>
+        <span className="font-headline font-black text-sm text-slate-900 tabular-nums">{rounded}</span>
       </div>
-      <div className="h-3 bg-white border-2 border-slate-900 rounded-full overflow-hidden">
+      <div
+        role="progressbar"
+        aria-label={label}
+        aria-valuenow={rounded}
+        aria-valuemin={0}
+        aria-valuemax={100}
+        className="h-3 bg-white border-2 border-slate-900 rounded-full overflow-hidden"
+      >
         <div className={`h-full ${barClass}`} style={{ width: `${pct}%` }} />
       </div>
     </div>
@@ -25,11 +36,7 @@ function PulseBar({ label, value, barClass }: { label: string; value: number; ba
 }
 
 export function WorldHUD({ clientState }: WorldHUDProps) {
-  const { worldSignals, playerBusinessName } = clientState;
-
-  const currentBusiness = useMemo(() => {
-    return playerBusinessName || "Local Commerce";
-  }, [playerBusinessName]);
+  const { worldSignals } = clientState;
 
   const activeCrisis = useMemo(() => {
     return worldSignals?.lastEventLabel || null;
@@ -42,19 +49,6 @@ export function WorldHUD({ clientState }: WorldHUDProps) {
       <h2 className="font-headline font-black text-2xl uppercase tracking-tighter text-slate-900 border-b-8 border-slate-900 pb-2">
         World Data
       </h2>
-
-      {/* Sector Panel */}
-      <div className="bg-lime border-4 border-slate-900 rounded-[1.5rem] p-5 shadow-[4px_4px_0px_#0f172a] relative overflow-hidden">
-        <div className="absolute -top-3 -right-3 w-16 h-16 bg-[#FFC107] border-4 border-slate-900 rounded-full opacity-50" />
-        <div className="relative z-10 flex flex-col gap-1">
-          <span className="font-headline font-black text-xs uppercase tracking-widest text-slate-800">
-            Current Business
-          </span>
-          <span className="font-headline font-black text-2xl text-slate-900 drop-shadow-sm leading-none mt-1">
-            {currentBusiness}
-          </span>
-        </div>
-      </div>
 
       {/* World Pulse — the three fixed signal bars */}
       <div className="bg-white border-4 border-slate-900 rounded-[1.5rem] p-5 shadow-[4px_4px_0px_#0f172a] flex flex-col gap-4">

@@ -123,15 +123,18 @@ export default function Results() {
             <Starburst className="w-80 h-80 bottom-[-100px] -right-20 rotate-[15deg] opacity-20 pointer-events-none" fill="var(--color-pill-blue)" />
             
             <div className="relative z-10 max-w-2xl mx-auto space-y-6">
-              <div className="inline-block px-8 py-3 bg-[#FFC107] border-[4px] border-slate-900 rounded-full font-headline font-black text-sm uppercase tracking-widest shadow-[6px_6px_0px_#0f172a] rotate-[-2deg]">
+              <div
+                role="status"
+                className="inline-block px-8 py-3 bg-[#FFC107] border-[4px] border-slate-900 rounded-full font-headline font-black text-sm uppercase tracking-widest shadow-[6px_6px_0px_#0f172a] rotate-[-2deg]"
+              >
                 Quest Complete
               </div>
-              <div className="text-[10rem] md:text-[14rem] font-headline font-black text-slate-900 leading-none tracking-tighter shadow-none drop-shadow-[12px_12px_0px_var(--color-lime)]">
+              <h1
+                aria-label={`Acumen score ${score.toFixed(1)}`}
+                className="text-[10rem] md:text-[14rem] font-headline font-black text-slate-900 leading-none tracking-tighter shadow-none drop-shadow-[12px_12px_0px_var(--color-lime)] m-0"
+              >
                 {score.toFixed(1)}
-              </div>
-              <p className="font-headline text-2xl font-black text-slate-900 tracking-widest uppercase">
-                Acumen Score
-              </p>
+              </h1>
               <div className="pt-8">
                 <h2 className="font-headline text-5xl md:text-7xl font-black text-pill-red uppercase tracking-tighter leading-tight drop-shadow-[4px_4px_0px_#0f172a]">
                   {verdict.text}
@@ -217,7 +220,15 @@ export default function Results() {
                             {/* Current Run */}
                             <div className="h-4 bg-pill-blue border-[3px] border-slate-900 rounded-full shadow-[2px_2px_0px_#0f172a]" style={{ width: `${(curr / 10) * 100}%` }} />
                           </div>
-                          <span className={`font-headline font-black text-xl w-16 text-right md:text-left ${diff > 0 ? "text-lime" : diff < 0 ? "text-pill-red" : "text-slate-400"}`}>
+                          <span
+                            className={`font-headline font-black text-xl w-16 text-right md:text-left px-2 rounded ${
+                              diff > 0
+                                ? "text-slate-900 bg-lime"
+                                : diff < 0
+                                  ? "text-white bg-pill-red"
+                                  : "text-slate-500"
+                            }`}
+                          >
                             {diff > 0 ? `+${diff.toFixed(1)}` : diff.toFixed(1)}
                           </span>
                         </div>
@@ -240,7 +251,7 @@ export default function Results() {
               </h3>
               <div className="space-y-6">
                 {/* Capital */}
-                <div className="bg-[#F5F2EB] p-8 rounded-[1.5rem] border-[6px] border-slate-900 shadow-[8px_8px_0px_#0f172a]">
+                <div className="bg-[#F5F2EB] p-8 rounded-[1.5rem] border-[3px] border-slate-900">
                   <div className="flex justify-between items-end mb-6">
                     <span className="font-headline font-black text-slate-500 text-sm uppercase tracking-widest">Capital</span>
                     <span className={`font-headline font-black text-4xl uppercase tracking-tighter ${capitalTextClass}`}>
@@ -257,7 +268,7 @@ export default function Results() {
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   {/* Reputation */}
-                  <div className="bg-[#F5F2EB] p-8 rounded-[1.5rem] border-[6px] border-slate-900 shadow-[8px_8px_0px_#0f172a]">
+                  <div className="bg-[#F5F2EB] p-8 rounded-[1.5rem] border-[3px] border-slate-900">
                     <div className="flex justify-between items-end mb-6">
                       <span className="font-headline font-black text-slate-500 text-sm uppercase tracking-widest">Rep</span>
                       <span className="font-headline font-black text-4xl text-hot-pink uppercase tracking-tighter">
@@ -273,7 +284,7 @@ export default function Results() {
                   </div>
 
                   {/* Network */}
-                  <div className="bg-[#F5F2EB] p-8 rounded-[1.5rem] border-[6px] border-slate-900 shadow-[8px_8px_0px_#0f172a]">
+                  <div className="bg-[#F5F2EB] p-8 rounded-[1.5rem] border-[3px] border-slate-900">
                     <div className="flex justify-between items-end mb-6">
                       <span className="font-headline font-black text-slate-500 text-sm uppercase tracking-widest">Network</span>
                       <span className="font-headline font-black text-4xl text-pill-blue uppercase tracking-tighter">

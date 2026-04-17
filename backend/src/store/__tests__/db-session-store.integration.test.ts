@@ -237,6 +237,48 @@ describe.skipIf(!DB_AVAILABLE)(
         expect(refetched?.worldState.capital).toBe(5_000);
       });
 
+      it("persists Layer 0 continuity fields through the DB-backed store", async () => {
+        const session = await store.createSession("Yaw", "yaw@test.com");
+        createdIds.push(session.id);
+
+        await store.updateSession(session.id, {
+          layer0Q1Response: "Raw Q1",
+          layer0Q2Prompt: "Prompt Q2",
+          layer0Q2Response: "Raw Q2",
+          playerContext: {
+            businessLabel: "Market Ops App",
+            businessSummary: "a software venture helping small businesses run operations with more control",
+            businessDescription:
+              "a software venture helping small businesses run operations with more control",
+            motivation: "To solve an obvious market problem and turn it into a lasting venture.",
+            founderEdge: "Fast-moving operator under pressure",
+          },
+          storyMemory: {
+            lastBeatSummary:
+              "You answered an early supplier disruption with a decisive operational response.",
+            openThread: "the unresolved supplier disruption",
+            continuityAnchor: "supplier disruption still threatening your first momentum",
+            recentDecisionStyle: "decisive operational response",
+            currentArc: "First Market Test",
+          },
+          generatedCurrentNode: {
+            narrative: "Two days after the supplier disruption, the pressure returns.",
+            choices: ["A", "B", "C"],
+            tensionHints: ["h1", "h2", "h3"],
+          },
+          generatedCurrentNodeId: "L1-node-1",
+          generatedCurrentNodeCreatedAt: new Date().toISOString(),
+          narrationSource: "fallback",
+        });
+
+        const refetched = await store.getSession(session.id);
+        expect(refetched?.layer0Q1Response).toBe("Raw Q1");
+        expect(refetched?.playerContext?.businessLabel).toBe("Market Ops App");
+        expect(refetched?.storyMemory?.continuityAnchor).toContain("supplier disruption");
+        expect(refetched?.generatedCurrentNodeId).toBe("L1-node-1");
+        expect(refetched?.narrationSource).toBe("fallback");
+      });
+
       it("throws SessionNotFoundError for an unknown id", async () => {
         const unknownId = "00000000-0000-0000-0000-000000000000";
 

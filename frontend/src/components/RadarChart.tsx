@@ -100,8 +100,10 @@ const RadarChart: React.FC<RadarChartProps> = ({
 
       {/* Labels */}
       {labels.map((dim, i) => {
-        // Push labels slightly further out
-        const p = getPoint(maxValue + 15, i);
+        // Push labels ~15% beyond the max radius. Must scale proportionally to
+        // maxValue — an additive offset breaks at low maxValue (e.g. 10) because
+        // getPoint scales r by (value / maxValue).
+        const p = getPoint(maxValue * 1.18, i);
         return (
           <text
             key={`label-${i}`}

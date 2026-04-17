@@ -118,7 +118,12 @@ export async function buildApp(
 
   // ── Game routes ─────────────────────────────────────────────────────────────
   app.register(startRoutes, { prefix, store });
-  app.register(classifyRoutes, { prefix, store });
+  app.register(classifyRoutes, {
+    prefix,
+    store,
+    getSkeleton,
+    generateSkin: generateNarrativeSkin,
+  });
   app.register(choiceRoutes, {
     prefix,
     store,

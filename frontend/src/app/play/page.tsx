@@ -8,7 +8,6 @@ import RetroTransition from "@/components/RetroTransition";
 import ErrorBanner from "@/components/ErrorBanner";
 import LoadingOverlay from "@/components/LoadingOverlay";
 import { WorldHUD } from "@/components/WorldHUD";
-import RadarChart from "@/components/RadarChart";
 import { Starburst, Sparkle } from "@/components/Decorations";
 import type { ClientWorldState } from "@hatchquest/shared";
 
@@ -76,7 +75,7 @@ export default function Gameplay() {
       setIsTransitioning(true);
 
       try {
-        const complete = await makeChoice(currentNode.id, index as 0 | 1 | 2);
+        const complete = await makeChoice(currentNode.id, index as 0 | 1 | 2, choice.text);
         setIsFinalTransition(complete);
       } catch {
         setChoiceDisabled(false);
@@ -121,14 +120,6 @@ export default function Gameplay() {
       </div>
     );
   }
-
-  const dummyEo = {
-    autonomy: 60,
-    innovativeness: 40,
-    proactiveness: 80,
-    riskTaking: 50,
-    competitiveAggressiveness: 70
-  };
 
   return (
     <div className="bg-[#F5F2EB] text-slate-900 min-h-screen h-screen overflow-hidden relative selection:bg-hot-pink selection:text-white">
@@ -272,33 +263,14 @@ export default function Gameplay() {
           )}
         </section>
 
-        {/* ── Right Pane (World & Radar) ── */}
+        {/* ── Right Pane (World only — EO Profile is results-only) ── */}
         <aside className="hidden lg:flex flex-col gap-8 h-full overflow-y-auto pl-2 pb-10 custom-scrollbar">
           <div className="bg-white rounded-[2rem] p-6 shadow-[12px_12px_0px_#0f172a] border-[6px] border-slate-900">
             <WorldHUD clientState={clientState!} />
           </div>
-          
-          <div className="bg-white rounded-[2rem] p-6 shadow-[12px_12px_0px_#0f172a] border-[6px] border-slate-900 flex flex-col items-center flex-1">
-            <h2 className="font-headline font-black text-slate-900 text-2xl uppercase tracking-tighter mb-6 border-b-8 border-slate-900 w-full text-center pb-2">EO Profile</h2>
-            <div className="w-full flex-1 flex items-center justify-center">
-              <RadarChart dimensions={dummyEo} maxValue={100} />
-            </div>
-          </div>
         </aside>
 
       </main>
-
-      <style dangerouslySetInnerHTML={{__html: `
-        .custom-scrollbar::-webkit-scrollbar { width: 12px; }
-        .custom-scrollbar::-webkit-scrollbar-track { background: #F5F2EB; border-left: 4px solid #0f172a; }
-        .custom-scrollbar::-webkit-scrollbar-thumb { background: #0f172a; border: 2px solid #F5F2EB; border-radius: 10px; }
-        .hide-scrollbar::-webkit-scrollbar { display: none; }
-        .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
-        @keyframes shine {
-          100% { transform: translateX(200%); }
-        }
-        .animate-shine { animation: shine 1.5s ease-in-out infinite; }
-      `}} />
     </div>
   );
 }
