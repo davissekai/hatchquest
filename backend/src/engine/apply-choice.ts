@@ -22,8 +22,9 @@ function clamp(value: number, min: number, max: number): number {
   return Math.max(min, Math.min(max, value));
 }
 
-// Max length of choiceHistory kept on WorldState.
-const MAX_CHOICE_HISTORY = 3;
+// Max length of choiceHistory kept on WorldState. 5 covers half the 10-turn arc,
+// giving the narrator enough story context for vivid continuity callbacks.
+const MAX_CHOICE_HISTORY = 5;
 // Max length of recentPatterns kept on WorldState.
 const MAX_RECENT_PATTERNS = 2;
 

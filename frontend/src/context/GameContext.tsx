@@ -36,8 +36,8 @@ interface GameContextType {
   submitQ1: (q1Response: string) => Promise<string>;
   /** Submit Q2 response. Advances session to Layer 1. */
   submitQ2: (q2Response: string) => Promise<void>;
-  /** Submit a choice by index. Returns isComplete flag. */
-  makeChoice: (nodeId: string, choiceIndex: 0 | 1 | 2) => Promise<boolean>;
+  /** Submit a choice by index and the displayed choice text. Returns isComplete flag. */
+  makeChoice: (nodeId: string, choiceIndex: 0 | 1 | 2, chosenText?: string) => Promise<boolean>;
   /** Hydrate state from an existing sessionId (resume flow). Returns the phase. */
   resumeSession: (explicitId?: string) => Promise<SessionPhase>;
   /** Fetch and store results for a completed session. */
@@ -168,7 +168,8 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
 
   const makeChoice = async (
     nodeId: string,
-    choiceIndex: 0 | 1 | 2
+    choiceIndex: 0 | 1 | 2,
+    chosenText?: string
   ): Promise<boolean> => {
     if (!state.sessionId) throw new Error("No active session");
     setIsLoading(true);
@@ -178,6 +179,7 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
         sessionId: state.sessionId,
         nodeId,
         choiceIndex,
+        chosenText,
       });
       patch({
         clientState: res.clientState,

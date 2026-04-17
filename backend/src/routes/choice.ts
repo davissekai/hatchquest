@@ -38,6 +38,8 @@ interface ChoiceBody {
   sessionId: string;
   nodeId: string;
   choiceIndex: number;
+  /** LLM-generated choice text shown to the player — stored as narrator continuity label. */
+  chosenText?: string;
 }
 
 const EO_DIMENSIONS: EODimension[] = [
@@ -120,7 +122,7 @@ async function handleChoice(
   generateSkin: ChoiceRouteOptions["generateSkin"],
   selectNextNodeId: (state: WorldState) => string | null
 ): Promise<void> {
-  const { sessionId, nodeId, choiceIndex } = request.body ?? {};
+  const { sessionId, nodeId, choiceIndex, chosenText } = request.body ?? {};
 
   if (!isNonEmptyString(sessionId) || !isNonEmptyString(nodeId)) {
     return reply
@@ -164,7 +166,12 @@ async function handleChoice(
 
     // 1b. Record choice metadata (history + recent patterns) for narrator continuity
     //     and director pattern-repeat suppression on the next turn.
+    // Prefer the LLM-generated choice text the player actually read over the generic
+    // archetype description — this makes continuity callbacks vivid and story-specific.
     const choiceLabel =
+      (typeof chosenText === "string" && chosenText.trim().length > 0
+        ? chosenText.trim()
+        : null) ??
       currentEntry.skeleton.choiceArchetypes[choiceIndex]?.archetypeDescription ??
       `choice ${choiceIndex + 1}`;
     const afterEffect = recordChoiceOnState(afterEffectRaw, effect, {

@@ -75,7 +75,7 @@ export default function Gameplay() {
       setIsTransitioning(true);
 
       try {
-        const complete = await makeChoice(currentNode.id, index as 0 | 1 | 2);
+        const complete = await makeChoice(currentNode.id, index as 0 | 1 | 2, choice.text);
         setIsFinalTransition(complete);
       } catch {
         setChoiceDisabled(false);
