@@ -10,7 +10,15 @@ import {
   primaryKey,
 } from "drizzle-orm/pg-core";
 import { sql } from "drizzle-orm";
-import type { WorldState, SessionStatus, Choice } from "@hatchquest/shared";
+import type {
+  Choice,
+  NarrationSource,
+  NarrativeSkin,
+  PlayerContext,
+  SessionStatus,
+  StoryMemory,
+  WorldState,
+} from "@hatchquest/shared";
 
 // Players — one row per registered user. player_id FK in game_sessions.
 export const players = pgTable("players", {
@@ -27,6 +35,17 @@ export const gameSessions = pgTable("game_sessions", {
   playerId: uuid("player_id").references(() => players.id, { onDelete: "cascade" }),
   worldState: jsonb("world_state").$type<WorldState>().notNull(),
   status: text("status").$type<SessionStatus>().notNull().default("active"),
+  layer0Q1Response: text("layer0_q1_response"),
+  layer0Q2Prompt: text("layer0_q2_prompt"),
+  layer0Q2Response: text("layer0_q2_response"),
+  playerContext: jsonb("player_context").$type<PlayerContext>(),
+  storyMemory: jsonb("story_memory").$type<StoryMemory>(),
+  generatedCurrentNode: jsonb("generated_current_node").$type<NarrativeSkin>(),
+  generatedCurrentNodeId: text("generated_current_node_id"),
+  generatedCurrentNodeCreatedAt: timestamp("generated_current_node_created_at", {
+    withTimezone: true,
+  }),
+  narrationSource: text("narration_source").$type<NarrationSource>(),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   completedAt: timestamp("completed_at", { withTimezone: true }),

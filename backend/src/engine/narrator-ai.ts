@@ -1,14 +1,3 @@
-/**
- * Narrator AI — generates personalised scenario narrative from a skeleton + PlayerContext.
- *
- * Pipeline:
- *   generateNarrativeSkin(skeleton, context, worldCtx?)
- *     → LLM call (Claude Haiku) if ANTHROPIC_API_KEY is set and MOCK_LLM != "1"
- *     → buildFallbackSkin on any failure, including timeout or missing key
- *     → validateNarration on LLM output; validator-rejected → buildFallbackSkin
- *
- * The fallback is deterministic and always valid.
- */
 import Anthropic from "@anthropic-ai/sdk";
 import type {
   BusinessSector,
@@ -22,10 +11,8 @@ import { isMockLLM, mockGenerateSkin } from "../lib/mock-anthropic.js";
 
 const NARRATOR_TIMEOUT_MS = 12_000;
 const ANTHROPIC_MODEL = process.env.ANTHROPIC_MODEL ?? "claude-haiku-4-5";
+const BUSINESS_SUMMARY_PROMPT_CAP = 140;
 
-// Hard-banned proper nouns the narrator must never use (foreign brands, off-setting names).
-// We allow any other capitalised word — the whitelist approach was too strict and was
-// silently knocking nearly every LLM response into the fallback path.
 const BANNED_PROPER_NOUNS = new Set([
   "Apple",
   "Google",
@@ -35,25 +22,84 @@ const BANNED_PROPER_NOUNS = new Set([
   "Shopify",
 ]);
 
-// Cap on businessDescription chars in the turn context block.
-// worldState.businessDescription is the raw Q1 text — we only need a short hint.
-const BUSINESS_DESCRIPTION_PROMPT_CAP = 120;
-
 function decapitalise(s: string): string {
   if (s.length === 0) return s;
   return s[0].toLowerCase() + s.slice(1);
 }
 
+function normalizeWhitespace(text: string): string {
+  return text.replace(/\s+/g, " ").trim();
+}
+
+function normalizeForComparison(text: string): string {
+  return text.toLowerCase().replace(/[^a-z0-9\s]/g, " ").replace(/\s+/g, " ").trim();
+}
+
+function truncate(text: string, maxChars: number): string {
+  const clean = normalizeWhitespace(text);
+  if (clean.length <= maxChars) return clean;
+  return `${clean.slice(0, maxChars).trimEnd()}…`;
+}
+
+function buildLeakPhrases(raw: string): string[] {
+  const words = normalizeForComparison(raw).split(" ").filter((word) => word.length > 2);
+  if (words.length < 5) return [];
+
+  const phrases: string[] = [];
+  const windowSize = Math.min(7, words.length);
+  const maxWindows = Math.min(4, words.length - windowSize + 1);
+
+  for (let i = 0; i < maxWindows; i += 1) {
+    phrases.push(words.slice(i, i + windowSize).join(" "));
+  }
+
+  return phrases;
+}
+
+function containsRawLeakage(output: NarrativeSkin, context: PlayerContext): boolean {
+  const renderedText = normalizeForComparison(
+    `${output.narrative} ${output.choices.join(" ")}`
+  );
+  const rawSources = [context.rawQ1Response, context.rawQ2Response, context.q2Prompt];
+
+  return rawSources.some((source) => {
+    if (!source) return false;
+    return buildLeakPhrases(source).some(
+      (phrase) => phrase.length >= 28 && renderedText.includes(phrase)
+    );
+  });
+}
+
+function startsWithTimeMarker(narrative: string): boolean {
+  return /^(A|An|One|Two|Three|Several)\b.+?(day|days|week|weeks|month|months)\b/i.test(
+    narrative
+  );
+}
+
+function hasFirstTurnContinuity(
+  narrative: string,
+  storyMemory: StoryMemory
+): boolean {
+  const normalizedNarrative = normalizeForComparison(narrative);
+  const signals = [
+    normalizeForComparison(storyMemory.openThread),
+    normalizeForComparison(storyMemory.continuityAnchor),
+    normalizeForComparison(storyMemory.lastBeatSummary),
+  ].filter((signal) => signal.length >= 10);
+
+  return signals.some((signal) => normalizedNarrative.includes(signal));
+}
+
 const NARRATOR_SYSTEM_PROMPT = `You are a business simulation narrator set in Accra, Ghana, 2026.
 
 You will receive:
-1. A SITUATION SEED — the abstract scenario structure
-2. Three CHOICE ARCHETYPES — the structural choices available
-3. WORLD CONDITIONS — current market signals the player can feel
-4. TURN CONTEXT — the player's sector, business label, story memory, recent
-   choices, turn number, and whether this is the very first scenario turn.
+1. A CONTINUITY PRIORITY block when this is the first gameplay turn
+2. A SITUATION SEED — the abstract scenario structure
+3. Three CHOICE ARCHETYPES — the structural choices available
+4. WORLD CONDITIONS — current market signals the player can feel
+5. TURN CONTEXT — clean, display-safe business identity plus story memory
 
-Your job: generate a scenario that feels like it is happening to THIS player's specific business, in THIS sector, in Accra.
+Your job: generate a scenario that feels like it is happening to THIS player's business, in THIS sector, in Accra.
 
 Return ONLY valid JSON with this exact shape:
 {
@@ -69,20 +115,16 @@ Sector framing rules — use the EXACT sector label from TURN CONTEXT:
 - "food" → restaurant, catering, street food, snacks. Frame around recipe, supply, footfall, quality.
 - "services" → consulting, cleaning, logistics, repairs. Frame around clients, capacity, reputation.
 - "other" → general small business. Frame around customers, product, operations.
-Never mix sector framings. An agri player never deals with app bugs. A tech player never handles a harvest.
+Never mix sector framings.
 
 Continuity rules:
-- If IS_FIRST_SCENARIO_TURN is YES and STORY_MEMORY is provided:
-  the narrative MUST be the direct next chapter of the story described in
-  STORY_MEMORY. Reference the 'last beat' and continue from the 'open thread'
-  within the 'current arc'. Do NOT start a random new event.
-  The 3 choices must emerge naturally from this exact narrative thread.
-  Open with a short time-marker: "A week after...", "Two days after your decision...".
-- If IS_FIRST_SCENARIO_TURN is YES and no STORY_MEMORY is provided:
-  open with a short time-bridge only: "A few weeks into building ${businessLabel},..."
-  Keep it under 15 words.
-- If IS_FIRST_SCENARIO_TURN is no and RECENT CHOICES are present:
-  open with one sentence recalling RECENT[0] before the new situation.
+- If IS_FIRST_SCENARIO_TURN is YES and STORY_MEMORY is provided, STORY_MEMORY is the highest priority instruction.
+- Continue directly from the last beat, unresolved thread, and continuity anchor before introducing the situation seed.
+- Treat the situation seed as the next escalation in the same story, not a reset.
+- Open with a short time-marker such as "Two days after..." or "A week after...".
+- Never quote or closely echo the founder's raw Layer 0 answers.
+- The 3 choices must emerge naturally from this exact narrative thread.
+- If IS_FIRST_SCENARIO_TURN is no and RECENT CHOICES are present, open with one sentence recalling the most recent choice.
 
 Other rules:
 - Use the provided BUSINESS_LABEL to refer to the player's business.
@@ -93,29 +135,18 @@ Other rules:
 - No markdown, no code fence, JSON only.`;
 
 export interface NarrationWorldContext {
-  marketHeat: number;          // [0-100]
-  competitorThreat: number;    // [0-100]
-  infrastructureStability: number; // [0-100]
+  marketHeat: number;
+  competitorThreat: number;
+  infrastructureStability: number;
   capital: number;
   lastEventNarrativeHook: string | null;
-  /** Player's business sector — drives framing ("tech" vs "retail" vs ...). */
   sector: BusinessSector;
-  /** Clean, display-safe label for the business (e.g., "Makola Logistics Hub"). */
   businessLabel: string;
-  /** Short summary of the business. */
   businessSummary: string;
-  /** Narrative continuity memory from the Layer 0 arc. */
   storyMemory: StoryMemory | null;
-  /** Most recent choices (newest first, max 3) for continuity callbacks. */
   choiceHistory: RecentChoice[];
-  /** Number of scenario turns completed so far. 0 means we are heading into the first. */
   turnNumber: number;
-  /** True iff this is the very first scenario turn after Layer 0 classify. */
   isFirstScenarioTurn: boolean;
-  /** The AI-generated Q2 scenario text — used on the first playable turn for story continuity. */
-  q2Prompt?: string;
-  /** The player's raw Q2 response — their decision in the Layer 0 story scenario. */
-  q2Response?: string;
 }
 
 /* c8 ignore start */
@@ -128,9 +159,14 @@ function getClient(): Anthropic | null {
 
 export function buildWorldConditionsBlock(ctx: NarrationWorldContext): string {
   const heatLabel = ctx.marketHeat > 65 ? "hot" : ctx.marketHeat > 35 ? "moderate" : "cold";
-  const threatLabel = ctx.competitorThreat > 65 ? "aggressive" : ctx.competitorThreat > 35 ? "present" : "quiet";
+  const threatLabel =
+    ctx.competitorThreat > 65 ? "aggressive" : ctx.competitorThreat > 35 ? "present" : "quiet";
   const infraLabel =
-    ctx.infrastructureStability > 65 ? "reliable" : ctx.infrastructureStability > 35 ? "patchy" : "unreliable";
+    ctx.infrastructureStability > 65
+      ? "reliable"
+      : ctx.infrastructureStability > 35
+        ? "patchy"
+        : "unreliable";
   const capitalStr = `GHS ${ctx.capital.toLocaleString("en-GH")}`;
 
   return `WORLD CONDITIONS:
@@ -141,49 +177,42 @@ export function buildWorldConditionsBlock(ctx: NarrationWorldContext): string {
 - Last world event: ${ctx.lastEventNarrativeHook ?? "none"}`;
 }
 
-/**
- * Formats the turn + continuity block for the narrator prompt.
- * Exposed so it is coverable and stable across LLM/mock paths.
- *
- * businessLabel and businessSummary provide the identity context without
- * raw user text leakage.
- * On the first scenario turn, storyMemory is provided so the LLM can
- * continue the story directly from the player's Layer 0 arc.
- */
 export function buildTurnContextBlock(ctx: NarrationWorldContext): string {
   const recent =
     ctx.choiceHistory.length === 0
       ? "none yet"
       : ctx.choiceHistory
           .map(
-            (c, i) =>
-              `${i === 0 ? "MOST RECENT" : `prior ${i}`}: "${c.choiceLabel}" (${c.effectSummary})`
+            (choice, index) =>
+              `${index === 0 ? "MOST RECENT" : `prior ${index}`}: "${choice.choiceLabel}" (${choice.effectSummary})`
           )
           .join("; ");
 
-  let storyBlock = "";
-  if (ctx.isFirstScenarioTurn && ctx.storyMemory) {
-    storyBlock =
-      `\n- STORY_MEMORY: { lastBeat: "${ctx.storyMemory.lastBeatSummary}", openThread: "${ctx.storyMemory.openThread}", arc: "${ctx.storyMemory.currentArc}" }`;
-  }
+  const businessSummary = ctx.businessSummary.trim().length > 0
+    ? truncate(ctx.businessSummary, BUSINESS_SUMMARY_PROMPT_CAP)
+    : "(not provided)";
+
+  const storyBlock =
+    ctx.isFirstScenarioTurn && ctx.storyMemory
+      ? `
+- STORY_MEMORY: { lastBeat: "${ctx.storyMemory.lastBeatSummary}", openThread: "${ctx.storyMemory.openThread}", continuityAnchor: "${ctx.storyMemory.continuityAnchor}", decisionStyle: "${ctx.storyMemory.recentDecisionStyle ?? "not provided"}", arc: "${ctx.storyMemory.currentArc}" }`
+- FIRST_TURN_PRIORITY: Continue directly from STORY_MEMORY before using the situation seed.`
+      : "";
 
   return `TURN CONTEXT:
 - Sector: ${ctx.sector}
 - BUSINESS_LABEL: ${ctx.businessLabel}
-- BUSINESS_SUMMARY: ${ctx.businessSummary}
+- BUSINESS_SUMMARY: ${businessSummary}
 - Turn number: ${ctx.turnNumber}
 - Is first scenario turn: ${ctx.isFirstScenarioTurn ? "YES" : "no"}
 - Recent choices: ${recent}${storyBlock}`;
 }
 
-/**
- * Validates LLM-generated narration against structural and content rules.
- * Returns { ok: true } or { ok: false, reason: string }.
- */
 export function validateNarration(
   output: NarrativeSkin,
   skeleton: ScenarioSkeleton,
-  playerBusinessName: string
+  context: PlayerContext,
+  worldCtx?: NarrationWorldContext
 ): { ok: boolean; reason?: string } {
   if (output.choices.length !== 3) {
     return { ok: false, reason: "expected exactly 3 choices" };
@@ -191,27 +220,29 @@ export function validateNarration(
   if (output.narrative.length > 1500) {
     return { ok: false, reason: `narrative too long: ${output.narrative.length} chars` };
   }
+  if (containsRawLeakage(output, context)) {
+    return { ok: false, reason: "narrative appears to leak raw Layer 0 text" };
+  }
 
-  // Reject only on hard-banned brand/foreign names. Anything else (Accra street names,
-  // local first names, market names) is allowed — the previous whitelist was so narrow
-  // that almost every LLM output was rejected and the player only ever saw skeleton seeds.
   const capitalised = output.narrative.match(/\b[A-Z][a-z]{2,}/g) ?? [];
-  const violations = capitalised.filter((w) => BANNED_PROPER_NOUNS.has(w));
+  const violations = capitalised.filter((word) => BANNED_PROPER_NOUNS.has(word));
   if (violations.length > 0) {
     return { ok: false, reason: `banned proper nouns: ${violations.slice(0, 3).join(", ")}` };
   }
 
-  // Reference args are kept for signature stability with callers/tests.
+  if (worldCtx?.isFirstScenarioTurn && worldCtx.storyMemory) {
+    if (!startsWithTimeMarker(output.narrative)) {
+      return { ok: false, reason: "first-turn narration must open with a time marker" };
+    }
+    if (!hasFirstTurnContinuity(output.narrative, worldCtx.storyMemory)) {
+      return { ok: false, reason: "first-turn narration drifted away from story memory" };
+    }
+  }
+
   void skeleton;
-  void playerBusinessName;
   return { ok: true };
 }
 
-/**
- * Generates a personalised NarrativeSkin using the LLM.
- * Falls back to buildFallbackSkin on any failure or validation rejection.
- * Returns a tuple: [skin, source] where source tracks whether LLM, fallback, or validator-rejected was used.
- */
 export async function generateNarrativeSkin(
   skeleton: ScenarioSkeleton,
   context: PlayerContext,
@@ -225,16 +256,18 @@ export async function generateNarrativeSkin(
   const client = getClient();
   /* c8 ignore start -- requires live Anthropic API key; not testable in CI */
   if (!client) return [buildFallbackSkin(skeleton, context, worldCtx), "fallback"];
+
   const worldBlock = worldCtx
     ? `\n\n${buildWorldConditionsBlock(worldCtx)}\n\n${buildTurnContextBlock(worldCtx)}`
     : "";
+  const continuityDirective =
+    worldCtx?.isFirstScenarioTurn && worldCtx.storyMemory
+      ? `FIRST TURN CONTINUITY PRIORITY:\n- Continue directly from STORY_MEMORY and CONTINUITY_ANCHOR.\n- Treat the SITUATION SEED as the next escalation in the same story.\n- Do not quote the founder's raw wording.`
+      : "";
 
-  // Sector and story context travel through worldBlock (TURN CONTEXT).
-  // Raw Q1/Q2 text is intentionally excluded from the user prompt — the LLM
-  // should frame from sector + Q2 story arc, not echo the player's essay.
-  void context; // PlayerContext kept in signature for API stability
-
-  const userPrompt = `SITUATION SEED: ${skeleton.situationSeed}${worldBlock}
+  const userPrompt = `${continuityDirective ? `${continuityDirective}\n\n` : ""}SITUATION SEED: ${
+    skeleton.situationSeed
+  }${worldBlock}
 
 CHOICE ARCHETYPES:
 1. ${skeleton.choiceArchetypes[0].archetypeDescription} (tension: ${skeleton.choiceArchetypes[0].tensionAxis})
@@ -270,11 +303,7 @@ CHOICE ARCHETYPES:
         choices: parsed.choices as [string, string, string],
         tensionHints: parsed.tensionHints as [string, string, string],
       };
-      const validation = validateNarration(
-        skin,
-        skeleton,
-        context.businessDescription
-      );
+      const validation = validateNarration(skin, skeleton, context, worldCtx);
       if (!validation.ok) {
         return [buildFallbackSkin(skeleton, context, worldCtx), "validator-rejected"];
       }
@@ -288,37 +317,37 @@ CHOICE ARCHETYPES:
   /* c8 ignore stop */
 }
 
-/**
- * Deterministic fallback — uses the skeleton's situation seed directly.
- * No LLM call required. Always produces a valid NarrativeSkin.
- *
- * When the caller passes worldCtx and this is the first scenario turn,
- * prepend a simple time-marker so the fallback still feels like a landing
- * into the player's story rather than an abstract scenario seed.
- */
 export function buildFallbackSkin(
   skeleton: ScenarioSkeleton,
   _context: PlayerContext,
   worldCtx?: NarrationWorldContext
 ): NarrativeSkin {
-  let prefix = "";
+  let narrative = skeleton.situationSeed;
+
   if (worldCtx?.isFirstScenarioTurn) {
     if (worldCtx.storyMemory) {
-      prefix = `Following your decision — ${decapitalise(worldCtx.storyMemory.lastBeatSummary)} — things move quickly. `;
+      narrative = `Two days after ${decapitalise(
+        worldCtx.storyMemory.continuityAnchor
+      )}, ${worldCtx.storyMemory.openThread} is still hanging over ${
+        worldCtx.businessLabel
+      }. ${worldCtx.storyMemory.lastBeatSummary} ${skeleton.situationSeed}`;
     } else {
-      prefix = `A few weeks into building ${worldCtx.businessLabel || "your business"}, a real decision has arrived. `;
+      narrative = `A few weeks into building ${
+        worldCtx.businessLabel || "your business"
+      }, pressure is starting to concentrate. ${skeleton.situationSeed}`;
     }
   } else if (worldCtx && worldCtx.choiceHistory.length > 0) {
     const last = worldCtx.choiceHistory[0];
-    prefix = `After choosing to ${decapitalise(last.choiceLabel)} (${last.effectSummary}), the next moment lands. `;
+    narrative = `After choosing to ${decapitalise(last.choiceLabel)} (${last.effectSummary}), the next pressure lands. ${skeleton.situationSeed}`;
   }
+
   return {
-    narrative: `${prefix}${skeleton.situationSeed}`,
+    narrative,
     choices: skeleton.choiceArchetypes.map(
-      (a) => a.archetypeDescription
+      (archetype) => archetype.archetypeDescription
     ) as [string, string, string],
     tensionHints: skeleton.choiceArchetypes.map(
-      (a) => a.tensionAxis
+      (archetype) => archetype.tensionAxis
     ) as [string, string, string],
   };
 }

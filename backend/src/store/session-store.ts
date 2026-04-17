@@ -27,6 +27,15 @@ export class SessionStore implements ISessionStore {
       status: "active",
       createdAt: now,
       updatedAt: now,
+      layer0Q1Response: null,
+      layer0Q2Prompt: null,
+      layer0Q2Response: null,
+      playerContext: null,
+      storyMemory: null,
+      generatedCurrentNode: null,
+      generatedCurrentNodeId: null,
+      generatedCurrentNodeCreatedAt: null,
+      narrationSource: null,
     };
 
     this.sessions.set(id, session);

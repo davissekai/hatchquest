@@ -20,22 +20,25 @@ const STUB_EFFECT = {
   eoDeltas: { riskTaking: 1 },
 };
 
-const STUB_SKELETON_ENTRY: RegisteredSkeleton = {
-  skeleton: {
-    id: "L1-node-1",
-    layer: 1,
-    theme: "general",
-    baseWeight: 1.0,
-    eoTargetDimensions: [],
-    situationSeed: "A test scenario.",
-    choiceArchetypes: [
-      { eoPoleSignal: "a", archetypeDescription: "Option A", tensionAxis: "hint A" },
-      { eoPoleSignal: "b", archetypeDescription: "Option B", tensionAxis: "hint B" },
-      { eoPoleSignal: "c", archetypeDescription: "Option C", tensionAxis: "hint C" },
-    ],
-  },
-  effects: [STUB_EFFECT, STUB_EFFECT, STUB_EFFECT],
-};
+function buildSkeletonEntry(id: string): RegisteredSkeleton {
+  return {
+    skeleton: {
+      id,
+      layer: id.startsWith("L2") ? 2 : 1,
+      theme: "general",
+      baseWeight: 1.0,
+      eoTargetDimensions: [],
+      narrativePattern: "test",
+      situationSeed: "A test scenario.",
+      choiceArchetypes: [
+        { eoPoleSignal: "a", archetypeDescription: "Option A", tensionAxis: "hint A" },
+        { eoPoleSignal: "b", archetypeDescription: "Option B", tensionAxis: "hint B" },
+        { eoPoleSignal: "c", archetypeDescription: "Option C", tensionAxis: "hint C" },
+      ],
+    },
+    effects: [STUB_EFFECT, STUB_EFFECT, STUB_EFFECT],
+  };
+}
 
 const STUB_SKIN: NarrativeSkin = {
   narrative: "A test scenario.",
@@ -50,7 +53,7 @@ function buildApp(store: SessionStore): FastifyInstance {
   app.register(choiceRoutes, {
     store,
     getSkeleton: (id: string) =>
-      id === "L1-node-1" || id === "L2-node-1" ? STUB_SKELETON_ENTRY : null,
+      id === "L1-node-1" || id === "L2-node-1" ? buildSkeletonEntry(id) : null,
     generateSkin: async () => [STUB_SKIN, "fallback" as const],
     // Stub Director AI — always returns L2-node-1 so route tests stay hermetic
     selectNextNodeId: () => "L2-node-1",
@@ -117,6 +120,23 @@ describe("POST /choice", () => {
     const body = res.json<ChoiceResponse>();
     expect(body.nextNode?.narrative).toBeDefined();
     expect((body.nextNode?.narrative ?? "").length).toBeGreaterThan(0);
+  });
+
+  it("persists the generated next node so resume stays stable", async () => {
+    const sessionId = await seedSession(store);
+
+    await app.inject({
+      method: "POST",
+      url: "/choice",
+      payload: { sessionId, nodeId: "L1-node-1", choiceIndex: 0 },
+    });
+
+    const session = await store.getSession(sessionId);
+    expect(session?.generatedCurrentNode).toEqual(STUB_SKIN);
+    expect(session?.generatedCurrentNodeId).toBe("L2-node-1");
+    expect(session?.generatedCurrentNodeCreatedAt).toBeTruthy();
+    expect(session?.narrationSource).toBe("fallback");
+    expect(session?.worldState.currentNodeContent).toEqual(STUB_SKIN);
   });
 
   // --- layer and turnsElapsed advance ---

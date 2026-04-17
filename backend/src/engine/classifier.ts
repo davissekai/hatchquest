@@ -100,7 +100,6 @@ const SECTOR_KEYWORDS: Record<BusinessSector, string[]> = {
     "booking",
     "network",
   ],
-  // 'other' has no keywords — it's the fallback when nothing else matches.
   other: [],
 };
 
@@ -121,6 +120,212 @@ function getAnthropicClient() {
     timeout: CLASSIFIER_TIMEOUT_MS,
     maxRetries: 0,
   });
+}
+
+function normalizeWhitespace(text: string): string {
+  return text.replace(/\s+/g, " ").trim();
+}
+
+function trimWords(text: string, maxWords: number): string {
+  const words = normalizeWhitespace(text).split(" ").filter(Boolean);
+  if (words.length <= maxWords) return words.join(" ");
+  return `${words.slice(0, maxWords).join(" ")}…`;
+}
+
+function cleanSentence(text: string, maxLength = 160): string {
+  const cleaned = normalizeWhitespace(text)
+    .replace(/^[-–—:,;]+/, "")
+    .replace(/["'`]+/g, "")
+    .trim();
+
+  if (cleaned.length <= maxLength) return cleaned;
+  return `${cleaned.slice(0, maxLength).trimEnd()}…`;
+}
+
+function normalizeForComparison(text: string): string {
+  return text.toLowerCase().replace(/[^a-z0-9\s]/g, " ").replace(/\s+/g, " ").trim();
+}
+
+function containsAny(text: string, signals: string[]): boolean {
+  return signals.some((signal) => text.includes(signal));
+}
+
+function looksTooVerbatim(candidate: string, raw: string): boolean {
+  const cleanCandidate = normalizeForComparison(candidate);
+  const cleanRaw = normalizeForComparison(raw);
+  return cleanCandidate.length >= 24 && cleanRaw.includes(cleanCandidate);
+}
+
+function extractPrimarySentence(text: string): string {
+  const normalized = normalizeWhitespace(text);
+  const [first] = normalized.split(/(?<=[.!?])\s+/);
+  return cleanSentence(first || normalized, 140);
+}
+
+function inferAudience(text: string): string {
+  const lower = text.toLowerCase();
+  if (containsAny(lower, ["office worker", "bank staff", "corporate"])) return "busy office workers";
+  if (containsAny(lower, ["smallholder", "farmer", "grower"])) return "smallholder farmers";
+  if (containsAny(lower, ["market women", "trader", "shop owner"])) return "small businesses in local markets";
+  if (containsAny(lower, ["student", "campus"])) return "students";
+  if (containsAny(lower, ["family", "household", "parent"])) return "households";
+  return "customers in Accra";
+}
+
+function inferBusinessLabel(q1Response: string, sector: BusinessSector): string {
+  const lower = q1Response.toLowerCase();
+
+  if (sector === "food" && containsAny(lower, ["delivery", "lunch"])) {
+    return "Accra Lunch Run";
+  }
+  if (sector === "food" && containsAny(lower, ["snack", "bakery", "juice"])) {
+    return "City Food Studio";
+  }
+  if (sector === "tech" && containsAny(lower, ["inventory", "stock"])) {
+    return "Market Ops App";
+  }
+  if (sector === "tech" && containsAny(lower, ["fintech", "payment", "wallet"])) {
+    return "Market Money App";
+  }
+  if (sector === "agri" && containsAny(lower, ["logistics", "buyer", "supply"])) {
+    return "FarmLink Hub";
+  }
+  if (sector === "agri") {
+    return "FarmLink Venture";
+  }
+  if (sector === "retail") {
+    return "City Retail Studio";
+  }
+  if (sector === "services" && containsAny(lower, ["delivery", "logistics"])) {
+    return "Accra Service Hub";
+  }
+  if (sector === "services") {
+    return "Accra Service Desk";
+  }
+  return "Accra Venture Studio";
+}
+
+function inferBusinessSummary(q1Response: string, sector: BusinessSector): string {
+  const lower = q1Response.toLowerCase();
+  const audience = inferAudience(q1Response);
+
+  switch (sector) {
+    case "food":
+      if (containsAny(lower, ["delivery", "lunch"])) {
+        return `a food venture delivering practical meal options for ${audience}`;
+      }
+      return `a food business serving ${audience} with reliable everyday products`;
+    case "tech":
+      if (containsAny(lower, ["inventory", "stock"])) {
+        return "a software venture helping small businesses run operations with more control";
+      }
+      if (containsAny(lower, ["payment", "fintech", "wallet"])) {
+        return `a digital finance venture improving access and convenience for ${audience}`;
+      }
+      return `a technology venture solving a practical business problem for ${audience}`;
+    case "agri":
+      return "an agriculture venture improving market access, logistics, or income for growers";
+    case "retail":
+      return `a retail venture offering dependable products for ${audience}`;
+    case "services":
+      if (containsAny(lower, ["delivery", "logistics"])) {
+        return "a service business focused on dependable logistics and fulfilment in Accra";
+      }
+      return `a service business helping ${audience} solve recurring operational problems`;
+    default:
+      return "a small business tackling a clear local need in Accra";
+  }
+}
+
+function inferMotivation(q1Response: string): string {
+  const lower = q1Response.toLowerCase();
+
+  if (containsAny(lower, ["affordable", "access", "community", "help", "support"])) {
+    return "To make a useful solution more accessible while building a durable business.";
+  }
+  if (containsAny(lower, ["gap", "problem", "challenge", "fix"])) {
+    return "To solve an obvious market problem and turn it into a lasting venture.";
+  }
+  if (containsAny(lower, ["job", "income", "earn", "family"])) {
+    return "To create stable income and build something the founder can grow over time.";
+  }
+  return "To build something meaningful and resilient in Accra.";
+}
+
+function inferFounderEdge(q2Response: string): string {
+  const lower = q2Response.toLowerCase();
+
+  if (containsAny(lower, ["call", "partner", "network", "uncle", "friend", "supplier"])) {
+    return "Relationship-driven operator";
+  }
+  if (containsAny(lower, ["negotiate", "immediately", "rush", "lock in", "backup"])) {
+    return "Fast-moving operator under pressure";
+  }
+  if (containsAny(lower, ["delay", "pause", "assess", "review", "wait"])) {
+    return "Measured decision-maker under pressure";
+  }
+  if (containsAny(lower, ["test", "pilot", "experiment", "prototype"])) {
+    return "Experimental founder";
+  }
+  return "Resourceful founder";
+}
+
+function inferDecisionStyle(q2Response: string): string {
+  const lower = q2Response.toLowerCase();
+
+  if (containsAny(lower, ["call", "partner", "network", "borrow", "uncle", "friend"])) {
+    return "relationship-led response";
+  }
+  if (containsAny(lower, ["negotiate", "backup", "replace", "immediately", "rush"])) {
+    return "decisive operational response";
+  }
+  if (containsAny(lower, ["delay", "pause", "review", "assess"])) {
+    return "measured stabilisation";
+  }
+  if (containsAny(lower, ["test", "pilot", "experiment", "prototype"])) {
+    return "experimental adjustment";
+  }
+  return "resourceful first move";
+}
+
+function inferChallengeLabel(q2Prompt: string): string {
+  const lower = q2Prompt.toLowerCase();
+
+  if (containsAny(lower, ["supplier", "vendor", "stock", "ingredient"])) {
+    return "supplier disruption";
+  }
+  if (containsAny(lower, ["cook", "staff", "worker", "team", "employee"])) {
+    return "staffing crunch";
+  }
+  if (containsAny(lower, ["order", "client", "customer", "deadline", "monday"])) {
+    return "delivery deadline";
+  }
+  if (containsAny(lower, ["bug", "launch", "beta", "app", "platform"])) {
+    return "launch risk";
+  }
+  if (containsAny(lower, ["permit", "license", "audit", "regulator", "compliance"])) {
+    return "compliance pressure";
+  }
+  if (containsAny(lower, ["cash", "payment", "loan", "debt", "money"])) {
+    return "cash-flow squeeze";
+  }
+  if (containsAny(lower, ["competitor", "rival", "cheaper"])) {
+    return "competitive pressure";
+  }
+  return "opening-week setback";
+}
+
+function buildFallbackStoryMemory(q2Prompt: string, q2Response: string): StoryMemory {
+  const challenge = inferChallengeLabel(q2Prompt);
+  const decisionStyle = inferDecisionStyle(q2Response);
+
+  return {
+    lastBeatSummary: `You answered an early ${challenge} with a ${decisionStyle}.`,
+    openThread: `the unresolved ${challenge}`,
+    continuityAnchor: `${challenge} still threatening your first momentum`,
+    recentDecisionStyle: decisionStyle,
+    currentArc: "First Market Test",
+  };
 }
 
 export async function callAnthropicClassifier(
@@ -330,8 +535,6 @@ export function selectLayer1NodeFromDistribution(
   return scores.reduce((best, curr) => (curr[1] > best[1] ? curr : best))[0];
 }
 
-// ─── Full assessment (single-step) ───────────────────────────────────────────
-
 export function buildLayer0Assessment(
   response: string,
   distribution: EOPoleDistribution
@@ -342,8 +545,10 @@ export function buildLayer0Assessment(
     initialEOProfile: seedEOProfileFromDistribution(distribution),
     layer1NodeId: selectLayer1NodeFromDistribution(distribution),
     storyMemory: {
-      lastBeatSummary: "You set out to build your new venture in Accra.",
-      openThread: "initial market entry",
+      lastBeatSummary: "You stepped into the Accra market with a new venture taking shape.",
+      openThread: "how the market will answer your first move",
+      continuityAnchor: "your first weeks of proving the business can hold",
+      recentDecisionStyle: "founder instinct",
       currentArc: "The Beginning",
     },
   };
@@ -359,8 +564,6 @@ export async function assessLayer0(response: string): Promise<Layer0Assessment> 
     (await callAnthropicClassifier(response)) ?? keywordClassify(response);
   return buildLayer0Assessment(response, distribution);
 }
-
-// ─── Q2 Generator ────────────────────────────────────────────────────────────
 
 const Q2_GENERATOR_PROMPT = `You are a business simulation game master set in Accra, Ghana, 2026.
 
@@ -406,33 +609,28 @@ export async function generateQ2(q1Response: string): Promise<string> {
   }
 }
 
-// ─── PlayerContext Extractor ──────────────────────────────────────────────────
-
 /**
- * Extracts a PlayerContext from the player's Q1 and Q2 responses.
- * Splits Q1 into businessDescription (first sentence) and motivation (remainder).
- * Raw responses are preserved so the Narrator AI can reference the player's exact words.
+ * Extracts a clean PlayerContext from the player's Layer 0 responses.
+ * Raw Q1/Q2 are kept only as optional internal fields for validation and are
+ * not meant to be persisted in the clean player_context DB column.
  */
 export function extractPlayerContext(
   q1Response: string,
   q2Response: string,
   q2Prompt: string
 ): PlayerContext {
-  const sentences = q1Response.split(/[.!?]+/).filter((s) => s.trim().length > 0);
-  const businessDescription = sentences[0]?.trim() ?? q1Response.trim();
-  const motivation =
-    sentences.length > 1
-      ? sentences.slice(1).join(". ").trim()
-      : "To build something meaningful in Accra.";
+  const sector = inferSectorFromText(q1Response);
+  const businessSummary = inferBusinessSummary(q1Response, sector);
 
   return {
-    businessLabel: "Your Venture", // Default, will be updated by AI
-    businessSummary: businessDescription, // Default, will be updated by AI
-    businessDescription,
-    motivation,
-    rawQ1Response: q1Response,
-    rawQ2Response: q2Response,
-    q2Prompt,
+    businessLabel: inferBusinessLabel(q1Response, sector),
+    businessSummary,
+    businessDescription: businessSummary,
+    motivation: inferMotivation(q1Response),
+    founderEdge: inferFounderEdge(q2Response),
+    rawQ1Response: normalizeWhitespace(q1Response),
+    rawQ2Response: normalizeWhitespace(q2Response),
+    q2Prompt: normalizeWhitespace(q2Prompt),
   };
 }
 
@@ -442,13 +640,13 @@ Extract a clean, display-safe context for the game engine.
 
 Return ONLY valid JSON with exactly this shape:
 {
-  "businessLabel": "<2-4 word catchy label, e.g. 'Makola Logistics Hub'>",
-  "businessSummary": "<1-sentence clear summary of what they actually do>",
-  "founderEdge": "<short phrase describing their unique advantage if any, or 'Resilient founder'>"
+  "businessLabel": "<2-4 word catchy label>",
+  "businessSummary": "<1-sentence clear summary of what they do>",
+  "founderEdge": "<short phrase describing their unique advantage>"
 }
 
 Rules:
-- No verbatim echoing of long user rants
+- No verbatim echoing of long user text
 - Professional but grounded in Accra
 - No markdown
 - Output JSON only`;
@@ -461,13 +659,14 @@ export async function generateDisplaySafeContext(
   q2Response: string
 ): Promise<Partial<PlayerContext>> {
   const client = getAnthropicClient();
+  const fallback = extractPlayerContext(q1Response, q2Response, "");
   const combined = `Q1: ${q1Response}\n\nQ2: ${q2Response}`;
 
   if (!client) {
     return {
-      businessLabel: "Your Venture",
-      businessSummary: q1Response.slice(0, 100),
-      founderEdge: "Resourceful founder",
+      businessLabel: fallback.businessLabel,
+      businessSummary: fallback.businessSummary,
+      founderEdge: fallback.founderEdge,
     };
   }
 
@@ -486,12 +685,35 @@ export async function generateDisplaySafeContext(
 
     const match = text.match(/\{[\s\S]*\}/);
     if (!match) throw new Error("No JSON found");
-    return JSON.parse(match[0]);
+    const parsed = JSON.parse(match[0]) as Partial<PlayerContext>;
+
+    const businessLabel =
+      typeof parsed.businessLabel === "string" &&
+      parsed.businessLabel.trim().length > 2 &&
+      !looksTooVerbatim(parsed.businessLabel, q1Response)
+        ? cleanSentence(parsed.businessLabel, 40)
+        : fallback.businessLabel;
+    const businessSummary =
+      typeof parsed.businessSummary === "string" &&
+      parsed.businessSummary.trim().length > 12 &&
+      !looksTooVerbatim(parsed.businessSummary, q1Response)
+        ? cleanSentence(parsed.businessSummary, 140)
+        : fallback.businessSummary;
+    const founderEdge =
+      typeof parsed.founderEdge === "string" && parsed.founderEdge.trim().length > 3
+        ? cleanSentence(parsed.founderEdge, 60)
+        : fallback.founderEdge;
+
+    return {
+      businessLabel,
+      businessSummary,
+      founderEdge,
+    };
   } catch {
     return {
-      businessLabel: "Your Venture",
-      businessSummary: q1Response.slice(0, 100),
-      founderEdge: "Resourceful founder",
+      businessLabel: fallback.businessLabel,
+      businessSummary: fallback.businessSummary,
+      founderEdge: fallback.founderEdge,
     };
   }
 }
@@ -503,8 +725,10 @@ Summarize this for narrative continuity.
 Return ONLY valid JSON with exactly this shape:
 {
   "lastBeatSummary": "<1-sentence summary of what happened and what the player did>",
-  "openThread": "<short phrase of an unresolved tension, e.g. 'the skeptical bank manager'>",
-  "currentArc": "<2-4 word arc title, e.g. 'The Market Launch Struggle'>"
+  "openThread": "<short unresolved tension>",
+  "continuityAnchor": "<specific bridge phrase the next scene should continue from>",
+  "recentDecisionStyle": "<short description of how the founder acted under pressure>",
+  "currentArc": "<2-4 word arc title>"
 }
 
 Rules:
@@ -521,14 +745,11 @@ export async function generateStoryMemory(
   q2Response: string
 ): Promise<StoryMemory> {
   const client = getAnthropicClient();
+  const fallback = buildFallbackStoryMemory(q2Prompt, q2Response);
   const combined = `Q2 SCENARIO: ${q2Prompt}\n\nQ2 DECISION: ${q2Response}`;
 
   if (!client) {
-    return {
-      lastBeatSummary: "You launched your business and faced your first real challenge.",
-      openThread: "initial market reaction",
-      currentArc: "The Beginning",
-    };
+    return fallback;
   }
 
   try {
@@ -546,22 +767,43 @@ export async function generateStoryMemory(
 
     const match = text.match(/\{[\s\S]*\}/);
     if (!match) throw new Error("No JSON found");
-    return JSON.parse(match[0]);
-  } catch {
+    const parsed = JSON.parse(match[0]) as Partial<StoryMemory>;
+
     return {
-      lastBeatSummary: "You launched your business and faced your first real challenge.",
-      openThread: "initial market reaction",
-      currentArc: "The Beginning",
+      lastBeatSummary:
+        typeof parsed.lastBeatSummary === "string" &&
+        parsed.lastBeatSummary.trim().length > 12 &&
+        !looksTooVerbatim(parsed.lastBeatSummary, q2Response)
+          ? cleanSentence(parsed.lastBeatSummary, 180)
+          : fallback.lastBeatSummary,
+      openThread:
+        typeof parsed.openThread === "string" &&
+        parsed.openThread.trim().length > 6 &&
+        !looksTooVerbatim(parsed.openThread, q2Response)
+          ? cleanSentence(parsed.openThread, 90)
+          : fallback.openThread,
+      continuityAnchor:
+        typeof parsed.continuityAnchor === "string" &&
+        parsed.continuityAnchor.trim().length > 8 &&
+        !looksTooVerbatim(parsed.continuityAnchor, q2Response)
+          ? cleanSentence(parsed.continuityAnchor, 120)
+          : fallback.continuityAnchor,
+      recentDecisionStyle:
+        typeof parsed.recentDecisionStyle === "string" &&
+        parsed.recentDecisionStyle.trim().length > 3
+          ? cleanSentence(parsed.recentDecisionStyle, 60)
+          : fallback.recentDecisionStyle,
+      currentArc:
+        typeof parsed.currentArc === "string" && parsed.currentArc.trim().length > 3
+          ? trimWords(cleanSentence(parsed.currentArc, 40), 5)
+          : fallback.currentArc,
     };
+  } catch {
+    return fallback;
   }
 }
 
-// ─── Public API ───────────────────────────────────────────────────────────────
-
-/**
- * Backward-compat single-step classifier. Used by legacy /classify route.
- * Prefer classifyFromBothResponses for richer signal.
- */
+/** Backward-compat single-step classifier. */
 export async function classify(response: string): Promise<string> {
   return (await assessLayer0(response)).layer1NodeId;
 }
@@ -570,12 +812,26 @@ export async function classify(response: string): Promise<string> {
  * Two-step classify: combines Q1 + Q2 for a richer EO signal.
  * Q2 reveals adversity response which Q1 alone cannot capture.
  */
+export async function assessLayer0FromBothResponses(
+  q1Response: string,
+  q2Response: string
+): Promise<Layer0Assessment> {
+  const combinedText = `Business idea: ${q1Response}\n\nResponse to challenge: ${q2Response}`;
+  const distribution =
+    (await callAnthropicClassifier(combinedText)) ?? keywordClassify(combinedText);
+
+  return {
+    distribution,
+    sector: inferSectorFromText(`${q1Response} ${q2Response}`),
+    initialEOProfile: seedEOProfileFromDistribution(distribution),
+    layer1NodeId: selectLayer1NodeFromDistribution(distribution),
+    storyMemory: buildFallbackStoryMemory("", q2Response),
+  };
+}
+
 export async function classifyFromBothResponses(
   q1Response: string,
   q2Response: string
 ): Promise<string> {
-  const combinedText = `Business idea: ${q1Response}\n\nResponse to challenge: ${q2Response}`;
-  const dist =
-    (await callAnthropicClassifier(combinedText)) ?? keywordClassify(combinedText);
-  return selectLayer1NodeFromDistribution(dist);
+  return (await assessLayer0FromBothResponses(q1Response, q2Response)).layer1NodeId;
 }
