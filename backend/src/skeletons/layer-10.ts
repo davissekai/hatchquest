@@ -10,6 +10,7 @@ const L10_SK_1: ScenarioSkeleton = {
   theme: "general",
   baseWeight: 1.0,
   eoTargetDimensions: ["autonomy", "innovativeness"],
+  narrativePattern: "exit",
   situationSeed:
     "You have built something real. The business is profitable, it has a reputation, and people know your name in this part of Accra. Now a buyer has made a serious offer — not life-changing money, but a fair multiple that rewards the years of work. At the same time, a younger entrepreneur from your neighbourhood has asked to take over operations so you can step back but retain ownership. And there is a third path: reinvest everything, evolve the business into something more ambitious, and see what the next chapter looks like when you remove the ceiling entirely.",
   choiceArchetypes: [
@@ -40,8 +41,8 @@ const L10_SK_1_EFFECTS: [ChoiceEffect, ChoiceEffect, ChoiceEffect] = [
     revenue: -8_000,
     debt: -10_000,
     monthlyBurn: -8_000,
-    reputation: 12,
-    networkStrength: 10,
+    reputation: 6,
+    networkStrength: 5,
     eoDeltas: { autonomy: 2, riskTaking: 1, innovativeness: -1 },
   },
   {
@@ -49,8 +50,8 @@ const L10_SK_1_EFFECTS: [ChoiceEffect, ChoiceEffect, ChoiceEffect] = [
     revenue: 2_500,
     debt: 0,
     monthlyBurn: -3_000,
-    reputation: 20,
-    networkStrength: 18,
+    reputation: 10,
+    networkStrength: 8,
     eoDeltas: { autonomy: 1, proactiveness: 1, innovativeness: -1 },
   },
   {
@@ -58,8 +59,8 @@ const L10_SK_1_EFFECTS: [ChoiceEffect, ChoiceEffect, ChoiceEffect] = [
     revenue: 8_000,
     debt: 5_000,
     monthlyBurn: 5_000,
-    reputation: 15,
-    networkStrength: 22,
+    reputation: 7,
+    networkStrength: 9,
     eoDeltas: { innovativeness: 3, proactiveness: 2, autonomy: -1, riskTaking: 1 },
   },
 ];

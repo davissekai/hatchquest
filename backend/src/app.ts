@@ -126,7 +126,16 @@ export async function buildApp(
     generateSkin: generateNarrativeSkin,
     selectNextNodeId,
   });
-  app.register(sessionRoutes, { prefix, store, getNode: getNodeFromSkeleton });
+  app.register(sessionRoutes, {
+    prefix,
+    store,
+    getNode: getNodeFromSkeleton,
+    // Wire the skin pipeline so /session can personalise the L1 opening
+    // with isFirstScenarioTurn=true (time-bridge prefix referencing the
+    // player's business). Non-L1 turns continue to use narrateScenarioNode.
+    getSkeleton,
+    generateSkin: generateNarrativeSkin,
+  });
   app.register(resultsRoutes, { prefix, store });
   app.register(debugRoutes);
 

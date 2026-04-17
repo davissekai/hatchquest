@@ -10,7 +10,13 @@
  * The fallback is deterministic and always valid.
  */
 import Anthropic from "@anthropic-ai/sdk";
-import type { ScenarioSkeleton, NarrativeSkin, PlayerContext } from "@hatchquest/shared";
+import type {
+  BusinessSector,
+  NarrativeSkin,
+  PlayerContext,
+  RecentChoice,
+  ScenarioSkeleton,
+} from "@hatchquest/shared";
 import { isMockLLM, mockGenerateSkin } from "../lib/mock-anthropic.js";
 
 const NARRATOR_TIMEOUT_MS = 12_000;
@@ -26,6 +32,8 @@ You will receive:
 2. A PLAYER CONTEXT — their specific business and motivation
 3. Three CHOICE ARCHETYPES — the structural choices available
 4. WORLD CONDITIONS — current market signals the player can feel
+5. TURN CONTEXT — how far into the game we are, recent choices, and whether
+   this is the very first scenario after Layer 0 classification.
 
 Your job: generate a personalised scenario that feels like it is happening to THIS player's specific business, in THIS player's specific market, in Accra.
 
@@ -37,7 +45,17 @@ Return ONLY valid JSON with this exact shape:
 }
 
 Rules:
-- Reference the player's specific business by name/description
+- Frame the scenario in the player's specific SECTOR and BUSINESS DESCRIPTION.
+  Never introduce physical-retail framing (shop space, shelves, packaging) for
+  a 'tech' sector player. Never introduce software-only framing for a 'retail',
+  'food', or 'agri' player. Use the sector you are given.
+- If IS_FIRST_SCENARIO_TURN is true, open with a brief time-bridge sentence
+  or short paragraph that references the BUSINESS DESCRIPTION and marks the
+  passage of real time since Layer 0 (e.g., "Four months in, your inventory
+  app has its first twenty shop owners..."). Only on the first scenario turn.
+- If IS_FIRST_SCENARIO_TURN is false and RECENT CHOICES are present, open
+  with a single-sentence callback to the most recent choice (RECENT[0])
+  BEFORE the new scenario seed, so the player feels continuity.
 - Use Accra-specific details (locations, currency in GHS, local business culture)
 - Narrative must be ≤600 characters
 - Choices must be 1-2 sentences each, action-oriented
@@ -50,6 +68,16 @@ export interface NarrationWorldContext {
   infrastructureStability: number; // [0-100]
   capital: number;
   lastEventNarrativeHook: string | null;
+  /** Player's business sector — drives framing ("tech" vs "retail" vs ...). */
+  sector: BusinessSector;
+  /** Verbatim Q1 free-text — the player's own description of their business. */
+  businessDescription: string;
+  /** Most recent choices (newest first, max 3) for continuity callbacks. */
+  choiceHistory: RecentChoice[];
+  /** Number of scenario turns completed so far. 0 means we are heading into the first. */
+  turnNumber: number;
+  /** True iff this is the very first scenario turn after Layer 0 classify. */
+  isFirstScenarioTurn: boolean;
 }
 
 /* c8 ignore start */
@@ -73,6 +101,29 @@ export function buildWorldConditionsBlock(ctx: NarrationWorldContext): string {
 - Infrastructure: ${infraLabel} (${Math.round(ctx.infrastructureStability)}/100)
 - Current capital: ${capitalStr}
 - Last world event: ${ctx.lastEventNarrativeHook ?? "none"}`;
+}
+
+/**
+ * Formats the turn + continuity block for the narrator prompt.
+ * Exposed so it is coverable and stable across LLM/mock paths.
+ */
+export function buildTurnContextBlock(ctx: NarrationWorldContext): string {
+  const recent =
+    ctx.choiceHistory.length === 0
+      ? "none yet"
+      : ctx.choiceHistory
+          .map(
+            (c, i) =>
+              `${i === 0 ? "MOST RECENT" : `prior ${i}`}: "${c.choiceLabel}" (${c.effectSummary})`
+          )
+          .join("; ");
+
+  return `TURN CONTEXT:
+- Sector: ${ctx.sector}
+- Business description (verbatim): ${ctx.businessDescription || "(not provided)"}
+- Turn number: ${ctx.turnNumber}
+- Is first scenario turn: ${ctx.isFirstScenarioTurn ? "YES" : "no"}
+- Recent choices: ${recent}`;
 }
 
 /**
@@ -125,8 +176,10 @@ export async function generateNarrativeSkin(
 
   const client = getClient();
   /* c8 ignore start -- requires live Anthropic API key; not testable in CI */
-  if (!client) return [buildFallbackSkin(skeleton, context), "fallback"];
-  const worldBlock = worldCtx ? `\n\n${buildWorldConditionsBlock(worldCtx)}` : "";
+  if (!client) return [buildFallbackSkin(skeleton, context, worldCtx), "fallback"];
+  const worldBlock = worldCtx
+    ? `\n\n${buildWorldConditionsBlock(worldCtx)}\n\n${buildTurnContextBlock(worldCtx)}`
+    : "";
 
   const userPrompt = `SITUATION SEED: ${skeleton.situationSeed}
 
@@ -153,7 +206,7 @@ CHOICE ARCHETYPES:
       .trim();
 
     const match = raw.match(/\{[\s\S]*\}/);
-    if (!match) return [buildFallbackSkin(skeleton, context), "fallback"];
+    if (!match) return [buildFallbackSkin(skeleton, context, worldCtx), "fallback"];
 
     const parsed = JSON.parse(match[0]) as NarrativeSkin;
     if (
@@ -174,14 +227,14 @@ CHOICE ARCHETYPES:
         context.businessDescription
       );
       if (!validation.ok) {
-        return [buildFallbackSkin(skeleton, context), "validator-rejected"];
+        return [buildFallbackSkin(skeleton, context, worldCtx), "validator-rejected"];
       }
       return [skin, "llm"];
     }
 
-    return [buildFallbackSkin(skeleton, context), "fallback"];
+    return [buildFallbackSkin(skeleton, context, worldCtx), "fallback"];
   } catch {
-    return [buildFallbackSkin(skeleton, context), "fallback"];
+    return [buildFallbackSkin(skeleton, context, worldCtx), "fallback"];
   }
   /* c8 ignore stop */
 }
@@ -189,13 +242,22 @@ CHOICE ARCHETYPES:
 /**
  * Deterministic fallback — uses the skeleton's situation seed directly.
  * No LLM call required. Always produces a valid NarrativeSkin.
+ *
+ * When the caller passes worldCtx and this is the first scenario turn,
+ * prepend a simple time-marker so the fallback still feels like a landing
+ * into the player's story rather than an abstract scenario seed.
  */
 export function buildFallbackSkin(
   skeleton: ScenarioSkeleton,
-  _context: PlayerContext
+  _context: PlayerContext,
+  worldCtx?: NarrationWorldContext
 ): NarrativeSkin {
+  const prefix =
+    worldCtx?.isFirstScenarioTurn && worldCtx.businessDescription
+      ? `A few weeks into building ${worldCtx.businessDescription.trim()}, a real decision has arrived. `
+      : "";
   return {
-    narrative: skeleton.situationSeed,
+    narrative: `${prefix}${skeleton.situationSeed}`,
     choices: skeleton.choiceArchetypes.map(
       (a) => a.archetypeDescription
     ) as [string, string, string],

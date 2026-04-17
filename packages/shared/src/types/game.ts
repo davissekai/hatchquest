@@ -29,7 +29,33 @@ export interface EOPoleDistribution {
 }
 
 // Business sector — set during Layer 0 classification
-export type BusinessSector = "tech" | "agri" | "retail" | "food" | "services";
+export type BusinessSector =
+  | "tech"
+  | "agri"
+  | "retail"
+  | "food"
+  | "services"
+  | "other";
+
+// Canonical list of all business sectors — kept in sync with BusinessSector.
+// Used for exhaustive checks, iteration, and runtime validation.
+export const BUSINESS_SECTORS: readonly BusinessSector[] = [
+  "tech",
+  "agri",
+  "retail",
+  "food",
+  "services",
+  "other",
+] as const;
+
+// A compact record of a recent choice — used by Narrator AI to generate
+// continuity callbacks ("After you delayed the launch...") and by the
+// Director AI for pattern-repeat suppression.
+export interface RecentChoice {
+  nodeId: string;
+  choiceLabel: string;
+  effectSummary: string;
+}
 
 // Business formality progression
 export type BusinessFormality = "unregistered" | "soleProprietorship" | "limitedCompany";
@@ -44,6 +70,16 @@ export interface WorldState {
   currentNodeId: string | null; // Which event node the player is on
   turnsElapsed: number; // Total decisions made
   isComplete: boolean; // True at layer 10
+
+  // --- Identity (set during Layer 0 classify) ---
+  /** Business sector inferred from Q1 free-text — drives director sector affinity and narrator framing. */
+  sector: BusinessSector;
+  /** Verbatim Q1 free-text response — preserved for narrator time-bridge / continuity. */
+  businessDescription: string;
+  /** Most recent choices (newest first, max length 3) — used for narrator callbacks. */
+  choiceHistory: RecentChoice[];
+  /** Narrative pattern tags of the last 2 scenarios — used to suppress pattern repeats. */
+  recentPatterns: string[];
 
   // --- Financial (GHS) ---
   capital: number; // Starting: 10,000 GHS

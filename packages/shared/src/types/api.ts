@@ -28,6 +28,12 @@ export interface ClientWorldState {
     competitorThreat: number;        // [0-100] derived from competitorAggression
     infrastructureStability: number; // [0-100] from infrastructureReliability
     lastEventLabel: string | null;   // most recent world event label
+    /**
+     * Up to 2 rotating secondary signals — short human labels like
+     * "Capital access open", "Under audit". Chosen deterministically by turn
+     * from the active world-event flags so the HUD stays stable across polls.
+     */
+    secondarySignals: string[];
   };
 }
 

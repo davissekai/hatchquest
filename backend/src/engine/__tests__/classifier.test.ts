@@ -148,9 +148,9 @@ describe("inferSectorFromText", () => {
     ).toBe("agri");
   });
 
-  it("defaults to tech when no strong sector signal exists", () => {
+  it("defaults to 'other' when no strong sector signal exists", () => {
     expect(inferSectorFromText("I want to build something meaningful.")).toBe(
-      "tech"
+      "other"
     );
   });
 });

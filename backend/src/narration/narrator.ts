@@ -20,7 +20,16 @@ Write a short results summary for the founder.
 Rules:
 - Keep it under 110 words
 - Use 2 to 4 sentences
-- Ground it in the founder's final business state and strongest/weakest EO signals
+- Reference the founder's specific business description and sector — make the
+  summary feel like it is about their venture, not a generic founder.
+- The EO DIMENSION SCORES block lists autonomy, innovativeness, riskTaking,
+  proactiveness, and competitiveAggressiveness each on a 0–10 scale. Your
+  language MUST match those numbers. Never call a score of 6+ "low" or "held
+  back". Never call a score of 4 or less "strong".
+- If final capital is negative AND revenue is positive, describe it as cash
+  burn exceeding gross revenue — acknowledge the loss explicitly. Do not
+  frame a negative-capital ending as "building something real" without first
+  naming the shortfall in plain language.
 - Encouraging but honest; never generic hype
 - Do not mention EO labels as a list
 - Return plain text only`;
@@ -121,11 +130,13 @@ export function buildDeterministicResultsSummary(state: WorldState): string {
   const [strongest, strongestScore] = strongestDimension(state.eoProfile);
   const [weakest] = weakestDimension(state.eoProfile);
   const businessHealth =
-    state.capital >= 20_000
-      ? "You finished with real financial breathing room"
-      : state.capital >= 8_000
-        ? "You kept the business alive with disciplined resource management"
-        : "You finished under pressure, but still standing";
+    state.capital < 0
+      ? "You finished in the red — cash burn outran gross revenue and the run closed with a shortfall"
+      : state.capital >= 20_000
+        ? "You finished with real financial breathing room"
+        : state.capital >= 8_000
+          ? "You kept the business alive with disciplined resource management"
+          : "You finished under pressure, but still standing";
 
   return `${businessHealth}: ${formatCurrency(state.capital)} in capital, ${state.reputation}/100 reputation, and ${state.networkStrength}/100 network strength. Your path was defined most by ${dimensionLabel(
     strongest
@@ -192,14 +203,27 @@ export async function narrateResultsSummary(
   const [strongest, strongestScore] = strongestDimension(state.eoProfile);
   const [weakest, weakestScore] = weakestDimension(state.eoProfile);
 
+  // Explicit EO scores + capital/revenue reconciliation are surfaced to
+  // the LLM so its narrative language has to match the radar chart and
+  // cannot contradict a negative capital result.
   const aiSummary = await callAnthropicNarration(
     RESULTS_SYSTEM_PROMPT,
     [
-      `Final capital: ${formatCurrency(state.capital)}`,
+      `Business: ${state.businessDescription || state.playerContext?.businessDescription || "undisclosed"}`,
+      `Sector: ${state.sector}`,
+      `Final capital: ${formatCurrency(state.capital)}${state.capital < 0 ? " (NEGATIVE — cash shortfall)" : ""}`,
       `Final revenue: ${formatCurrency(state.revenue)}`,
       `Debt: ${formatCurrency(state.debt)}`,
       `Reputation: ${state.reputation}/100`,
       `Network: ${state.networkStrength}/100`,
+      "",
+      "EO DIMENSION SCORES (0-10, must match your language):",
+      `- autonomy: ${state.eoProfile.autonomy.toFixed(1)}`,
+      `- innovativeness: ${state.eoProfile.innovativeness.toFixed(1)}`,
+      `- riskTaking: ${state.eoProfile.riskTaking.toFixed(1)}`,
+      `- proactiveness: ${state.eoProfile.proactiveness.toFixed(1)}`,
+      `- competitiveAggressiveness: ${state.eoProfile.competitiveAggressiveness.toFixed(1)}`,
+      "",
       `Strongest signal: ${strongest} (${strongestScore.toFixed(1)}/10)`,
       `Weakest signal: ${weakest} (${weakestScore.toFixed(1)}/10)`,
       `Context: ${describeDemand(state.marketDemand)}; ${describeCompetition(

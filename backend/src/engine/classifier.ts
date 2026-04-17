@@ -98,6 +98,8 @@ const SECTOR_KEYWORDS: Record<BusinessSector, string[]> = {
     "booking",
     "network",
   ],
+  // 'other' has no keywords — it's the fallback when nothing else matches.
+  other: [],
 };
 
 const SECTOR_PRIORITY: BusinessSector[] = [
@@ -287,7 +289,7 @@ export function inferSectorFromText(response: string): BusinessSector {
     return SECTOR_PRIORITY.indexOf(a) - SECTOR_PRIORITY.indexOf(b);
   });
 
-  return scores[ranked[0]] > 0 ? ranked[0] : "tech";
+  return scores[ranked[0]] > 0 ? ranked[0] : "other";
 }
 
 function roundProfileValue(value: number): number {

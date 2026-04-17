@@ -8,6 +8,7 @@ import RetroTransition from "@/components/RetroTransition";
 import ErrorBanner from "@/components/ErrorBanner";
 import LoadingOverlay from "@/components/LoadingOverlay";
 import { WorldHUD } from "@/components/WorldHUD";
+import RadarChart from "@/components/RadarChart";
 import type { ClientWorldState } from "@hatchquest/shared";
 
 const transitionMessages = [
@@ -25,8 +26,8 @@ const finalMessages = [
   "Final verdict incoming...",
 ];
 
-/** Core game loop — High-Contrast Minimalist (Swiss-Graffiti) aesthetic */
-const Gameplay = () => {
+/** Core game loop — Desktop-First Vibrant UI */
+export default function Gameplay() {
   const router = useRouter();
   const { state, phase, hasActiveSession, makeChoice, isLoading, error, resetGame, resumeSession } = useGame();
   const currentNode = state.currentNode;
@@ -93,29 +94,26 @@ const Gameplay = () => {
     }
   }, [router, isFinalTransition]);
 
-  // Free-text choice uses choice 0 as a fallback for demo purposes.
-  // The text is discarded server-side; the intent is to keep the demo moving.
   const handleFreeTextChoice = useCallback(async (): Promise<void> => {
     if (!freeText.trim() || isTransitioning || choiceDisabled || !currentNode) return;
     setFreeText("");
     await handleChoice(0);
   }, [freeText, isTransitioning, choiceDisabled, currentNode, handleChoice]);
 
-  // No session + not transitioning — show empty state
   if (!currentNode && !isTransitioning && phase !== "complete") {
     return (
-      <div className="min-h-screen bg-cream flex items-center justify-center px-6">
-        <div className="flex flex-col items-center gap-6 max-w-sm text-center">
+      <div className="min-h-screen bg-vivid-blue bg-gradient-to-b from-sky-blue to-vivid-blue flex items-center justify-center px-6">
+        <div className="flex flex-col items-center gap-6 max-w-sm text-center bg-white p-8 rounded-[3rem] shadow-2xl border-4 border-white">
           {error ? (
             <ErrorBanner message={error} onRetry={() => router.replace("/resume")} />
           ) : (
-            <p className="font-body italic text-xl text-navy">
+            <p className="font-headline font-bold text-2xl text-slate-900">
               No active session found.
             </p>
           )}
           <button
             onClick={() => { resetGame(); router.replace("/"); }}
-            className="px-8 py-4 bg-navy text-white rounded-full font-headline font-black uppercase tracking-widest hover:bg-lime hover:text-navy transition-all duration-300 shadow-[0_10px_30px_rgba(30,58,138,0.2)] hover:scale-105 active:scale-95 border-4 border-transparent hover:border-white"
+            className="px-8 py-4 bg-pill-blue text-white rounded-full font-headline font-black uppercase tracking-widest hover:scale-105 transition-all duration-300 shadow-xl border-4 border-transparent hover:border-white"
           >
             Return Home
           </button>
@@ -124,22 +122,23 @@ const Gameplay = () => {
     );
   }
 
+  // Fallback for Radar chart if the engine doesn't expose it yet
+  const dummyEo = {
+    autonomy: 60,
+    innovativeness: 40,
+    proactiveness: 80,
+    riskTaking: 50,
+    competitiveAggressiveness: 70
+  };
+
   return (
-    <div className="bg-cream text-navy min-h-screen relative overflow-hidden">
-      {/* ── Adinkra Pattern Background ─────────────────────────────── */}
-      <div className="fixed inset-0 z-0 bg-cream">
-        <div className="absolute inset-0 adinkra-pattern" />
+    <div className="bg-vivid-blue bg-gradient-to-br from-sky-blue to-vivid-blue text-slate-900 min-h-screen h-screen overflow-hidden relative">
+      {/* Background Decor */}
+      <div className="fixed inset-0 pointer-events-none z-0 opacity-30">
+        <div className="absolute top-[-5%] right-[-5%] w-[40vw] h-[40vw] bg-white rounded-full blur-[100px]" />
+        <div className="absolute bottom-[-10%] left-[-10%] w-[50vw] h-[50vw] bg-lime rounded-full blur-[120px] opacity-40" />
       </div>
 
-      {/* ── Top HUD ─────────────────────────────────────── */}
-      <div className="relative z-20">
-        <HUD
-          clientState={clientState || { capital: 0, reputation: 0, networkStrength: 0, layer: 0, turnsElapsed: 0 } as ClientWorldState}
-          layer={layer}
-        />
-      </div>
-
-      {/* ── Overlays ───────────────────────────────────────────────────── */}
       {isLoading && !isTransitioning && <LoadingOverlay message="Loading..." />}
 
       {isTransitioning && (
@@ -150,114 +149,154 @@ const Gameplay = () => {
         />
       )}
 
-      {/* Error banner */}
       {error && !isTransitioning && (
-        <div className="fixed top-24 left-1/2 -translate-x-1/2 z-30 w-full max-w-lg px-6">
+        <div className="fixed top-6 left-1/2 -translate-x-1/2 z-50 w-full max-w-lg px-6">
           <ErrorBanner message={error} onRetry={() => router.replace("/resume")} />
         </div>
       )}
 
-      {/* ── Main content ───────────────────────────────────────────────── */}
-      <main className="relative z-10 flex flex-col items-center justify-center min-h-screen px-6 pt-24 pb-12">
-        {currentNode && (
-        <div className="max-w-2xl w-full flex flex-col gap-6">
-
-          {/* Turn badge */}
-          <div className="inline-block self-start border-4 border-white bg-lime text-navy px-6 py-2 rounded-full font-headline font-black uppercase tracking-widest text-sm shadow-[0_5px_15px_rgba(57,255,20,0.3)]">
-            Turn {turns}
+      <main className="relative z-10 w-full h-full max-w-[1600px] mx-auto p-4 lg:p-8 grid grid-cols-1 lg:grid-cols-[320px_1fr_320px] gap-6 overflow-hidden">
+        
+        {/* ── Left Pane (HUD & Navigation) ── */}
+        <aside className="hidden lg:flex flex-col gap-6 h-full overflow-y-auto pr-2 pb-10 custom-scrollbar">
+          <div className="bg-white/95 backdrop-blur-xl rounded-[2.5rem] p-6 shadow-xl border-4 border-white/50">
+            <h2 className="font-headline font-black text-pill-blue text-xl mb-4">World Status</h2>
+            <HUD
+              clientState={clientState || { capital: 0, reputation: 0, networkStrength: 0, layer: 0, turnsElapsed: 0 } as ClientWorldState}
+              layer={layer}
+            />
           </div>
-
-          {/* World signals */}
-          {clientState && (
-            <WorldHUD clientState={clientState} />
-          )}
-
-          {/* Narrative flat card */}
-          <div className="bg-white/80 backdrop-blur-xl border-4 border-white p-10 rounded-[3rem] shadow-[0_20px_60px_rgba(30,58,138,0.1)]">
-            <p className="font-headline font-extrabold text-base md:text-lg text-navy leading-tight whitespace-pre-line tracking-tight drop-shadow-sm">
-              {currentNode.narrative}
-            </p>
+          <div className="bg-white/95 backdrop-blur-xl rounded-[2.5rem] p-6 shadow-xl border-4 border-white/50 flex-1">
+            <h2 className="font-headline font-black text-grass-green text-xl mb-4">Inventory & Logs</h2>
+            <div className="h-48 flex items-center justify-center bg-slate-50 rounded-2xl border-2 border-slate-100">
+               <p className="font-body text-slate-400 font-bold">No active items.</p>
+            </div>
           </div>
+        </aside>
 
-          {/* Choices */}
-          <div className="flex flex-col gap-5 mt-4">
-            {currentNode.choices.map((choice, i: number) => {
-              const letterLabel = String.fromCharCode(65 + i);
+        {/* ── Center Pane (Narrative & Choices) ── */}
+        <section className="flex flex-col h-full overflow-y-auto pb-32 pt-2 lg:pt-0 hide-scrollbar">
+          {currentNode && (
+            <div className="max-w-2xl w-full mx-auto flex flex-col gap-8 pb-10">
               
-              // Color code the buttons: A = Cyan, B = Pink, C = Yellow/Orange
-              const colors = [
-                "bg-electric-cyan hover:bg-electric-cyan/90 text-navy shadow-[0_10px_30px_rgba(0,240,255,0.3)]",
-                "bg-hot-pink hover:bg-hot-pink/90 text-white shadow-[0_10px_30px_rgba(255,42,133,0.3)]",
-                "bg-electric-yellow hover:bg-electric-yellow/90 text-navy shadow-[0_10px_30px_rgba(255,234,0,0.3)]",
-              ];
-              const buttonColor = colors[i % colors.length];
+              {/* Turn & Status Ribbon */}
+              <div className="flex justify-center">
+                <div className="inline-flex items-center gap-2 border-4 border-white bg-grass-green text-white px-8 py-3 rounded-full font-headline font-black uppercase tracking-widest text-sm shadow-xl">
+                  <span>Turn {turns}</span>
+                  <span className="w-2 h-2 rounded-full bg-white animate-pulse" />
+                  <span>Layer {layer}</span>
+                </div>
+              </div>
 
-              return (
-                <button
-                  key={choice.index}
-                  onClick={() => handleChoice(choice.index)}
-                  disabled={isTransitioning || choiceDisabled}
-                  className={`group flex items-center w-full rounded-full border-4 border-white transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed hover:scale-105 active:scale-95 ${buttonColor}`}
-                >
-                  <span className={`flex-shrink-0 w-16 h-16 rounded-full m-2 flex items-center justify-center text-2xl font-black bg-white/20 backdrop-blur-sm group-hover:bg-white/40 transition-colors`}>
-                    {letterLabel}
-                  </span>
-                  <span className="flex-1 flex flex-col items-start px-4 py-4 text-left">
-                    <span className="font-headline font-extrabold text-lg drop-shadow-sm">{choice.text}</span>
-                  </span>
-                  <span className="material-symbols-outlined text-3xl pr-6 font-bold group-hover:translate-x-2 transition-transform drop-shadow-sm">arrow_forward</span>
-                </button>
-              );
-            })}
-          </div>
+              {/* Mobile Only: Top stats (Hidden on Desktop since Left Pane handles it) */}
+              <div className="lg:hidden">
+                 <HUD
+                  clientState={clientState || { capital: 0, reputation: 0, networkStrength: 0, layer: 0, turnsElapsed: 0 } as ClientWorldState}
+                  layer={layer}
+                />
+              </div>
 
-          {/* Free-text choice */}
-          <div className="mt-2 flex flex-col gap-3">
-            <p className="font-headline font-bold text-xs uppercase tracking-widest text-navy/50 px-2">
-              Or write your own approach
-            </p>
-            <div className="flex gap-3">
-              <input
-                type="text"
-                placeholder="Describe your move..."
-                value={freeText}
-                onChange={(e) => setFreeText(e.target.value)}
-                onKeyDown={(e) => e.key === "Enter" && freeText.trim() && void handleFreeTextChoice()}
-                className="flex-1 bg-white/80 border-4 border-white rounded-full px-6 py-3 font-body text-navy placeholder:text-navy/30 focus:outline-none focus:border-lime transition-colors"
-                disabled={isTransitioning || choiceDisabled}
-              />
-              <button
-                onClick={() => void handleFreeTextChoice()}
-                disabled={!freeText.trim() || isTransitioning || choiceDisabled}
-                className="px-6 py-3 bg-navy text-white rounded-full font-headline font-black uppercase tracking-widest text-sm hover:bg-lime hover:text-navy transition-all disabled:opacity-40 disabled:cursor-not-allowed border-4 border-white"
-              >
-                Send
-              </button>
-            </div>
-          </div>
+              {/* Narrative Bubble */}
+              <div className="bg-white border-4 border-white p-10 rounded-[3rem] shadow-2xl relative">
+                {/* Speech bubble tail */}
+                <div className="absolute -bottom-6 left-12 w-10 h-10 bg-white border-b-4 border-l-4 border-white rotate-[-45deg] shadow-lg rounded-bl-xl z-0 hidden lg:block" />
+                
+                <p className="relative z-10 font-body font-bold text-lg md:text-xl text-slate-800 leading-relaxed tracking-tight whitespace-pre-line">
+                  {currentNode.narrative}
+                </p>
+              </div>
 
-          {/* Bottom market tension indicator */}
-          <div className="flex items-center gap-4 border-4 border-white bg-white/80 backdrop-blur-md rounded-full p-3 self-start shadow-[0_10px_30px_rgba(30,58,138,0.08)] mt-4">
-            <div className="w-12 h-12 rounded-full bg-navy flex items-center justify-center text-electric-cyan flex-shrink-0 shadow-inner">
-              <span
-                className="material-symbols-outlined text-xl"
-                style={{ fontVariationSettings: "'FILL' 1" }}
-              >
-                trending_up
-              </span>
+              {/* Choices */}
+              <div className="flex flex-col gap-4 mt-6 z-10">
+                {currentNode.choices.map((choice, i: number) => {
+                  const letterLabel = String.fromCharCode(65 + i);
+                  
+                  // Vivid App Colors
+                  const colors = [
+                    "bg-pill-blue hover:bg-sky-blue text-white border-white",
+                    "bg-hot-pink hover:bg-hot-pink/80 text-white border-white",
+                    "bg-lime hover:bg-grass-green text-slate-900 border-white",
+                  ];
+                  const buttonColor = colors[i % colors.length];
+
+                  return (
+                    <button
+                      key={choice.index}
+                      onClick={() => handleChoice(choice.index)}
+                      disabled={isTransitioning || choiceDisabled}
+                      className={`group relative flex items-center w-full rounded-[2.5rem] border-4 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed hover:scale-105 active:scale-95 shadow-xl overflow-hidden ${buttonColor}`}
+                    >
+                      {/* Shine effect */}
+                      <div className="absolute inset-0 w-1/2 h-full bg-white/20 skew-x-12 -translate-x-full group-hover:animate-shine" />
+
+                      <span className={`flex-shrink-0 w-16 h-16 rounded-full m-3 flex items-center justify-center text-3xl font-headline font-black bg-white/20 backdrop-blur-sm group-hover:bg-white/40 transition-colors shadow-inner`}>
+                        {letterLabel}
+                      </span>
+                      <span className="flex-1 flex flex-col items-start px-2 py-4 text-left">
+                        <span className="font-headline font-bold text-lg leading-tight">{choice.text}</span>
+                      </span>
+                      <span className="material-symbols-outlined text-4xl pr-6 font-black group-hover:translate-x-2 transition-transform drop-shadow-sm">arrow_forward_ios</span>
+                    </button>
+                  );
+                })}
+              </div>
+
+              {/* Free-text choice */}
+              <div className="mt-4 flex flex-col gap-3 z-10">
+                <p className="font-headline font-bold text-sm uppercase tracking-widest text-white/80 text-center drop-shadow-md">
+                  Or write your own approach
+                </p>
+                <div className="flex gap-3 bg-white p-2 rounded-full shadow-2xl border-4 border-white/50">
+                  <input
+                    type="text"
+                    placeholder="Describe your move..."
+                    value={freeText}
+                    onChange={(e) => setFreeText(e.target.value)}
+                    onKeyDown={(e) => e.key === "Enter" && freeText.trim() && void handleFreeTextChoice()}
+                    className="flex-1 bg-slate-50 border-none rounded-full px-6 py-4 font-body font-bold text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-4 focus:ring-sky-blue/30 transition-all"
+                    disabled={isTransitioning || choiceDisabled}
+                  />
+                  <button
+                    onClick={() => void handleFreeTextChoice()}
+                    disabled={!freeText.trim() || isTransitioning || choiceDisabled}
+                    className="px-8 py-4 bg-pill-red text-white rounded-full font-headline font-black uppercase tracking-widest hover:scale-105 active:scale-95 transition-all disabled:opacity-40 disabled:cursor-not-allowed border-4 border-white shadow-lg flex items-center gap-2"
+                  >
+                    <span>Execute</span>
+                    <span className="material-symbols-outlined text-xl">send</span>
+                  </button>
+                </div>
+              </div>
+
             </div>
-            <div className="pr-4">
-              <p className="text-navy font-headline font-black text-xs tracking-widest uppercase">
-                Market Tension
-              </p>
-              <p className="text-navy/70 font-headline font-bold text-[10px] uppercase tracking-wider">Active · Accra Central</p>
-            </div>
+          )}
+        </section>
+
+        {/* ── Right Pane (Contextual Data) ── */}
+        <aside className="hidden lg:flex flex-col gap-6 h-full overflow-y-auto pl-2 pb-10 custom-scrollbar">
+          <div className="bg-white/95 backdrop-blur-xl rounded-[2.5rem] p-6 shadow-xl border-4 border-white/50">
+            <WorldHUD clientState={clientState!} />
           </div>
-        </div>
-        )}
+          
+          <div className="bg-white/95 backdrop-blur-xl rounded-[2.5rem] p-6 shadow-xl border-4 border-white/50 flex flex-col items-center">
+            <h2 className="font-headline font-black text-pill-red text-lg uppercase tracking-widest mb-2 text-center">EO Profile</h2>
+            <RadarChart dimensions={dummyEo} maxValue={100} />
+          </div>
+        </aside>
+
       </main>
+
+      {/* Inline styles for custom scrollbars and shine animation */}
+      <style dangerouslySetInnerHTML={{__html: `
+        .custom-scrollbar::-webkit-scrollbar { width: 8px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: rgba(255,255,255,0.1); border-radius: 10px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.4); border-radius: 10px; }
+        .hide-scrollbar::-webkit-scrollbar { display: none; }
+        .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+        @keyframes shine {
+          100% { transform: translateX(200%); }
+        }
+        .animate-shine { animation: shine 1.5s ease-in-out infinite; }
+      `}} />
     </div>
   );
-};
-
-export default Gameplay;
+}

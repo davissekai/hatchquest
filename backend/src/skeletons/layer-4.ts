@@ -10,6 +10,7 @@ const L4_SK_1: ScenarioSkeleton = {
   theme: "operations",
   baseWeight: 1.0,
   eoTargetDimensions: ["innovativeness", "riskTaking"],
+  narrativePattern: "pivot",
   situationSeed:
     "Five months in and your core revenue line is stalling. The model that got you here is not going to get you to the next level. You have identified a fundamental change that could double your business — but it means dismantling what you have built and rebuilding while managing the existing operation.",
   choiceArchetypes: [
@@ -70,6 +71,7 @@ const L4_SK_2: ScenarioSkeleton = {
   id: "L4-node-2",
   layer: 4,
   theme: "financing",
+  narrativePattern: "fundraising",
   baseWeight: 1.0,
   eoTargetDimensions: ["autonomy", "competitiveAggressiveness"],
   situationSeed:
@@ -103,8 +105,8 @@ const L4_SK_2_EFFECTS: [ChoiceEffect, ChoiceEffect, ChoiceEffect] = [
     revenue: 3_000,
     debt: 0,
     monthlyBurn: 2_000,
-    reputation: 15,
-    networkStrength: 20,
+    reputation: 8,
+    networkStrength: 10,
     eoDeltas: { proactiveness: 2, competitiveAggressiveness: 2, autonomy: -3 },
   },
   {
@@ -112,8 +114,8 @@ const L4_SK_2_EFFECTS: [ChoiceEffect, ChoiceEffect, ChoiceEffect] = [
     revenue: 1_500,
     debt: 0,
     monthlyBurn: 1_000,
-    reputation: 10,
-    networkStrength: 12,
+    reputation: 6,
+    networkStrength: 6,
     eoDeltas: { autonomy: -1, innovativeness: 2, proactiveness: 1 },
   },
   {
@@ -133,6 +135,7 @@ const L4_SK_3: ScenarioSkeleton = {
   id: "L4-node-3",
   layer: 4,
   theme: "competition",
+  narrativePattern: "reputation_crisis",
   baseWeight: 1.0,
   eoTargetDimensions: ["proactiveness", "autonomy"],
   situationSeed:
@@ -165,8 +168,8 @@ const L4_SK_3_EFFECTS: [ChoiceEffect, ChoiceEffect, ChoiceEffect] = [
     revenue: 800,
     debt: 0,
     monthlyBurn: 200,
-    reputation: 15,
-    networkStrength: 10,
+    reputation: 8,
+    networkStrength: 6,
     eoDeltas: { proactiveness: 3, autonomy: 1 },
   },
   {

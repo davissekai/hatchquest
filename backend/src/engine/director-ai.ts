@@ -1,5 +1,29 @@
-import type { EODimension, WorldState } from "@hatchquest/shared";
+import type { EODimension, ScenarioSkeleton, WorldState } from "@hatchquest/shared";
 import type { RegisteredSkeleton } from "../skeletons/registry.js";
+
+/**
+ * Sector affinity multiplier in [0.2, 2.0] — unlisted sectors fall through to 1.0.
+ * Suppresses scenarios that don't fit the player's business sector.
+ */
+export function computeSectorAffinity(
+  skeleton: ScenarioSkeleton,
+  state: WorldState
+): number {
+  return skeleton.sectorAffinities?.[state.sector] ?? 1.0;
+}
+
+/**
+ * Pattern-repeat penalty: if the skeleton's narrativePattern matches one of
+ * the last two played scenarios, multiply weight by 0.3 to suppress repeats.
+ * Untagged skeletons (no narrativePattern) are unaffected.
+ */
+export function computePatternRepeatPenalty(
+  skeleton: ScenarioSkeleton,
+  state: WorldState
+): number {
+  if (!skeleton.narrativePattern) return 1.0;
+  return state.recentPatterns.includes(skeleton.narrativePattern) ? 0.3 : 1.0;
+}
 
 /**
  * Scenario theme — used to compute context-sensitive weight multipliers.
@@ -248,7 +272,9 @@ export function selectNextSkeleton(
     weight:
       entry.skeleton.baseWeight *
       computeThemeAffinity(entry.skeleton.theme as NodeTheme, state) *
-      computeEOAffinityFromDimensions(entry.skeleton.eoTargetDimensions, state),
+      computeEOAffinityFromDimensions(entry.skeleton.eoTargetDimensions, state) *
+      computeSectorAffinity(entry.skeleton, state) *
+      computePatternRepeatPenalty(entry.skeleton, state),
   }));
 
   return weightedDraw(scored, rng);

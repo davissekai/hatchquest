@@ -10,6 +10,7 @@ const L9_SK_1: ScenarioSkeleton = {
   theme: "hiring",
   baseWeight: 1.0,
   eoTargetDimensions: ["autonomy", "riskTaking"],
+  narrativePattern: "hiring",
   situationSeed:
     "Demand has outpaced what your current team can handle. You have a real scaling decision in front of you: hire ten people directly and build the team you always imagined, outsource the operations to a specialist firm in Tema that handles this category, or grow incrementally — two hires per month, controlled and affordable. Each path leads to a different kind of company. Payroll for ten would reshape your entire financial structure, outsourcing would mean releasing quality control, and incremental growth risks losing momentum at exactly the wrong time.",
   choiceArchetypes: [
@@ -40,8 +41,8 @@ const L9_SK_1_EFFECTS: [ChoiceEffect, ChoiceEffect, ChoiceEffect] = [
     revenue: 12_000,
     debt: 5_000,
     monthlyBurn: 15_000,
-    reputation: 18,
-    networkStrength: 20,
+    reputation: 10,
+    networkStrength: 10,
     eoDeltas: { riskTaking: 3, proactiveness: 2, autonomy: 1, innovativeness: 1, competitiveAggressiveness: 1 },
   },
   {
@@ -49,8 +50,8 @@ const L9_SK_1_EFFECTS: [ChoiceEffect, ChoiceEffect, ChoiceEffect] = [
     revenue: 7_000,
     debt: 0,
     monthlyBurn: 4_000,
-    reputation: 6,
-    networkStrength: 12,
+    reputation: 5,
+    networkStrength: 6,
     eoDeltas: { innovativeness: 2, autonomy: -2, proactiveness: 1, riskTaking: -1, competitiveAggressiveness: 1 },
   },
   {

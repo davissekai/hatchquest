@@ -10,6 +10,9 @@ const L3_SK_1: ScenarioSkeleton = {
   theme: "growth",
   baseWeight: 1.0,
   eoTargetDimensions: ["riskTaking", "proactiveness"],
+  narrativePattern: "expansion",
+  // Second physical site framing — bad fit for software/remote plays.
+  sectorAffinities: { tech: 0.2, services: 0.5 },
   situationSeed:
     "Three months in, a second site opportunity has appeared — a small space in a different part of the city at below-market rent. The owner needs an answer in five days. Moving fast means splitting your attention and capital before your first location is stable. Waiting means someone else takes it.",
   conditions: { capitalMin: 4_000 },
@@ -73,6 +76,7 @@ const L3_SK_2: ScenarioSkeleton = {
   id: "L3-node-2",
   layer: 3,
   theme: "crisis",
+  narrativePattern: "key_person_loss",
   baseWeight: 1.0,
   eoTargetDimensions: ["autonomy", "innovativeness"],
   situationSeed:
@@ -135,6 +139,7 @@ const L3_SK_3: ScenarioSkeleton = {
   id: "L3-node-3",
   layer: 3,
   theme: "market",
+  narrativePattern: "pivot",
   baseWeight: 1.0,
   eoTargetDimensions: ["innovativeness", "competitiveAggressiveness"],
   situationSeed:
@@ -197,6 +202,7 @@ const L3_SK_4: ScenarioSkeleton = {
   id: "L3-node-4",
   layer: 3,
   theme: "networking",
+  narrativePattern: "partnership",
   baseWeight: 1.1,
   eoTargetDimensions: ["autonomy", "proactiveness"],
   situationSeed:
@@ -231,7 +237,7 @@ const L3_SK_4_EFFECTS: [ChoiceEffect, ChoiceEffect, ChoiceEffect] = [
     debt: 0,
     monthlyBurn: 500,
     reputation: -5,
-    networkStrength: 15,
+    networkStrength: 8,
     eoDeltas: { proactiveness: 2, autonomy: -3 },
   },
   {

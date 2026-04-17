@@ -8,7 +8,9 @@ export type {
   EOPoleDistribution,
   BusinessSector,
   BusinessFormality,
+  RecentChoice,
 } from "./types/game.js";
+export { BUSINESS_SECTORS } from "./types/game.js";
 export type { GameSession, SessionStatus } from "./types/session.js";
 export type { PlayerContext } from "./types/context.js";
 export type {

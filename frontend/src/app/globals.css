@@ -1,16 +1,16 @@
 @import "tailwindcss";
 
-/* ── Vibrant Rounded Graffiti Aesthetic ────────────────────────────────── */
+/* ── Desktop-First Vibrant UI Aesthetic ────────────────────────────────── */
 :root {
-  --background: #FDFBF7; /* cream */
-  --on-background: #1E3A8A; /* navy */
-  --surface: #FDFBF7;
-  --on-surface: #1E3A8A;
+  --background: #0088FF; /* Deep vivid sky blue */
+  --on-background: #FFFFFF; /* white */
+  --surface: #FFFFFF;
+  --on-surface: #0f172a; /* slate-900 */
   
-  --primary: #FF2A85; /* hot-pink */
+  --primary: #32CD32; /* Grass Green */
   --on-primary: #FFFFFF;
   
-  --error: #b41340;
+  --error: #FF3B30; /* Bright Apple Red */
 }
 
 @theme {
@@ -23,26 +23,33 @@
   --color-on-primary: var(--on-primary);
   --color-error: var(--error);
 
-  --color-navy: #1E3A8A;
-  --color-electric-yellow: #FFEA00;
-  --color-cream: #FDFBF7;
+  /* Vibrant Palette */
+  --color-vivid-blue: #0088FF;
+  --color-sky-blue: #33A1FF;
+  --color-grass-green: #32CD32;
+  --color-pill-red: #FF3B30;
+  --color-pill-blue: #007AFF;
+  --color-soft-white: #F8FAFC;
+  --color-slate-900: #0f172a;
   
-  /* Vibrant Graffiti Palette */
+  /* Legacy Aliases for un-updated components */
+  --color-navy: #0f172a;
+  --color-cream: #F8FAFC;
+  
+  /* Fallbacks/Accents */
   --color-hot-pink: #FF2A85;
-  --color-electric-cyan: #00F0FF;
   --color-lime: #39FF14;
-  --color-vibrant-orange: #FF5E00;
-  --color-bubblegum: #FF85C0;
 
   /* Typography */
-  --font-headline: var(--font-plus-jakarta), "Plus Jakarta Sans", sans-serif;
-  --font-body: var(--font-newsreader), "Newsreader", serif;
-  --font-label: var(--font-plus-jakarta), "Plus Jakarta Sans", sans-serif;
+  --font-headline: var(--font-fredoka), "Fredoka", sans-serif;
+  --font-body: var(--font-nunito), "Nunito", sans-serif;
+  --font-label: var(--font-fredoka), "Fredoka", sans-serif;
 
-  /* Border radius */
+  /* Massive Border radius for 'App' feel */
   --radius: 1rem;
   --radius-lg: 2rem;
   --radius-xl: 3rem;
+  --radius-2xl: 4rem;
   --radius-full: 9999px;
 }
 
