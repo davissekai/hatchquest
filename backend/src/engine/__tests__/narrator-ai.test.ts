@@ -265,7 +265,13 @@ describe("validateNarration", () => {
     expect(result.ok).toBe(true);
   });
 
-  it("rejects first-turn narration that drifts away from story memory", () => {
+  it("accepts first-turn narration without a time marker (continuity is a prompt-side concern, not a validator hard gate)", () => {
+    // Time-marker and ≥40% word-overlap checks were removed from the validator:
+    // they rejected usable LLM output more often than they caught real drift,
+    // and forced buildFallbackSkin to serve a stilted template. The system
+    // prompt still instructs the LLM to open with a time marker and continue
+    // story memory — if it occasionally doesn't, that's a minor cosmetic miss,
+    // not a fatal quality issue worth a fallback.
     const skin: NarrativeSkin = {
       narrative: "A stranger walks into your office with a completely unrelated offer.",
       choices: ["a", "b", "c"],
@@ -288,7 +294,6 @@ describe("validateNarration", () => {
         },
       })
     );
-    expect(result.ok).toBe(false);
-    expect(result.reason).toMatch(/time marker|story memory/);
+    expect(result.ok).toBe(true);
   });
 });

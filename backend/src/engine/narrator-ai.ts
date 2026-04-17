@@ -78,44 +78,6 @@ function containsRawLeakage(output: NarrativeSkin, context: PlayerContext): bool
   });
 }
 
-function startsWithTimeMarker(narrative: string): boolean {
-  return /^(A|An|One|Two|Three|Several)\b.+?(day|days|week|weeks|month|months)\b/i.test(
-    narrative
-  );
-}
-
-function contentWords(text: string): Set<string> {
-  return new Set(
-    normalizeForComparison(text).split(" ").filter((w) => w.length > 3)
-  );
-}
-
-function wordOverlapRatio(signal: string, narrative: string): number {
-  const signalWords = contentWords(signal);
-  if (signalWords.size === 0) return 0;
-  const narrativeWords = contentWords(narrative);
-  let matches = 0;
-  for (const word of signalWords) {
-    if (narrativeWords.has(word)) matches++;
-  }
-  return matches / signalWords.size;
-}
-
-// Passes when ≥40% of content words from any storyMemory signal appear in
-// the narrative — tolerant of LLM paraphrasing while still blocking drift.
-function hasFirstTurnContinuity(
-  narrative: string,
-  storyMemory: StoryMemory
-): boolean {
-  const signals = [
-    storyMemory.openThread,
-    storyMemory.continuityAnchor,
-    storyMemory.lastBeatSummary,
-  ].filter((s) => s.length >= 10);
-
-  return signals.some((signal) => wordOverlapRatio(signal, narrative) >= 0.4);
-}
-
 const NARRATOR_SYSTEM_PROMPT = `You are a business simulation narrator set in Accra, Ghana, 2026.
 
 You will receive:
@@ -256,16 +218,8 @@ export function validateNarration(
     return { ok: false, reason: `banned proper nouns: ${violations.slice(0, 3).join(", ")}` };
   }
 
-  if (worldCtx?.isFirstScenarioTurn && worldCtx.storyMemory) {
-    if (!startsWithTimeMarker(output.narrative)) {
-      return { ok: false, reason: "first-turn narration must open with a time marker" };
-    }
-    if (!hasFirstTurnContinuity(output.narrative, worldCtx.storyMemory)) {
-      return { ok: false, reason: "first-turn narration drifted away from story memory" };
-    }
-  }
-
   void skeleton;
+  void worldCtx;
   return { ok: true };
 }
 
