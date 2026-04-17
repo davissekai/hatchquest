@@ -268,12 +268,12 @@ describe("buildTurnContextBlock", () => {
     expect(block).toContain("(not provided)");
   });
 
-  it("truncates long businessDescription to 140 chars in the block", () => {
+  it("truncates long businessDescription to 120 chars in the block", () => {
     const long = "x".repeat(200);
     const block = buildTurnContextBlock(ctx({ businessDescription: long }));
-    // Block should contain truncated form (140 chars + ellipsis), not the full 200-char string
+    // Block should contain truncated form (120 chars + ellipsis), not the full 200-char string
     expect(block).not.toContain(long);
-    expect(block).toContain("x".repeat(140) + "…");
+    expect(block).toContain("x".repeat(120) + "…");
   });
 
   it("appends Q2 scenario and decision on first scenario turn when both are present", () => {

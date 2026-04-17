@@ -34,9 +34,11 @@ const BANNED_PROPER_NOUNS = new Set([
   "Shopify",
 ]);
 
-// Cap on businessDescription chars sent to the LLM. Q1 paragraphs can be long;
-// pasting the whole thing into the prompt causes the LLM to echo it verbatim.
-const BUSINESS_DESCRIPTION_PROMPT_CAP = 140;
+// Hard caps on PlayerContext fields sent to the LLM.
+// Q1 answers are often multi-paragraph essays. Sending them uncapped causes the
+// LLM to echo the raw text verbatim into the narrative instead of paraphrasing.
+const BUSINESS_DESCRIPTION_PROMPT_CAP = 120;
+const MOTIVATION_PROMPT_CAP = 100;
 
 function decapitalise(s: string): string {
   if (s.length === 0) return s;
@@ -156,7 +158,7 @@ export function buildTurnContextBlock(ctx: NarrationWorldContext): string {
   const businessShort =
     ctx.businessDescription.length > BUSINESS_DESCRIPTION_PROMPT_CAP
       ? `${ctx.businessDescription.slice(0, BUSINESS_DESCRIPTION_PROMPT_CAP).trim()}…`
-      : ctx.businessDescription;
+      : ctx.businessDescription || "(not provided)";
 
   let q2Block = "";
   if (ctx.isFirstScenarioTurn && ctx.q2Prompt && ctx.q2Response) {
@@ -175,7 +177,7 @@ export function buildTurnContextBlock(ctx: NarrationWorldContext): string {
 
   return `TURN CONTEXT:
 - Sector: ${ctx.sector}
-- Business (paraphrase hint, never echo verbatim): ${businessShort || "(not provided)"}
+- Business (paraphrase hint, never echo verbatim): ${businessShort}
 - Turn number: ${ctx.turnNumber}
 - Is first scenario turn: ${ctx.isFirstScenarioTurn ? "YES" : "no"}
 - Recent choices: ${recent}${q2Block}`;
@@ -239,11 +241,16 @@ export async function generateNarrativeSkin(
       ? `${context.businessDescription.slice(0, BUSINESS_DESCRIPTION_PROMPT_CAP).trim()}…`
       : context.businessDescription;
 
+  const motivationShort =
+    context.motivation.length > MOTIVATION_PROMPT_CAP
+      ? `${context.motivation.slice(0, MOTIVATION_PROMPT_CAP).trim()}…`
+      : context.motivation;
+
   const userPrompt = `SITUATION SEED: ${skeleton.situationSeed}
 
-PLAYER CONTEXT:
-- Business (summary, do NOT quote verbatim): ${businessShort}
-- Motivation: ${context.motivation}${worldBlock}
+PLAYER CONTEXT (use for framing only — do NOT reproduce these fields verbatim in the narrative):
+- Business: ${businessShort}
+- Motivation: ${motivationShort}${worldBlock}
 
 CHOICE ARCHETYPES:
 1. ${skeleton.choiceArchetypes[0].archetypeDescription} (tension: ${skeleton.choiceArchetypes[0].tensionAxis})
