@@ -64,7 +64,11 @@ function containsRawLeakage(output: NarrativeSkin, context: PlayerContext): bool
   const renderedFiltered = filterShort(
     `${output.narrative} ${output.choices.join(" ")}`
   );
-  const rawSources = [context.rawQ1Response, context.rawQ2Response, context.q2Prompt];
+  // Only rawQ1Response is contraband. Q2 prompt is game-generated scenario text
+  // and Q2 response is summarised into storyMemory — both are meant to carry
+  // forward into the first L1 beat, so detecting them here blocks legitimate
+  // narrative continuity. Q1 is the founder's free-form pitch and must never echo.
+  const rawSources = [context.rawQ1Response];
 
   return rawSources.some((source) => {
     if (!source) return false;

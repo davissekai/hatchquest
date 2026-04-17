@@ -225,6 +225,46 @@ describe("validateNarration", () => {
     expect(result.reason).toMatch(/raw Layer 0 text/);
   });
 
+  it("accepts first-turn narration that echoes Q2 content via story memory", () => {
+    // Q2 content is game-generated scenario text that storyMemory distills into
+    // continuityAnchor/openThread/lastBeatSummary. The first L1 beat SHOULD carry
+    // those concepts forward — Q2 words appearing in the narrative is the feature,
+    // not a leak. Only rawQ1Response (the founder's free-form pitch) must never echo.
+    const q2EchoContext: PlayerContext = {
+      ...TEST_CONTEXT,
+      rawQ2Response:
+        "I would call two backup suppliers immediately and lock in a short-term deal.",
+      q2Prompt:
+        "Your main supplier just backed out of a key arrangement and traders are waiting for an answer.",
+    };
+    const skin: NarrativeSkin = {
+      // Contains the 7-content-word chunk "your main supplier just backed out key"
+      // (after filterShort) from q2Prompt — the exact pattern the old leak detector caught.
+      narrative:
+        "Two days after your main supplier just backed out key arrangement talks, the disruption is still threatening your first momentum. Rivals are circling the gap.",
+      choices: ["invest now", "slow down", "ask partners for cover"],
+      tensionHints: ["Speed vs runway", "Stability vs momentum", "Control vs support"],
+    };
+
+    const result = validateNarration(
+      skin,
+      TEST_SKELETON,
+      q2EchoContext,
+      ctx({
+        isFirstScenarioTurn: true,
+        storyMemory: {
+          lastBeatSummary:
+            "You answered an early supplier disruption with a decisive operational response.",
+          openThread: "the unresolved supplier disruption",
+          continuityAnchor: "supplier disruption still threatening your first momentum",
+          recentDecisionStyle: "decisive operational response",
+          currentArc: "First Market Test",
+        },
+      })
+    );
+    expect(result.ok).toBe(true);
+  });
+
   it("rejects first-turn narration that drifts away from story memory", () => {
     const skin: NarrativeSkin = {
       narrative: "A stranger walks into your office with a completely unrelated offer.",
