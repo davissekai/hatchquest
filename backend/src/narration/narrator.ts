@@ -1,8 +1,7 @@
-import Anthropic from "@anthropic-ai/sdk";
 import type { EOProfile, ScenarioNode, WorldState } from "@hatchquest/shared";
+import { callLLM } from "../lib/llm-client.js";
 
 const NARRATION_TIMEOUT_MS = 3_500;
-const ANTHROPIC_MODEL = process.env.ANTHROPIC_MODEL ?? "claude-haiku-4-5";
 
 const SCENARIO_SYSTEM_PROMPT = `You are the narrative voice for HatchQuest, a serious entrepreneurship simulation set in Accra, Ghana.
 Rewrite the supplied scenario into immersive but concise second-person game copy.
@@ -33,17 +32,6 @@ Rules:
 - Encouraging but honest; never generic hype
 - Do not mention EO labels as a list
 - Return plain text only`;
-
-function getAnthropicClient() {
-  const apiKey = process.env.ANTHROPIC_API_KEY;
-  if (!apiKey) return null;
-
-  return new Anthropic({
-    apiKey,
-    timeout: NARRATION_TIMEOUT_MS,
-    maxRetries: 0,
-  });
-}
 
 function formatCurrency(value: number): string {
   return `GHS ${Math.round(value).toLocaleString()}`;
@@ -151,26 +139,7 @@ async function callAnthropicNarration(
   userPrompt: string,
   maxTokens: number
 ): Promise<string | null> {
-  const client = getAnthropicClient();
-  if (!client) return null;
-
-  try {
-    const message = await client.messages.create({
-      model: ANTHROPIC_MODEL,
-      max_tokens: maxTokens,
-      system,
-      messages: [{ role: "user", content: userPrompt }],
-    });
-
-    const text = message.content
-      .map((block) => (block.type === "text" ? block.text : ""))
-      .join("")
-      .trim();
-
-    return text.length > 0 ? text : null;
-  } catch {
-    return null;
-  }
+  return callLLM({ system, user: userPrompt, maxTokens, timeoutMs: NARRATION_TIMEOUT_MS });
 }
 
 export async function narrateScenarioNode(

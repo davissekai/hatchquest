@@ -1,4 +1,3 @@
-import Anthropic from "@anthropic-ai/sdk";
 import type {
   BusinessSector,
   NarrativeSkin,
@@ -7,10 +6,10 @@ import type {
   ScenarioSkeleton,
   StoryMemory,
 } from "@hatchquest/shared";
+import { callLLM } from "../lib/llm-client.js";
 import { isMockLLM, mockGenerateSkin } from "../lib/mock-anthropic.js";
 
 const NARRATOR_TIMEOUT_MS = 12_000;
-const ANTHROPIC_MODEL = process.env.ANTHROPIC_MODEL ?? "claude-haiku-4-5";
 const BUSINESS_SUMMARY_PROMPT_CAP = 140;
 
 const BANNED_PROPER_NOUNS = new Set([
@@ -137,14 +136,6 @@ export interface NarrationWorldContext {
   isFirstScenarioTurn: boolean;
 }
 
-/* c8 ignore start */
-function getClient(): Anthropic | null {
-  const apiKey = process.env.ANTHROPIC_API_KEY;
-  if (!apiKey) return null;
-  return new Anthropic({ apiKey, timeout: NARRATOR_TIMEOUT_MS, maxRetries: 0 });
-}
-/* c8 ignore stop */
-
 export function buildWorldConditionsBlock(ctx: NarrationWorldContext): string {
   const heatLabel = ctx.marketHeat > 65 ? "hot" : ctx.marketHeat > 35 ? "moderate" : "cold";
   const threatLabel =
@@ -233,10 +224,7 @@ export async function generateNarrativeSkin(
     return [skin, "fallback"];
   }
 
-  const client = getClient();
-  /* c8 ignore start -- requires live Anthropic API key; not testable in CI */
-  if (!client) return [buildFallbackSkin(skeleton, context, worldCtx), "fallback"];
-
+  /* c8 ignore start -- requires live LLM API key; not testable in CI */
   const worldBlock = worldCtx
     ? `\n\n${buildWorldConditionsBlock(worldCtx)}\n\n${buildTurnContextBlock(worldCtx)}`
     : "";
@@ -255,17 +243,14 @@ CHOICE ARCHETYPES:
 3. ${skeleton.choiceArchetypes[2].archetypeDescription} (tension: ${skeleton.choiceArchetypes[2].tensionAxis})`;
 
   try {
-    const msg = await client.messages.create({
-      model: ANTHROPIC_MODEL,
-      max_tokens: 1000,
+    const raw = await callLLM({
       system: NARRATOR_SYSTEM_PROMPT,
-      messages: [{ role: "user", content: userPrompt }],
+      user: userPrompt,
+      maxTokens: 1000,
+      timeoutMs: NARRATOR_TIMEOUT_MS,
     });
 
-    const raw = msg.content
-      .map((block) => (block.type === "text" ? block.text : ""))
-      .join("")
-      .trim();
+    if (!raw) return [buildFallbackSkin(skeleton, context, worldCtx), "fallback"];
 
     const match = raw.match(/\{[\s\S]*\}/);
     if (!match) return [buildFallbackSkin(skeleton, context, worldCtx), "fallback"];

@@ -1,4 +1,3 @@
-import Anthropic from "@anthropic-ai/sdk";
 import type {
   BusinessSector,
   EOPoleDistribution,
@@ -6,6 +5,7 @@ import type {
   PlayerContext,
   StoryMemory,
 } from "@hatchquest/shared";
+import { callLLM } from "../lib/llm-client.js";
 
 export interface Layer0Assessment {
   distribution: EOPoleDistribution;
@@ -16,7 +16,6 @@ export interface Layer0Assessment {
 }
 
 const CLASSIFIER_TIMEOUT_MS = 10_000;
-const ANTHROPIC_MODEL = process.env.ANTHROPIC_MODEL ?? "claude-haiku-4-5";
 
 const SYSTEM_PROMPT = `You are an entrepreneurial orientation classifier.
 Return ONLY valid JSON with exactly this shape:
@@ -110,17 +109,6 @@ const SECTOR_PRIORITY: BusinessSector[] = [
   "services",
   "retail",
 ];
-
-function getAnthropicClient() {
-  const apiKey = process.env.ANTHROPIC_API_KEY;
-  if (!apiKey) return null;
-
-  return new Anthropic({
-    apiKey,
-    timeout: CLASSIFIER_TIMEOUT_MS,
-    maxRetries: 0,
-  });
-}
 
 function normalizeWhitespace(text: string): string {
   return text.replace(/\s+/g, " ").trim();
@@ -331,32 +319,16 @@ function buildFallbackStoryMemory(q2Prompt: string, q2Response: string): StoryMe
 export async function callAnthropicClassifier(
   response: string
 ): Promise<EOPoleDistribution | null> {
-  const client = getAnthropicClient();
-  if (!client) return null;
-
   try {
-    const msg = await client.messages.create({
-      model: ANTHROPIC_MODEL,
-      max_tokens: 180,
+    const raw = await callLLM({
       system: SYSTEM_PROMPT,
-      messages: [
-        {
-          role: "user",
-          content: response,
-        },
-      ],
+      user: response,
+      maxTokens: 180,
+      timeoutMs: CLASSIFIER_TIMEOUT_MS,
     });
-
-    const raw = msg.content
-      .map((block) => (block.type === "text" ? block.text : ""))
-      .join("")
-      .trim();
-
     if (!raw) return null;
-
     const match = raw.match(/\{[\s\S]*\}/);
     if (!match) return null;
-
     const parsed = JSON.parse(match[0]) as EOPoleDistribution;
     return isValidDistribution(parsed) ? parsed : null;
   } catch {
@@ -587,23 +559,14 @@ const FALLBACK_Q2 =
  * Falls back to a generic scenario if the LLM call fails or API key is missing.
  */
 export async function generateQ2(q1Response: string): Promise<string> {
-  const client = getAnthropicClient();
-  if (!client) return FALLBACK_Q2;
-
   try {
-    const msg = await client.messages.create({
-      model: ANTHROPIC_MODEL,
-      max_tokens: 300,
+    const text = await callLLM({
       system: Q2_GENERATOR_PROMPT,
-      messages: [{ role: "user", content: q1Response }],
+      user: q1Response,
+      maxTokens: 300,
+      timeoutMs: CLASSIFIER_TIMEOUT_MS,
     });
-
-    const text = msg.content
-      .map((block) => (block.type === "text" ? block.text : ""))
-      .join("")
-      .trim();
-
-    return text.length > 20 ? text : FALLBACK_Q2;
+    return text && text.length > 20 ? text : FALLBACK_Q2;
   } catch {
     return FALLBACK_Q2;
   }
@@ -658,31 +621,18 @@ export async function generateDisplaySafeContext(
   q1Response: string,
   q2Response: string
 ): Promise<Partial<PlayerContext>> {
-  const client = getAnthropicClient();
   const fallback = extractPlayerContext(q1Response, q2Response, "");
   const combined = `Q1: ${q1Response}\n\nQ2: ${q2Response}`;
 
-  if (!client) {
-    return {
-      businessLabel: fallback.businessLabel,
-      businessSummary: fallback.businessSummary,
-      founderEdge: fallback.founderEdge,
-    };
-  }
-
   try {
-    const msg = await client.messages.create({
-      model: ANTHROPIC_MODEL,
-      max_tokens: 250,
+    const text = await callLLM({
       system: CONTEXT_GENERATOR_PROMPT,
-      messages: [{ role: "user", content: combined }],
+      user: combined,
+      maxTokens: 250,
+      timeoutMs: CLASSIFIER_TIMEOUT_MS,
     });
 
-    const text = msg.content
-      .map((block) => (block.type === "text" ? block.text : ""))
-      .join("")
-      .trim();
-
+    if (!text) throw new Error("No response");
     const match = text.match(/\{[\s\S]*\}/);
     if (!match) throw new Error("No JSON found");
     const parsed = JSON.parse(match[0]) as Partial<PlayerContext>;
@@ -744,27 +694,18 @@ export async function generateStoryMemory(
   q2Prompt: string,
   q2Response: string
 ): Promise<StoryMemory> {
-  const client = getAnthropicClient();
   const fallback = buildFallbackStoryMemory(q2Prompt, q2Response);
   const combined = `Q2 SCENARIO: ${q2Prompt}\n\nQ2 DECISION: ${q2Response}`;
 
-  if (!client) {
-    return fallback;
-  }
-
   try {
-    const msg = await client.messages.create({
-      model: ANTHROPIC_MODEL,
-      max_tokens: 250,
+    const text = await callLLM({
       system: STORY_MEMORY_PROMPT,
-      messages: [{ role: "user", content: combined }],
+      user: combined,
+      maxTokens: 250,
+      timeoutMs: CLASSIFIER_TIMEOUT_MS,
     });
 
-    const text = msg.content
-      .map((block) => (block.type === "text" ? block.text : ""))
-      .join("")
-      .trim();
-
+    if (!text) throw new Error("No response");
     const match = text.match(/\{[\s\S]*\}/);
     if (!match) throw new Error("No JSON found");
     const parsed = JSON.parse(match[0]) as Partial<StoryMemory>;
