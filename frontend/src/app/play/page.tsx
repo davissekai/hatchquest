@@ -38,7 +38,6 @@ export default function Gameplay() {
   const [isTransitioning, setIsTransitioning] = useState(false);
   const [isFinalTransition, setIsFinalTransition] = useState(false);
   const [choiceDisabled, setChoiceDisabled] = useState(false);
-  const [freeText, setFreeText] = useState("");
 
   useEffect(() => {
     if (isTransitioning) return;
@@ -93,13 +92,12 @@ export default function Gameplay() {
     }
   }, [router, isFinalTransition]);
 
-  const handleFreeTextChoice = useCallback(async (): Promise<void> => {
-    if (!freeText.trim() || isTransitioning || choiceDisabled || !currentNode) return;
-    setFreeText("");
-    await handleChoice(0);
-  }, [freeText, isTransitioning, choiceDisabled, currentNode, handleChoice]);
 
   if (!currentNode && !isTransitioning && phase !== "complete") {
+    // While idle, useEffect is about to redirect — show a spinner instead of the error screen
+    if (phase === "idle") {
+      return <LoadingOverlay message="Loading..." />;
+    }
     return (
       <div className="min-h-screen bg-[#F5F2EB] flex items-center justify-center px-6 selection:bg-hot-pink selection:text-white">
         <div className="flex flex-col items-center gap-6 max-w-sm text-center bg-white p-10 rounded-[2rem] shadow-[12px_12px_0px_#0f172a] border-[6px] border-slate-900">
@@ -233,31 +231,6 @@ export default function Gameplay() {
                 })}
               </div>
 
-              {/* Free-text choice */}
-              <div className="mt-8 flex flex-col gap-4 z-10">
-                <p className="font-headline font-black text-sm uppercase tracking-widest text-slate-500 text-center">
-                  Or execute a custom approach
-                </p>
-                <div className="flex gap-4 bg-white p-4 rounded-[2rem] shadow-[12px_12px_0px_#0f172a] border-[6px] border-slate-900">
-                  <input
-                    type="text"
-                    placeholder="Describe your move..."
-                    value={freeText}
-                    onChange={(e) => setFreeText(e.target.value)}
-                    onKeyDown={(e) => e.key === "Enter" && freeText.trim() && void handleFreeTextChoice()}
-                    className="flex-1 bg-[#F5F2EB] border-[4px] border-slate-900 rounded-[1.5rem] px-6 py-4 font-headline font-bold text-lg text-slate-900 placeholder:text-slate-400 focus:outline-none focus:border-pill-blue focus:-translate-y-1 focus:shadow-[6px_6px_0px_#0f172a] transition-all"
-                    disabled={isTransitioning || choiceDisabled}
-                  />
-                  <button
-                    onClick={() => void handleFreeTextChoice()}
-                    disabled={!freeText.trim() || isTransitioning || choiceDisabled}
-                    className="px-8 py-4 bg-pill-red text-white rounded-[1.5rem] font-headline font-black text-xl uppercase tracking-widest hover:-translate-y-1 hover:shadow-[6px_6px_0px_#0f172a] active:translate-y-1 active:shadow-[0px_0px_0px_#0f172a] transition-all disabled:opacity-40 disabled:cursor-not-allowed border-[4px] border-slate-900 flex items-center gap-2"
-                  >
-                    <span>Execute</span>
-                    <span className="material-symbols-outlined font-black">send</span>
-                  </button>
-                </div>
-              </div>
 
             </div>
           )}

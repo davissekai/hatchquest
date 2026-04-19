@@ -15,7 +15,7 @@ interface RadarChartProps {
 const RadarChart: React.FC<RadarChartProps> = ({
   dimensions,
   maxValue = 100,
-  size = 280,
+  size = 320,
 }) => {
   const labels = [
     { key: "autonomy", label: "AUTONOMY" },
@@ -27,7 +27,7 @@ const RadarChart: React.FC<RadarChartProps> = ({
 
   const numAxes = labels.length;
   const center = size / 2;
-  const radius = size / 2 - 40; 
+  const radius = size / 2 - 55;
   const angleStep = (Math.PI * 2) / numAxes;
 
   const getPoint = (value: number, index: number, offset = 0) => {

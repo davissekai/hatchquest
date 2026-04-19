@@ -259,10 +259,12 @@ export default function Results() {
                     </span>
                   </div>
                   <div className="h-8 w-full rounded-full bg-white border-[4px] border-slate-900 overflow-hidden shadow-inner p-1">
-                    <div
-                      className={`h-full rounded-full border-r-[4px] border-slate-900 ${capitalFillClass}`}
-                      style={{ width: `${capitalBarWidth}%` }}
-                    />
+                    {capitalBarWidth > 0 && (
+                      <div
+                        className={`h-full rounded-full border-r-[4px] border-slate-900 ${capitalFillClass}`}
+                        style={{ width: `${capitalBarWidth}%` }}
+                      />
+                    )}
                   </div>
                 </div>
 

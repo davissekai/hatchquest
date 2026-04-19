@@ -45,12 +45,24 @@ async function callOpenRouter(opts: LLMCallOptions): Promise<string | null> {
       }),
     });
 
-    if (!res.ok) return null;
+    if (!res.ok) {
+      const body = await res.text().catch(() => "(unreadable)");
+      console.error(`[OpenRouter] HTTP ${res.status}: ${body}`);
+      return null;
+    }
     const json = (await res.json()) as {
       choices?: { message?: { content?: string } }[];
+      error?: { message?: string };
     };
-    return json.choices?.[0]?.message?.content?.trim() ?? null;
-  } catch {
+    if (json.error) {
+      console.error(`[OpenRouter] API error: ${json.error.message}`);
+      return null;
+    }
+    const text = json.choices?.[0]?.message?.content?.trim() ?? null;
+    if (!text) console.error("[OpenRouter] Empty content in response:", JSON.stringify(json));
+    return text;
+  } catch (err) {
+    console.error("[OpenRouter] fetch error:", err);
     return null;
   } finally {
     clearTimeout(timer);

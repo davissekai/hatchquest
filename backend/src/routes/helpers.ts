@@ -52,7 +52,7 @@ export function toClientState(worldState: WorldState): ClientWorldState {
       competitorThreat: worldState.competitorAggression,
       infrastructureStability: worldState.infrastructureReliability,
       lastEventLabel:
-        worldState.worldEventHistory.length > 0
+        (worldState.worldEventHistory?.length ?? 0) > 0
           ? worldState.worldEventHistory[worldState.worldEventHistory.length - 1]?.label ?? null
           : null,
       secondarySignals: pickSecondarySignals(worldState),

@@ -51,11 +51,7 @@ export default function Layer0Page() {
     }
   };
 
-  const preambleText = state.preamble ?? `The economy is recovering. Inflation is down and the cedi is holding, and there is a quiet optimism in the air that the city has not felt in a while. Business is moving and new money is circulating. Mobile money is everywhere — no longer just a feature but the system through which Accra runs. The city is expanding physically as infrastructure is built, and the energy around entrepreneurship is steadily growing.
-
-But the fundamentals have not changed. Capital is still hard to access without the right connections or collateral, and the informal economy remains enormous, setting the price floor for everything. Power is unreliable, and competition is stiff across local, informal, and foreign players. Survival in the first year is not guaranteed, and most do not make it.
-
-You have GHS 10,000 and an idea. That is where your story starts.`;
+  const preambleText = state.preamble ?? "Accra, 2026. The city hums with restless energy — mobile money has rewired commerce, the streets are dense with ambition. You have an idea, some savings, and a phone. Every founder here started the same way. What you do next is entirely up to you.";
 
   return (
     <div className="bg-[#F5F2EB] text-slate-900 min-h-screen relative overflow-hidden selection:bg-hot-pink selection:text-white">
