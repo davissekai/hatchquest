@@ -15,7 +15,7 @@ export interface Layer0Assessment {
   storyMemory: StoryMemory;
 }
 
-const CLASSIFIER_TIMEOUT_MS = 10_000;
+const CLASSIFIER_TIMEOUT_MS = 30_000;
 
 const SYSTEM_PROMPT = `You are an entrepreneurial orientation classifier.
 Return ONLY valid JSON with exactly this shape:
@@ -323,7 +323,7 @@ export async function callAnthropicClassifier(
     const raw = await callLLM({
       system: SYSTEM_PROMPT,
       user: response,
-      maxTokens: 180,
+      maxTokens: 1500,
       timeoutMs: CLASSIFIER_TIMEOUT_MS,
     });
     if (!raw) return null;
@@ -563,7 +563,7 @@ export async function generateQ2(q1Response: string): Promise<string> {
     const text = await callLLM({
       system: Q2_GENERATOR_PROMPT,
       user: q1Response,
-      maxTokens: 300,
+      maxTokens: 1500,
       timeoutMs: CLASSIFIER_TIMEOUT_MS,
     });
     return text && text.length > 20 ? text : FALLBACK_Q2;
@@ -628,7 +628,7 @@ export async function generateDisplaySafeContext(
     const text = await callLLM({
       system: CONTEXT_GENERATOR_PROMPT,
       user: combined,
-      maxTokens: 250,
+      maxTokens: 1500,
       timeoutMs: CLASSIFIER_TIMEOUT_MS,
     });
 
@@ -701,7 +701,7 @@ export async function generateStoryMemory(
     const text = await callLLM({
       system: STORY_MEMORY_PROMPT,
       user: combined,
-      maxTokens: 250,
+      maxTokens: 1500,
       timeoutMs: CLASSIFIER_TIMEOUT_MS,
     });
 

@@ -1,7 +1,7 @@
 import type { EOProfile, ScenarioNode, WorldState } from "@hatchquest/shared";
 import { callLLM } from "../lib/llm-client.js";
 
-const NARRATION_TIMEOUT_MS = 12_000;
+const NARRATION_TIMEOUT_MS = 30_000;
 
 const SCENARIO_SYSTEM_PROMPT = `You are the narrative voice for HatchQuest, a serious entrepreneurship simulation set in Accra, Ghana.
 Rewrite the supplied scenario into immersive but concise second-person game copy.
@@ -157,7 +157,7 @@ export async function narrateScenarioNode(
       buildScenarioWorldStateBrief(state),
       "Keep the same decision stakes.",
     ].join("\n\n"),
-    140
+    350
   );
 
   return {

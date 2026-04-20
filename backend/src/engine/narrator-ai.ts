@@ -9,7 +9,7 @@ import type {
 import { callLLM } from "../lib/llm-client.js";
 import { isMockLLM, mockGenerateSkin } from "../lib/mock-anthropic.js";
 
-const NARRATOR_TIMEOUT_MS = 12_000;
+const NARRATOR_TIMEOUT_MS = 30_000;
 const BUSINESS_SUMMARY_PROMPT_CAP = 140;
 
 const BANNED_PROPER_NOUNS = new Set([
@@ -90,7 +90,7 @@ Your job: generate a scenario that feels like it is happening to THIS player's b
 
 Return ONLY valid JSON with this exact shape:
 {
-  "narrative": "<2-3 paragraph scenario description, grounded in the player's sector>",
+  "narrative": "<scenario description, grounded in the player's sector, strictly under 60 words>",
   "choices": ["<choice 1 text>", "<choice 2 text>", "<choice 3 text>"],
   "tensionHints": ["<hint 1>", "<hint 2>", "<hint 3>"]
 }
@@ -111,14 +111,16 @@ Continuity rules:
 - Open with a short time-marker such as "Two days after..." or "A week after...".
 - Never quote or closely echo the founder's raw Layer 0 answers.
 - The 3 choices must emerge naturally from this exact narrative thread.
-- If IS_FIRST_SCENARIO_TURN is no and RECENT CHOICES are present, open with one sentence recalling the most recent choice.
+- If IS_FIRST_SCENARIO_TURN is no and RECENT CHOICES are present, open with one sentence that recalls the most recent choice AND naturally flows into the new situation — do not treat them as two separate scenes.
 
 Other rules:
 - Use the provided BUSINESS_LABEL to refer to the player's business.
 - Use Accra-specific details: locations, GHS currency, local business culture.
-- Narrative must be rich and immersive, ~3 paragraphs. Up to 1500 characters.
-- Choices must be 1–3 sentences each, action-oriented, specific to this exact scenario.
+- Narrative must be rich and immersive. STRICT LIMIT: under 100 words. 4–6 sentences max.
+- Choices must be 1–2 sentences each, under 30 words each, action-oriented, specific to this exact scenario.
 - Tension hints describe the dilemma without EO jargon.
+- NEVER include parenthetical deltas, stat changes, or effect summaries (e.g. "-3k capital") in the narrative or choices.
+- When recapping the previous choice, paraphrase naturally — never quote the choice label verbatim.
 - No markdown, no code fence, JSON only.`;
 
 export interface NarrationWorldContext {
@@ -163,7 +165,7 @@ export function buildTurnContextBlock(ctx: NarrationWorldContext): string {
       : ctx.choiceHistory
           .map(
             (choice, index) =>
-              `${index === 0 ? "MOST RECENT" : `prior ${index}`}: "${choice.choiceLabel}" (${choice.effectSummary})`
+              `${index === 0 ? "MOST RECENT" : `prior ${index}`}: "${choice.choiceLabel}"`
           )
           .join("; ");
 
@@ -196,7 +198,7 @@ export function validateNarration(
   if (output.choices.length !== 3) {
     return { ok: false, reason: "expected exactly 3 choices" };
   }
-  if (output.narrative.length > 1500) {
+  if (output.narrative.length > 700) {
     return { ok: false, reason: `narrative too long: ${output.narrative.length} chars` };
   }
   if (containsRawLeakage(output, context)) {
