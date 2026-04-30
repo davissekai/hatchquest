@@ -17,9 +17,20 @@ coverage
 # next.js
 /.next/
 /out/
+frontend/.next/
+frontend/out/
+
+# screenshots / stray image artifacts
+*.png
+*.jpg
+*.jpeg
+!public/**
+!frontend/public/**
+!**/public/**
 
 # production
 /build
+packages/shared/dist
 
 # misc
 .DS_Store
@@ -47,3 +58,6 @@ next-env.d.ts
 
 # local project artifacts
 hatchquest/
+
+# Visual brainstorming sessions
+.superpowers/

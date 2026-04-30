@@ -1,22 +1,51 @@
 # HatchQuest — Frontend Agent Briefing
 
-> This file is the authoritative context for all AI agent sessions inside `frontend/`.
-> Read it fully before writing any code. It supersedes any older docs.
+> Authoritative context for all AI agent sessions inside `frontend/`.
+> Read this fully before writing any code.
 
 ---
 
 ## What You Are Building
 
-HatchQuest is a **Entrepreneurship-Oriented Business Simulation with Game-Based Assessment**.
-Players respond to scenarios set in **Accra, Ghana**, and the game maps their choices to the
-**Lumpkin & Dess EO framework** — 5 dimensions: Autonomy, Innovativeness, Risk-Taking,
-Proactiveness, Competitive Aggressiveness.
+HatchQuest is a **Game-Based Assessment of Entrepreneurial Orientation**.
+Players respond to business scenarios set in **Accra, Ghana**, making choices that reveal their
+entrepreneurial mindset across 5 dimensions (Lumpkin & Dess EO framework):
+Autonomy, Innovativeness, Risk-Taking, Proactiveness, Competitive Aggressiveness.
 
-The EO profile is a **hidden assessment** — players never see it during gameplay.
+The EO profile is a **hidden assessment** — players never see scores during gameplay.
 It is revealed only on the results page at game end.
 
-**Your job:** Build the UI that makes this playable. You are a consumer of the backend API.
-No game logic lives in the frontend. Ever.
+**Your job:** Build the UI. You are a consumer of the backend API. No game logic in the frontend. Ever.
+
+---
+
+## Current Backend State
+
+The backend is **fully built and deployed** on Railway:
+
+```
+https://hatchquestbackend-production.up.railway.app
+```
+
+Routes available:
+```
+POST /api/game/start           → start session, get Layer 0 preamble + Q1
+POST /api/game/classify-q1     → submit Q1 free-text → get AI-generated Q2 prompt
+POST /api/game/classify-q2     → submit Q2 free-text → EO classified, Layer 1 assigned
+GET  /api/game/session/:id     → get current session state + current scenario node
+POST /api/game/choice          → submit choice (choiceIndex 0|1|2) → get next node
+GET  /api/game/results/:id     → get EO profile + summary (game-complete only)
+```
+
+Full request/response shapes: `docs/API_CONTRACT.md`.
+
+Key facts about the backend:
+- Auth is stubbed — password field accepted but not validated. `sessionId` is the session key.
+- Layer 0 is a **two-step free-text flow** (Q1 → Q2), not a single classify call. The old `/classify` route exists for backward compat only — do not use it.
+- Every scenario has exactly **3 choices** — not 9, not variable. `choiceIndex` is `0`, `1`, or `2`.
+- `nextNode` is `null` when the game ends (5 turns complete).
+- `eoProfile` is never in `clientState` during gameplay — only in `/results` response.
+- `clientState.playerBusinessName` is the player's Q1 text — use it as the HUD business label.
 
 ---
 
@@ -25,66 +54,114 @@ No game logic lives in the frontend. Ever.
 1. **No game logic in components.** Components render state — they don't calculate it.
 2. **Never expose EO dimensions during gameplay.** Only on `/results`.
 3. **Disable choice buttons on click.** Re-enable only on API error.
-4. **Mobile-first.** Minimum 375px. Everything must be responsive.
-5. **TypeScript strict.** No `any`. All types come from `@hatchquest/shared`.
-6. **Davis decides architecture. Lois + Ebo implement.** Flag anything structural before building.
+4. **Mobile-first.** Minimum 375px. Everything responsive.
+5. **TypeScript strict.** No `any`. All types from `@hatchquest/shared`.
+6. **Davis decides architecture.** Flag anything structural before building.
 
 ---
 
 ## Your Scope
 
-You work inside `frontend/` only.
+Work inside `frontend/` only.
 
-- `frontend/src/app/` — pages and routes
-- `frontend/src/components/` — UI components
-- `frontend/src/context/` — React context (GameContext)
-- `frontend/src/lib/` — utility helpers, API client
+```
+frontend/src/app/           ← pages and routes
+frontend/src/components/    ← UI components
+frontend/src/context/       ← React context (GameContext)
+frontend/src/lib/           ← API client, helpers
+```
 
-Do NOT touch:
-- `backend/` — Fastify server (Davis)
-- `packages/shared/` — shared types (Davis owns, requires sign-off to change)
-- Root `package.json` or workspace config
+**Do NOT touch:**
+- `backend/` — Fastify server, Davis only
+- `packages/shared/` — shared types, Davis sign-off required for any change
+- Root `package.json` or workspace config files
 
 ---
 
-## Getting Set Up
+## Development — Getting Set Up
 
 ```bash
-# Clone the repo
-git clone https://github.com/davissekai/hatchquest.git
-cd hatchquest
-
-# Install all workspace packages (this sets up @hatchquest/shared)
+# Install all workspace packages from repo root
 npm install
 
 # Start frontend dev server
-npm run dev:frontend
+npm run dev --workspace=frontend
 # → http://localhost:3000
 
-# Type-check only the frontend
-cd frontend && npm run type-check
+# Type-check frontend only
+npm run type-check --workspace=frontend
+
+# Run frontend tests
+npm test --workspace=frontend
 ```
 
-**Branch:** Work on `feature/v2-engine`. Do NOT use the stale `frontend` or `packages` remote branches — `feature/v2-engine` has the latest shared types and all backend infrastructure.
-
-For your feature work, branch off `feature/v2-engine`:
+**Branch:** Branch off `develop`:
 ```bash
-git checkout -b feat/your-feature-name feature/v2-engine
+git checkout -b feat/your-feature-name develop
 ```
 
-PRs go to `feature/v2-engine`, not `develop` or `main`.
+PRs go to `develop`. Do not PR to `main` directly.
+
+---
+
+## TDD — Tests First, Always
+
+**Write the test before writing the component or function.**
+
+The workflow for every new piece of UI:
+
+1. **RED** — Write a failing test that describes the behavior.
+2. **GREEN** — Write the minimum implementation to pass it.
+3. **REFACTOR** — Clean up without breaking the test.
+
+Test framework: **Vitest + React Testing Library**.
+
+Good tests:
+- Test what the user sees and does, not implementation details
+- Test API call behavior (mock `fetch`, assert correct URL and body)
+- Test conditional rendering (loading states, error states, null `nextNode`)
+- Test that choice buttons are disabled while a request is in flight
+
+Bad tests:
+- Testing that a function exists
+- Testing that a component renders without crashing (with no assertions)
+- Testing implementation internals (state variable names, internal functions)
+
+Every screen should have tests for:
+- Happy path (success)
+- Loading state
+- API error (400, 404, 409, 500)
+- Edge cases (null `currentNode`, null `nextNode`, etc.)
+
+---
+
+## Verification Gate
+
+Run before raising any PR. All three must pass — no exceptions.
+
+```bash
+# From the frontend directory or workspace root:
+npm run type-check --workspace=frontend   # zero errors
+npm run lint --workspace=frontend         # zero warnings
+npm test --workspace=frontend             # all pass
+```
+
+Code is not ready until all three pass. Do not submit a PR with failing checks.
+
+Also manually verify at **375px width** (mobile) before declaring any screen done.
 
 ---
 
 ## Shared Types — Import From `@hatchquest/shared`
 
-All API types are in `packages/shared/src/types/`. Import them — never redefine inline.
+Never redefine types inline. Import from shared:
 
 ```typescript
 import type {
   ClientWorldState,
   StartRequest, StartResponse,
-  ClassifyRequest, ClassifyResponse,
+  ClassifyQ1Request, ClassifyQ1Response,
+  ClassifyQ2Request, ClassifyQ2Response,
   ChoiceRequest, ChoiceResponse,
   SessionResponse,
   ResultsResponse,
@@ -96,155 +173,202 @@ import type {
 
 ---
 
-## The v2 API Contract
+## Existing Components — Do Not Rewrite
 
-Backend runs at `http://localhost:3001` in local dev. Read `docs/API_CONTRACT.md` for the full
-reference. Summary:
+These are solid and reusable:
 
-### Game Flow
-
-```
-POST /api/game/start          → { sessionId, layer0Question }
-POST /api/game/classify       → { sessionId, layer1NodeId }    ← NEW in v2
-POST /api/game/choice (loop)  → { sessionId, clientState, nextNode }
-GET  /api/game/results/:id    → { sessionId, eoProfile, clientState, summary }
-```
-
-### Endpoint shapes
-
-**POST `/api/game/start`**
-```typescript
-// Request
-{ playerName: string; email: string; password: string }
-
-// Response
-{ sessionId: string; layer0Question: string }
-```
-
-**POST `/api/game/classify`** — Layer 0 only, runs once
-```typescript
-// Request
-{ sessionId: string; response: string }   // player's free-text answer
-
-// Response
-{ sessionId: string; layer1NodeId: string }
-```
-
-**POST `/api/game/choice`** — called in a loop until isComplete
-```typescript
-// Request
-{ sessionId: string; nodeId: string; choiceIndex: 0 | 1 | 2 }
-
-// Response
-{
-  sessionId: string;
-  clientState: ClientWorldState;
-  nextNode: ScenarioNode | null;   // null when isComplete
-}
-```
-
-**GET `/api/game/session/:sessionId`** — for reconnects/refreshes
-```typescript
-// Response
-{ sessionId: string; clientState: ClientWorldState; currentNode: ScenarioNode | null }
-```
-
-**GET `/api/game/results/:sessionId`** — only when clientState.isComplete = true
-```typescript
-// Response
-{ sessionId: string; eoProfile: EOProfile; clientState: ClientWorldState; summary: string; session: GameSession }
-```
-
-### `ScenarioNode` shape (what you render on the play screen)
-```typescript
-interface ScenarioNode {
-  id: string;
-  layer: number;
-  narrative: string;       // story text (replaces v1 "storyText")
-  choices: Choice[];
-}
-
-interface Choice {
-  index: 0 | 1 | 2;
-  text: string;
-  tensionHint: string;     // describes the EO tension — show this as a subtitle/hint
-}
-```
+| Component | Purpose |
+|---|---|
+| `BreathingGrid` | Animated background grid |
+| `RetroTransition` | Loading overlay between decisions |
+| `AnimatedScore` | Animated number counter |
+| `RadarChart` | 5-axis EO radar chart (update data source to v2 `EOProfile`) |
+| `Sidebar`, `ResourceBar` | HUD layout |
+| `NarrativeCard` | Story text container |
+| `ChoiceButton` | Single choice button |
 
 ---
 
-## What Exists (Current State)
-
-The visual design system is **solid and usable**. Do not rewrite these:
-- `BreathingGrid` — animated background grid
-- `RetroTransition` — loading overlay between decisions
-- `AnimatedScore` — animated number counter for results
-- `RadarChart` — 5-axis EO radar chart (update data source to v2 `EOProfile`)
-- `Sidebar`, `ResourceBar`, `NarrativeCard`, `ChoiceButton` — use / update as needed
-
-**What is broken and must be rewritten:**
-
-`GameContext.tsx` — currently wired to v1 API shapes. Full rewrite needed:
-- `startGame` expects `{beat, state}` response → v2 returns `{sessionId, layer0Question}`
-- No `classifyLayer0` function exists → needed for Layer 0 free-text step
-- `makeChoice` sends `choiceId: string` → v2 needs `{sessionId, nodeId, choiceIndex: 0|1|2}`
-- `resumeSession` calls `GET /api/game/session?sessionId=...` → v2 is `GET /api/game/session/:sessionId`
-- All inline type definitions → replace with imports from `@hatchquest/shared`
-
----
-
-## Page Routes (What to Build)
+## Screens to Build
 
 ### `/` — Landing page
-Status: done. Minor: remove the hardcoded UGBS logo URL if it causes issues.
-
-### `/create` — Founder creation form
-Status: mostly done. Needs:
-- Add `password` field (v2 `StartRequest` requires it — auth not enforced yet but field is required)
-- On submit: call `startGame()` → route to `/layer0` (not `/loading`)
-
-### `/layer0` — Layer 0 free-text screen (NEW — does not exist yet)
-Build this from scratch:
-- Display `layer0Question` from the `startGame` response
-- Large textarea for player's free-text answer (no character limit — let them write)
-- Submit → call `classifyLayer0()` → route to `/play`
-- Show loading state while classifying
-
-### `/play` — Main game loop
-Status: exists but wired to v1 state. Update:
-- Use `ScenarioNode` from `clientState` context (`node.narrative`, `node.choices[].text`)
-- Show `tensionHint` as subtitle text under each choice button
-- HUD: show `clientState.capital`, `clientState.reputation`, `clientState.networkStrength`
-- Remove `momentumMultiplier` from HUD (not in `ClientWorldState`)
-- On choice: POST `/api/game/choice` with `{sessionId, nodeId, choiceIndex}`
-- When `nextNode === null` → route to `/results`
-
-### `/results` — EO profile reveal
-Status: exists but wired to v1 results. Update:
-- Fetch from `GET /api/game/results/:sessionId`
-- Display `eoProfile` on the RadarChart (5 dimensions, values 0–10)
-- Display `summary` text from the response
-- Show final capital from `clientState.capital`
-
-### `/resume` — Reconnect existing session
-Status: exists. Update to use `GET /api/game/session/:sessionId` (URL param).
+**Status:** Done. No changes needed unless design review flags issues.
 
 ---
 
-## Working Without the Backend
+### `/create` — Auth / Register
+**Status:** Exists, needs fixes.
 
-The backend isn't running locally for you — use mock data. Create `frontend/src/lib/mock-api.ts`:
+- Fields: player name, email, password.
+- On submit → `POST /api/game/start`.
+- On success: save `sessionId` to localStorage, navigate to `/layer0` passing `preamble` and `layer0Question`.
+
+Tests to write:
+- Renders all three fields
+- Disables submit while loading
+- Saves sessionId to localStorage on success
+- Shows error message on 400
+
+---
+
+### `/layer0` — Layer 0 free-text (two-step) ⬅ BUILD THIS
+**Status:** Does not exist. Build from scratch.
+
+**Step 1 — Q1:**
+- Full-viewport `preamble` paragraph (narrative world intro from `/start` response).
+- Below: `layer0Question` as heading.
+- Large `<textarea>` — no character limit, no multiple choice.
+- Submit → `POST /classify-q1`.
+- Show loading state during call.
+- On success: store `q2Prompt`, switch to Q2 UI state.
+
+**Step 2 — Q2:**
+- Display `q2Prompt` (AI-generated, personalised to their Q1 answer).
+- Large `<textarea>`.
+- Submit → `POST /classify-q2`.
+- Show "Reading your story..." animation during call.
+- On success → `GET /session/:sessionId` once, then navigate to `/play`.
+
+Tests to write:
+- Step 1: preamble visible, Q1 prompt visible, textarea present
+- Step 1: submit calls `/classify-q1` with correct body
+- Step 1: transitions to step 2 on success, q2Prompt visible
+- Step 2: submit calls `/classify-q2` with correct body
+- Step 2: loading state visible during call
+- Step 2: navigates to `/play` after classify-q2 success + session fetch
+
+---
+
+### `/play` — Scenario screen (Layers 1–5)
+**Status:** Exists but wired to v1 shapes. Rewrite the API integration.
+
+- `currentNode.narrative` — full story paragraph.
+- Three `ChoiceButton` components. Each shows:
+  - `choice.text` — the action.
+  - `choice.tensionHint` — subtitle hint below the text.
+- HUD: `capital`, `revenue`, `debt`, `reputation`, `networkStrength`, `turnsElapsed`, `playerBusinessName`.
+- On click:
+  1. Disable all buttons immediately.
+  2. `POST /choice` → `{ sessionId, nodeId: currentNode.id, choiceIndex }`.
+  3. Show `RetroTransition`.
+  4. Update HUD from `clientState`.
+  5. If `nextNode !== null`: render new scenario.
+  6. If `nextNode === null`: navigate to `/game-complete`.
+- Re-enable buttons only on API error.
+
+Tests to write:
+- Renders `narrative` and 3 choices
+- Renders `tensionHint` under each choice
+- Disables buttons on click
+- Calls `/choice` with correct `nodeId` and `choiceIndex`
+- Updates HUD after response
+- Navigates to `/game-complete` when `nextNode === null`
+- Re-enables buttons on API error
+
+---
+
+### `/game-complete` — Ending transition ⬅ BUILD THIS
+**Status:** Does not exist.
+
+- "Your story is complete. Calculating your entrepreneurial profile..."
+- Brief animation / pause.
+- Auto-navigate to `/results` after 2–3 seconds.
+
+Tests to write:
+- Renders completion message
+- Navigates to `/results` after delay
+
+---
+
+### `/results` — EO profile reveal
+**Status:** Exists but wired to v1. Update.
+
+- `GET /results/:sessionId`.
+- Radar chart from `eoProfile` (5 axes, values 0–10).
+- `summary` paragraph.
+- Final `clientState.capital` as headline stat.
+- CTA: share / start again.
+
+Tests to write:
+- Calls correct endpoint on mount
+- Renders radar chart with 5 data points
+- Renders `summary` text
+- Renders final capital
+
+---
+
+### `/profile` — Player profile ⬅ BUILD THIS
+**Status:** Does not exist. No dedicated backend endpoint.
+
+- If session complete: pull from `GET /results/:sessionId`. Show EO profile card + summary.
+- If session in progress: show current `clientState` stats from localStorage.
+- If no session: redirect to `/`.
+
+Tests to write:
+- Redirects to `/` when no session in localStorage
+- Shows EO card when session is complete
+- Shows in-progress stats when session is active
+
+---
+
+### Session Resume (on every app load)
+**Status:** Partial. Update to use correct endpoint format.
+
+On app load, if `sessionId` in localStorage:
+- `GET /session/:sessionId` (URL param, not query string)
+  - `isComplete === true` → `/results`
+  - `currentNode !== null` → `/play`
+  - `currentNode === null`, `layer === 0` → `/layer0`
+- If `404` → clear localStorage, redirect to `/`
+
+---
+
+## GameContext Rewrite
+
+`GameContext.tsx` needs a full rewrite. Current version is wired to v1 shapes.
+
+The new context must expose:
+```typescript
+interface GameContext {
+  sessionId: string | null;
+  clientState: ClientWorldState | null;
+  currentNode: ScenarioNode | null;
+
+  // Actions
+  startGame: (playerName: string, email: string, password: string) => Promise<void>;
+  submitQ1: (q1Response: string) => Promise<string>;        // returns q2Prompt
+  submitQ2: (q2Response: string) => Promise<void>;          // triggers classification
+  makeChoice: (choiceIndex: 0 | 1 | 2) => Promise<void>;
+  resumeSession: (sessionId: string) => Promise<void>;
+
+  // State
+  isLoading: boolean;
+  error: string | null;
+}
+```
+
+Wire to mock data first. Once verified, swap to real API calls.
+
+---
+
+## Mock Data (for dev without backend)
 
 ```typescript
-// Swap real fetch calls for mocks during dev
-// When backend is live, delete this file and update GameContext to use real URLs
+// frontend/src/lib/mock-api.ts
+import type { StartResponse, ClassifyQ1Response, ClassifyQ2Response, SessionResponse, ScenarioNode } from "@hatchquest/shared";
 
 export const mockStartResponse: StartResponse = {
   sessionId: "mock-session-001",
-  layer0Question: "Describe the business you want to build and the problem it solves in Accra.",
+  preamble: "Accra, 2026. The city hums with restless energy — mobile money has rewired commerce, the streets are dense with ambition. You have an idea, some savings, and a phone. Every founder here started the same way. What you do next is entirely up to you.",
+  layer0Question: "Describe the business you want to build and the problem it solves. What makes you the right person to build it?",
 };
 
-export const mockClassifyResponse: ClassifyResponse = {
+export const mockQ1Response: ClassifyQ1Response = {
+  sessionId: "mock-session-001",
+  q2Prompt: "You mentioned building a logistics platform. What's the biggest obstacle you expect in your first 90 days, and how would you respond to it?",
+};
+
+export const mockQ2Response: ClassifyQ2Response = {
   sessionId: "mock-session-001",
   layer1NodeId: "L1-node-1",
 };
@@ -252,58 +376,46 @@ export const mockClassifyResponse: ClassifyResponse = {
 export const mockNode: ScenarioNode = {
   id: "L1-node-1",
   layer: 1,
-  narrative: "Three months after launching, your logistics platform has 12 active farmers. A larger competitor has noticed you and is offering your top drivers signing bonuses. Your co-founder thinks you should raise prices now. Your mentor says stay lean.",
+  narrative: "It is your third week. A distributor offers a bulk order — but the quantity exceeds your current capacity. Fulfilling it means stretching your capital thin and hiring help you cannot yet afford. Declining means losing the opportunity to someone else.",
   choices: [
-    { index: 0, text: "Match the competitor's offer — give your drivers a retention bonus from reserves.", tensionHint: "Capital at risk vs. team loyalty" },
-    { index: 1, text: "Ignore the competitor and double down on farmer acquisition — grow faster than they can poach.", tensionHint: "Proactive growth vs. competitive threat" },
-    { index: 2, text: "Negotiate with the competitor — explore whether a partnership makes more sense than a fight.", tensionHint: "Collaboration vs. independent control" },
+    { index: 0, text: "Take the deal. Stretch your capital, hire temporary help, deliver on the deadline no matter the cost.", tensionHint: "Speed vs. financial stability" },
+    { index: 1, text: "Negotiate a smaller initial order that fits your current capacity. Prove yourself first, scale later.", tensionHint: "Opportunity vs. risk management" },
+    { index: 2, text: "Decline the bulk order and focus on building your local customer base directly.", tensionHint: "Growth ambition vs. disciplined restraint" },
   ],
 };
 ```
 
----
-
-## Priority Task Order
-
-Build in this order — don't start the next until the current one's tests pass:
-
-1. **Rewrite `GameContext.tsx`** — v2 API shapes, import types from `@hatchquest/shared`, add `classifyLayer0()`. Wire to mock data first.
-2. **Build `/layer0` page** — free-text input, submit handler, loading state.
-3. **Update `/play` page** — use `ScenarioNode.narrative`, `choices[].tensionHint`, v2 HUD fields.
-4. **Update `/results` page** — use `EOProfile` on RadarChart, display `summary`.
-5. **Update `/create` page** — add password field, fix routing.
-6. **Update `/resume` page** — fix session endpoint URL.
-7. **Swap mocks for real API** when backend URL is confirmed.
+Delete the mock file and swap for real API calls when backend integration is confirmed.
 
 ---
 
-## Verification Before Any PR
+## Priority Build Order
 
-```bash
-cd frontend
-npm run type-check   # zero errors
-npm run lint         # zero warnings
-npm run test         # all pass
-```
+Do not start the next until the current one's tests pass.
 
-Also manually verify at 375px width (mobile).
+1. **Rewrite `GameContext.tsx`** — v2 API shapes, import from `@hatchquest/shared`, add `submitQ1` and `submitQ2`. Wire to mocks first.
+2. **Build `/layer0`** — two-step Q1→Q2 flow, loading states, transition.
+3. **Update `/play`** — narrative, choice buttons with tensionHint, HUD with v2 fields, choice submission.
+4. **Build `/game-complete`** — simple screen, auto-navigate to results.
+5. **Update `/results`** — `EOProfile` on RadarChart, `summary` text, final capital.
+6. **Update `/create`** — fix routing to `/layer0`, ensure all fields present.
+7. **Build `/profile`** — session-aware EO card or in-progress stats.
+8. **Fix session resume** — correct endpoint format, routing logic.
+9. **Swap mocks for real API** — update base URL in API client, delete mock file.
 
 ---
 
-## EO Dimensions Reference
+## EO Dimensions (for the results radar chart)
 
-The 5 dimensions the game measures. These are hidden from players during gameplay.
-Revealed on `/results` via the radar chart.
+| Key | Label | Description |
+|---|---|---|
+| `autonomy` | Autonomy | Independent action and execution |
+| `innovativeness` | Innovativeness | New ideas and experimentation |
+| `riskTaking` | Risk-Taking | Bold action under uncertainty |
+| `proactiveness` | Proactiveness | Opportunity-seeking, forward-looking |
+| `competitiveAggressiveness` | Competitive Aggressiveness | Direct challenge to competitors |
 
-| Dimension | What it measures |
-|---|---|
-| Autonomy | Independent action and execution |
-| Innovativeness | Support for new ideas and experimentation |
-| Risk-Taking | Bold actions under uncertainty |
-| Proactiveness | Opportunity-seeking, forward-looking |
-| Competitive Aggressiveness | Direct challenge to competitors |
-
-Each is a float `[0, 10]` in the `EOProfile`.
+All values are floats in `[0, 10]`. Never show these labels during gameplay — only on `/results`.
 
 ---
 

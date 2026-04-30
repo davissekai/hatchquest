@@ -11,65 +11,10 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  # Runs on PRs from packages branch — pure type checking, no runtime
-  packages:
-    name: Packages · Type Check
-    runs-on: ubuntu-latest
-    if: startsWith(github.head_ref, 'packages')
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 20
-          cache: npm
-      - run: npm ci
-      - name: Type check (shared)
-        run: npm run type-check --workspace=packages/shared
-
-  # Runs on PRs from backend branch
-  backend:
-    name: Backend · Type Check · Test
-    runs-on: ubuntu-latest
-    if: startsWith(github.head_ref, 'backend')
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 20
-          cache: npm
-      - run: npm ci
-      - name: Type check (shared)
-        run: npm run type-check --workspace=packages/shared
-      - name: Type check (backend)
-        run: npm run type-check --workspace=backend
-      - name: Test (backend)
-        run: npm run test --workspace=backend
-
-  # Runs on PRs from frontend branch
-  frontend:
-    name: Frontend · Lint · Build
-    runs-on: ubuntu-latest
-    if: startsWith(github.head_ref, 'frontend')
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 20
-          cache: npm
-      - run: npm ci
-      - name: Lint (frontend)
-        run: npm run lint --workspace=frontend
-      - name: Build (frontend)
-        run: npm run build --workspace=frontend
-        env:
-          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
-          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
-
   # Full suite — runs on all PRs to develop or master
   full:
     name: Full Suite · All Checks
     runs-on: ubuntu-latest
-    if: github.base_ref == 'master' || github.base_ref == 'develop'
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4

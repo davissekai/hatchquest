@@ -245,35 +245,37 @@ Agri-business, food processing, or rural-to-urban trade. Your edge is patience a
 Three sequential short-answer prompts. Each one is scenario-flavored — not abstract. The player types a free-text response to each. The backend sends all 3 responses together to the Claude API classifier.
 
 **Design rules:**
-- Each question should feel like a natural next step from the preamble, not a survey
-- No question should name an EO dimension
+- One situation. One question. No "or." No options. No hedging.
+- Each question is grounded in the world state the preamble has already established — the player answers from inside the story, not from outside it
+- No question names an EO dimension
 - Each question targets 1–2 specific poles (see mapping below)
-- Questions build on each other — the story progresses with each one
+- Questions build on each other — the story progresses across the 3 prompts
+- Short. Direct. A player should be able to read it in 3 seconds.
 
 **Question 1** — targets: values (people vs profit) + orientation (proactive vs reactive)
 
-Prompt the player to describe what they're building and why now. The "why now" is key — it reveals whether they're chasing an opportunity (proactive) or responding to circumstances (reactive). The "what" reveals values orientation.
+Ask the player *why* they are doing this. One sentence. The answer reveals whether they are chasing an opportunity (proactive) or responding to circumstances (reactive), and what they value most.
 
 Example:
-> "Tell us about the business you're starting. What is it, and what made you decide to start now?"
+> "Why are you starting this business?"
 
 ---
 
 **Question 2** — targets: risk tolerance + autonomy (autonomous vs collaborative)
 
-Place the player in a specific early obstacle. Ask how they handle it. This reveals whether they act alone or seek help, and whether they absorb risk or avoid it.
+Place the player in a single, specific situation that has already happened in their world. No choices offered. Ask what they did. The answer reveals how they handle adversity — alone or with others, absorbing risk or avoiding it.
 
 Example:
-> "It's your second week. Your first real problem appears — a supplier backs out, a client cancels, or a key tool breaks down. Describe what happened and what you did."
+> "Your first supplier just backed out. What did you do?"
 
 ---
 
 **Question 3** — targets: competitive aggressiveness + agency (autonomous vs collaborative)
 
-Introduce another person — a potential co-founder, a rival, or a mentor — and ask how the player relates to them. This is the social/relational signal that separates autonomy from collaboration and measured from aggressive.
+Introduce one specific person into their world — not a category of person, one person. Ask how the player responded to them. The answer reveals how they relate to others in their space — competitively or collaboratively, independently or dependently.
 
 Example:
-> "Someone wants to get involved in what you're building — as a partner, a rival, or an advisor. Who are they, and how do you respond to them?"
+> "Someone in Accra is building something very similar to yours. You've just heard about them. What's your move?"
 
 ---
 

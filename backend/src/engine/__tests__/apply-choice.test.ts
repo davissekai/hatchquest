@@ -1,11 +1,16 @@
 import { describe, it, expect } from "vitest";
-import { applyChoice, applyEffect } from "../apply-choice.js";
+import {
+  applyChoice,
+  applyEffect,
+  buildEffectSummary,
+  recordChoiceOnState,
+} from "../apply-choice.js";
 import { createInitialWorldState } from "../world-state.js";
 import type { ChoiceEffect } from "../apply-choice.js";
 
 // Helper: create a base state for testing
 function makeState() {
-  return createInitialWorldState({ seed: 42, sector: "tech" });
+  return createInitialWorldState({ seed: 42 });
 }
 
 describe("applyChoice", () => {
@@ -208,5 +213,111 @@ describe("applyEffect", () => {
       reputation: 0, networkStrength: 0, eoDeltas: {},
     });
     expect(state.capital).toBe(original);
+  });
+});
+
+// ─── buildEffectSummary ───────────────────────────────────────────────────────
+
+describe("buildEffectSummary", () => {
+  it("returns 'no material change' when all deltas are zero", () => {
+    expect(
+      buildEffectSummary({
+        capital: 0, revenue: 0, debt: 0, monthlyBurn: 0,
+        reputation: 0, networkStrength: 0, eoDeltas: {},
+      })
+    ).toBe("no material change");
+  });
+
+  it("formats kilo-amounts with a k suffix and signed prefix", () => {
+    const summary = buildEffectSummary({
+      capital: -3000, revenue: 2000, debt: 1500,
+      monthlyBurn: 0, reputation: 0, networkStrength: 0, eoDeltas: {},
+    });
+    expect(summary).toContain("-3k capital");
+    expect(summary).toContain("+2k revenue");
+    expect(summary).toContain("+1.5k debt");
+  });
+
+  it("formats small (<1000) numeric deltas without a k suffix", () => {
+    const summary = buildEffectSummary({
+      capital: -200, revenue: 500, debt: 0,
+      monthlyBurn: 0, reputation: 0, networkStrength: 0, eoDeltas: {},
+    });
+    expect(summary).toContain("-200 capital");
+    expect(summary).toContain("+500 revenue");
+  });
+
+  it("includes reputation and network deltas with explicit signs", () => {
+    const summary = buildEffectSummary({
+      capital: 0, revenue: 0, debt: 0, monthlyBurn: 0,
+      reputation: 6, networkStrength: -3, eoDeltas: {},
+    });
+    expect(summary).toContain("+6 rep");
+    expect(summary).toContain("-3 network");
+  });
+});
+
+// ─── recordChoiceOnState ──────────────────────────────────────────────────────
+
+describe("recordChoiceOnState", () => {
+  const zeroEffect: ChoiceEffect = {
+    capital: -1000, revenue: 0, debt: 0, monthlyBurn: 0,
+    reputation: 0, networkStrength: 0, eoDeltas: {},
+  };
+
+  it("prepends a new RecentChoice to choiceHistory, newest-first", () => {
+    const state = makeState();
+    const next = recordChoiceOnState(state, zeroEffect, {
+      nodeId: "L1-node-1",
+      choiceLabel: "Took the deal",
+      narrativePattern: "supply_chain_stretch",
+    });
+    expect(next.choiceHistory).toHaveLength(1);
+    expect(next.choiceHistory[0]?.nodeId).toBe("L1-node-1");
+    expect(next.choiceHistory[0]?.effectSummary).toContain("-1k capital");
+  });
+
+  it("trims choiceHistory to MAX_CHOICE_HISTORY=5", () => {
+    let state = makeState();
+    for (let i = 0; i < 7; i++) {
+      state = recordChoiceOnState(state, zeroEffect, {
+        nodeId: `node-${i}`,
+        choiceLabel: `choice ${i}`,
+      });
+    }
+    expect(state.choiceHistory).toHaveLength(5);
+    expect(state.choiceHistory[0]?.nodeId).toBe("node-6"); // newest first
+    expect(state.choiceHistory[4]?.nodeId).toBe("node-2");
+  });
+
+  it("prepends narrativePattern to recentPatterns and trims to 2", () => {
+    let state = makeState();
+    state = recordChoiceOnState(state, zeroEffect, {
+      nodeId: "n1", choiceLabel: "a", narrativePattern: "fundraising",
+    });
+    state = recordChoiceOnState(state, zeroEffect, {
+      nodeId: "n2", choiceLabel: "b", narrativePattern: "hiring",
+    });
+    state = recordChoiceOnState(state, zeroEffect, {
+      nodeId: "n3", choiceLabel: "c", narrativePattern: "pivot",
+    });
+    expect(state.recentPatterns).toEqual(["pivot", "hiring"]);
+  });
+
+  it("leaves recentPatterns untouched when narrativePattern is absent", () => {
+    const state = makeState();
+    const next = recordChoiceOnState(state, zeroEffect, {
+      nodeId: "n1", choiceLabel: "a",
+    });
+    expect(next.recentPatterns).toEqual(state.recentPatterns);
+  });
+
+  it("does not mutate the input state", () => {
+    const state = makeState();
+    recordChoiceOnState(state, zeroEffect, {
+      nodeId: "n1", choiceLabel: "a", narrativePattern: "exit",
+    });
+    expect(state.choiceHistory).toEqual([]);
+    expect(state.recentPatterns).toEqual([]);
   });
 });

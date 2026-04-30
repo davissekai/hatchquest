@@ -17,7 +17,7 @@ export class SessionStore implements ISessionStore {
     const id = crypto.randomUUID();
     // Integer seed in [0, 999999] — sufficient entropy for procedural market generation
     const seed = (Math.random() * 1_000_000) | 0;
-    const worldState = createInitialWorldState({ seed, sector: "tech" });
+    const worldState = createInitialWorldState({ seed });
     const now = new Date().toISOString();
 
     const session: GameSession = {
@@ -27,6 +27,15 @@ export class SessionStore implements ISessionStore {
       status: "active",
       createdAt: now,
       updatedAt: now,
+      layer0Q1Response: null,
+      layer0Q2Prompt: null,
+      layer0Q2Response: null,
+      playerContext: null,
+      storyMemory: null,
+      generatedCurrentNode: null,
+      generatedCurrentNodeId: null,
+      generatedCurrentNodeCreatedAt: null,
+      narrationSource: null,
     };
 
     this.sessions.set(id, session);

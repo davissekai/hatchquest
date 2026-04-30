@@ -1,12 +1,14 @@
-import { describe, it, expect, beforeEach } from "vitest";
+import { describe, it, expect, beforeEach, afterEach } from "vitest";
 import Fastify, { type FastifyInstance } from "fastify";
 import { SessionStore } from "../../store/session-store.js";
 import { choiceRoutes } from "../choice.js";
-import type { ChoiceResponse } from "@hatchquest/shared";
+import { SessionLock } from "../session-lock.js";
+import type { ChoiceResponse, NarrativeSkin } from "@hatchquest/shared";
+import type { RegisteredSkeleton } from "../../skeletons/registry.js";
 
 // --- Test-double registry ---
-// Injected instead of the real scenario-registry so tests are hermetic.
-// The node and effect here are deliberately minimal — enough for route logic.
+// Injected instead of the real skeleton registry so tests are hermetic.
+// The skeleton and effect here are deliberately minimal — enough for route logic.
 
 const STUB_EFFECT = {
   capital: -500,
@@ -18,15 +20,30 @@ const STUB_EFFECT = {
   eoDeltas: { riskTaking: 1 },
 };
 
-const STUB_NODE = {
-  id: "L1-node-1",
-  layer: 1,
+function buildSkeletonEntry(id: string): RegisteredSkeleton {
+  return {
+    skeleton: {
+      id,
+      layer: id.startsWith("L2") ? 2 : 1,
+      theme: "general",
+      baseWeight: 1.0,
+      eoTargetDimensions: [],
+      narrativePattern: "test",
+      situationSeed: "A test scenario.",
+      choiceArchetypes: [
+        { eoPoleSignal: "a", archetypeDescription: "Option A", tensionAxis: "hint A" },
+        { eoPoleSignal: "b", archetypeDescription: "Option B", tensionAxis: "hint B" },
+        { eoPoleSignal: "c", archetypeDescription: "Option C", tensionAxis: "hint C" },
+      ],
+    },
+    effects: [STUB_EFFECT, STUB_EFFECT, STUB_EFFECT],
+  };
+}
+
+const STUB_SKIN: NarrativeSkin = {
   narrative: "A test scenario.",
-  choices: [
-    { index: 0 as const, text: "Option A", tensionHint: "hint A" },
-    { index: 1 as const, text: "Option B", tensionHint: "hint B" },
-    { index: 2 as const, text: "Option C", tensionHint: "hint C" },
-  ],
+  choices: ["Option A", "Option B", "Option C"],
+  tensionHints: ["hint A", "hint B", "hint C"],
 };
 
 // Build a Fastify app with injected store and registry stubs.
@@ -35,9 +52,9 @@ function buildApp(store: SessionStore): FastifyInstance {
   const app = Fastify({ logger: false });
   app.register(choiceRoutes, {
     store,
-    getNode: (id: string | null) => (id === "L1-node-1" || id === "L2-node-1" ? STUB_NODE : null),
-    getChoiceEffect: (nodeId: string, idx: 0 | 1 | 2) =>
-      nodeId === "L1-node-1" ? STUB_EFFECT : null,
+    getSkeleton: (id: string) =>
+      id === "L1-node-1" || id === "L2-node-1" ? buildSkeletonEntry(id) : null,
+    generateSkin: async () => [STUB_SKIN, "fallback" as const],
     // Stub Director AI — always returns L2-node-1 so route tests stay hermetic
     selectNextNodeId: () => "L2-node-1",
   });
@@ -53,13 +70,22 @@ async function seedSession(store: SessionStore): Promise<string> {
   return session.id;
 }
 
+const savedApiKey = process.env.ANTHROPIC_API_KEY;
+
 let store: SessionStore;
 let app: FastifyInstance;
 
 beforeEach(async () => {
+  delete process.env.ANTHROPIC_API_KEY;
   store = new SessionStore();
   app = buildApp(store);
   await app.ready();
+});
+
+afterEach(() => {
+  if (savedApiKey !== undefined) {
+    process.env.ANTHROPIC_API_KEY = savedApiKey;
+  }
 });
 
 describe("POST /choice", () => {
@@ -80,6 +106,37 @@ describe("POST /choice", () => {
     expect(body.sessionId).toBe(sessionId);
     expect(body.clientState).toBeDefined();
     expect(body.nextNode).toBeDefined();
+  });
+
+  it("returns a nextNode with a non-empty narrative", async () => {
+    const sessionId = await seedSession(store);
+
+    const res = await app.inject({
+      method: "POST",
+      url: "/choice",
+      payload: { sessionId, nodeId: "L1-node-1", choiceIndex: 0 },
+    });
+
+    const body = res.json<ChoiceResponse>();
+    expect(body.nextNode?.narrative).toBeDefined();
+    expect((body.nextNode?.narrative ?? "").length).toBeGreaterThan(0);
+  });
+
+  it("persists the generated next node so resume stays stable", async () => {
+    const sessionId = await seedSession(store);
+
+    await app.inject({
+      method: "POST",
+      url: "/choice",
+      payload: { sessionId, nodeId: "L1-node-1", choiceIndex: 0 },
+    });
+
+    const session = await store.getSession(sessionId);
+    expect(session?.generatedCurrentNode).toEqual(STUB_SKIN);
+    expect(session?.generatedCurrentNodeId).toBe("L2-node-1");
+    expect(session?.generatedCurrentNodeCreatedAt).toBeTruthy();
+    expect(session?.narrationSource).toBe("fallback");
+    expect(session?.worldState.currentNodeContent).toEqual(STUB_SKIN);
   });
 
   // --- layer and turnsElapsed advance ---
@@ -220,5 +277,77 @@ describe("POST /choice", () => {
     });
 
     expect(res.statusCode).toBe(400);
+  });
+
+  // --- Concurrency guard — TOCTOU race prevention ---
+
+  it("serializes concurrent choices on the same session — second request sees advanced state", async () => {
+    const sessionId = await seedSession(store);
+
+    // Fire two concurrent requests with the same nodeId (both valid at the time of dispatch)
+    const [res1, res2] = await Promise.all([
+      app.inject({
+        method: "POST",
+        url: "/choice",
+        payload: { sessionId, nodeId: "L1-node-1", choiceIndex: 0 },
+      }),
+      app.inject({
+        method: "POST",
+        url: "/choice",
+        payload: { sessionId, nodeId: "L1-node-1", choiceIndex: 0 },
+      }),
+    ]);
+
+    // One should succeed (first to acquire the lock)
+    // The other should fail because the nodeId is now stale
+    const results = [res1.statusCode, res2.statusCode].sort();
+    // One 200 (first acquires lock), one 400 (stale nodeId after first advanced)
+    expect(results).toContain(200);
+    expect(results).toContain(400);
+  });
+});
+
+// ─── SessionLock unit tests ──────────────────────────────────────────────────
+
+describe("SessionLock", () => {
+  it("serializes access — second acquire waits for first release", async () => {
+    const lock = new SessionLock();
+    const order: string[] = [];
+
+    const release1 = await lock.acquire("session-1");
+    const p2 = lock.acquire("session-1").then((release2) => {
+      order.push("acquired-2");
+      release2();
+    });
+
+    order.push("acquired-1");
+    release1();
+    await p2;
+
+    expect(order).toEqual(["acquired-1", "acquired-2"]);
+  });
+
+  it("different sessionIds do not block each other", async () => {
+    const lock = new SessionLock();
+    const order: string[] = [];
+
+    const release1 = await lock.acquire("session-a");
+    const release2 = await lock.acquire("session-b");
+
+    order.push("got-both");
+    release1();
+    release2();
+
+    expect(order).toEqual(["got-both"]);
+  });
+
+  it("releases clean up — subsequent acquire on same id is not blocked", async () => {
+    const lock = new SessionLock();
+    const release1 = await lock.acquire("session-x");
+    release1();
+    const release2 = await lock.acquire("session-x");
+    release2();
+    // If we reach here without hanging, the lock cleaned up correctly
+    expect(true).toBe(true);
   });
 });

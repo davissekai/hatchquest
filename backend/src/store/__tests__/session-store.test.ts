@@ -50,9 +50,19 @@ describe("createSession", () => {
     expect(s.worldState.isComplete).toBe(false);
   });
 
-  it("defaults sector to tech", async () => {
+  it("initialises worldState with null playerContext", async () => {
     const s = await store.createSession("Kwame", "kwame@example.com");
-    expect(s.worldState.sector).toBe("tech");
+    expect(s.worldState.playerContext).toBeNull();
+  });
+
+  it("initialises continuity cache fields as null", async () => {
+    const s = await store.createSession("Kwame", "kwame@example.com");
+    expect(s.layer0Q1Response).toBeNull();
+    expect(s.playerContext).toBeNull();
+    expect(s.storyMemory).toBeNull();
+    expect(s.generatedCurrentNode).toBeNull();
+    expect(s.generatedCurrentNodeId).toBeNull();
+    expect(s.narrationSource).toBeNull();
   });
 
   it("produces unique ids for successive sessions", async () => {

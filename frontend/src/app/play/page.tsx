@@ -1,233 +1,249 @@
 "use client";
 
-import { useState, useCallback, useEffect, useRef } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useGame } from "@/context/GameContext";
-import BreathingGrid from "@/components/BreathingGrid";
+import { HUD } from "@/components/HUD";
 import RetroTransition from "@/components/RetroTransition";
+import ErrorBanner from "@/components/ErrorBanner";
+import LoadingOverlay from "@/components/LoadingOverlay";
+import { WorldHUD } from "@/components/WorldHUD";
+import { Starburst, Sparkle } from "@/components/Decorations";
+import type { ClientWorldState } from "@hatchquest/shared";
 
-const beatMessages = [
-  "PROCESSING DECISION...",
-  "UPDATING MARKET...",
-  "RIVALS ARE WATCHING...",
-  "DEAL IN PROGRESS...",
-  "SHIFTING ALLIANCES...",
-  "RECALCULATING ODDS...",
-  "SUPPLY CHAIN ALERT...",
-  "PIVOTING STRATEGY...",
-  "ENDGAME APPROACHING...",
+const transitionMessages = [
+  "Processing your decision...",
+  "Updating the market...",
+  "Rivals are watching...",
+  "Deal in progress...",
+  "Shifting alliances...",
 ];
 
 const finalMessages = [
-  "CALCULATING YOUR ACUMEN...",
-  "TALLYING RESULTS...",
-  "MEASURING YOUR EMPIRE...",
-  "FINAL VERDICT INCOMING...",
+  "Calculating your acumen...",
+  "Tallying your results...",
+  "Measuring your empire...",
+  "Final verdict incoming...",
 ];
 
-const formatDelta = (val: number) => {
-  if (val > 0) return `+${val.toLocaleString()}`;
-  return `${val.toLocaleString()}`;
-};
-
-const Gameplay = () => {
+export default function Gameplay() {
   const router = useRouter();
-  const { state, makeChoice, isLoading } = useGame();
+  const { state, phase, hasActiveSession, makeChoice, isLoading, error, resetGame, resumeSession } = useGame();
+  const currentNode = state.currentNode;
+  const clientState = state.clientState;
+
+  const layer = clientState?.layer ?? 0;
+  const turns = clientState?.turnsElapsed ?? 0;
+
   const [isTransitioning, setIsTransitioning] = useState(false);
   const [isFinalTransition, setIsFinalTransition] = useState(false);
   const [choiceDisabled, setChoiceDisabled] = useState(false);
-  const [showFeedback, setShowFeedback] = useState(false);
-  const [feedbackData, setFeedbackData] = useState<{
-    text: string;
-    deltas: { capital: number; reputation: number; network: number };
-  } | null>(null);
-
-  const previousRoundRef = useRef<number>(state.currentRound);
-  const wasCompleteRef = useRef<boolean>(state.isComplete);
 
   useEffect(() => {
-    if (!state.currentBeat && !isLoading) {
-      router.replace("/session-expired");
+    if (isTransitioning) return;
+    if (phase === "idle" && !isLoading) {
+      if (hasActiveSession()) {
+        void resumeSession();
+      } else {
+        router.replace("/create");
+      }
+    } else if (phase === "layer0") {
+      router.replace("/layer0");
+    } else if (phase === "complete") {
+      router.replace("/results");
+    } else if (phase === "active" && !currentNode && !isLoading && hasActiveSession()) {
+      void resumeSession();
     }
-  }, [state.currentBeat, isLoading, router]);
+  }, [
+    phase,
+    isLoading,
+    hasActiveSession,
+    resumeSession,
+    router,
+    isTransitioning,
+    currentNode,
+  ]);
 
   const handleChoice = useCallback(
     async (index: number) => {
-      if (isTransitioning || showFeedback || choiceDisabled) return;
-
-      const choice = state.currentBeat?.choices[index];
+      if (isTransitioning || choiceDisabled || !currentNode) return;
+      const choice = currentNode.choices.find(c => c.index === index);
       if (!choice) return;
 
       setChoiceDisabled(true);
-      previousRoundRef.current = state.currentRound;
-      wasCompleteRef.current = state.isComplete;
       setIsTransitioning(true);
 
       try {
-        const result = await makeChoice(choice.id);
-        setFeedbackData({ text: result.feedback, deltas: result.deltas });
-        if (state.isComplete || wasCompleteRef.current) {
-          setIsFinalTransition(true);
-        }
+        const complete = await makeChoice(currentNode.id, index as 0 | 1 | 2, choice.text);
+        setIsFinalTransition(complete);
       } catch {
         setChoiceDisabled(false);
         setIsTransitioning(false);
       }
     },
-    [isTransitioning, showFeedback, choiceDisabled, state, makeChoice]
+    [isTransitioning, choiceDisabled, currentNode, makeChoice]
   );
 
   const handleTransitionComplete = useCallback(() => {
     setIsTransitioning(false);
-    setShowFeedback(true);
-  }, []);
-
-  const handleFeedbackContinue = useCallback(() => {
-    setShowFeedback(false);
-    setFeedbackData(null);
     setChoiceDisabled(false);
-
-    if (state.isComplete) {
+    if (isFinalTransition) {
       router.push("/results");
-    } else if (previousRoundRef.current > 0 && state.currentRound > previousRoundRef.current) {
-      router.push("/round-summary");
     }
-  }, [router, state.isComplete, state.currentRound]);
+  }, [router, isFinalTransition]);
 
-  if (!state.currentBeat) {
-    return null;
+
+  if (!currentNode && !isTransitioning && phase !== "complete") {
+    // While idle, useEffect is about to redirect — show a spinner instead of the error screen
+    if (phase === "idle") {
+      return <LoadingOverlay message="Loading..." />;
+    }
+    return (
+      <div className="min-h-screen bg-[#F5F2EB] flex items-center justify-center px-6 selection:bg-hot-pink selection:text-white">
+        <div className="flex flex-col items-center gap-6 max-w-sm text-center bg-white p-10 rounded-[2rem] shadow-[12px_12px_0px_#0f172a] border-[6px] border-slate-900">
+          {error ? (
+            <ErrorBanner message={error} onRetry={() => router.replace("/resume")} />
+          ) : (
+            <p className="font-headline font-black text-3xl text-slate-900 uppercase">
+              No active session
+            </p>
+          )}
+          <button
+            onClick={() => { resetGame(); router.replace("/"); }}
+            className="px-10 py-5 bg-pill-blue text-white rounded-full font-headline font-black uppercase tracking-widest hover:-translate-y-1 hover:shadow-[8px_8px_0px_#0f172a] active:translate-y-1 active:shadow-[2px_2px_0px_#0f172a] transition-all duration-200 shadow-[6px_6px_0px_#0f172a] border-4 border-slate-900"
+          >
+            Return Home
+          </button>
+        </div>
+      </div>
+    );
   }
 
-  const beat = state.currentBeat;
-  const transitionMessages = isFinalTransition ? finalMessages : beatMessages.slice(0, 3);
-
   return (
-    <div className="relative min-h-[100dvh] flex flex-col overflow-hidden">
-      <BreathingGrid />
+    <div className="bg-[#F5F2EB] text-slate-900 min-h-screen h-screen overflow-hidden relative selection:bg-hot-pink selection:text-white">
+      
+      {/* Decorative Background Elements */}
+      <Starburst className="w-64 h-64 -top-20 -left-20 rotate-45" fill="var(--color-pill-blue)" />
+      <Starburst className="w-48 h-48 bottom-[-5%] -right-10 -rotate-12 opacity-50" fill="var(--color-lime)" />
+      <Sparkle className="w-20 h-20 top-[15%] right-[25%]" fill="var(--color-hot-pink)" />
+      <Sparkle className="w-16 h-16 bottom-[10%] left-[20%]" fill="#FFC107" />
+
+      {isLoading && !isTransitioning && <LoadingOverlay message="Loading..." />}
 
       {isTransitioning && (
         <RetroTransition
-          messages={transitionMessages}
+          messages={isFinalTransition ? finalMessages : transitionMessages}
           duration={isFinalTransition ? 2500 : 1500}
           onComplete={handleTransitionComplete}
         />
       )}
 
-      {/* Feedback overlay */}
-      {showFeedback && feedbackData && (
-        <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-background/95">
-          <div className="scanlines pointer-events-none" />
-          <div className="relative z-10 flex flex-col items-center gap-6 px-6 max-w-sm w-full">
-            <div className="border-[3px] border-primary bg-card px-5 py-2 shadow-brutal-sm animate-fade-in">
-              <span className="font-display text-xs tracking-[0.3em] text-muted-foreground uppercase">
-                Consequence
-              </span>
-            </div>
-
-            <p
-              className="font-body text-base text-foreground/90 text-center leading-relaxed animate-fade-in"
-              style={{ animationDelay: "0.1s" }}
-            >
-              {feedbackData.text}
-            </p>
-
-            <div
-              className="w-full border-[3px] border-primary bg-card shadow-brutal-sm animate-fade-in"
-              style={{ animationDelay: "0.2s" }}
-            >
-              <div className="flex divide-x-[2px] divide-primary">
-                {[
-                  { label: "Capital", delta: feedbackData.deltas.capital },
-                  { label: "Rep", delta: feedbackData.deltas.reputation },
-                  { label: "Network", delta: feedbackData.deltas.network },
-                ].map((item) => (
-                  <div key={item.label} className="flex-1 py-4 flex flex-col items-center">
-                    <span className="font-display text-[9px] tracking-[0.15em] text-muted-foreground uppercase mb-1">
-                      {item.label}
-                    </span>
-                    <span
-                      className={`font-display text-sm font-bold ${
-                        item.delta >= 0 ? "text-accent" : "text-destructive"
-                      }`}
-                    >
-                      {formatDelta(item.delta)}
-                    </span>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            <button
-              onClick={handleFeedbackContinue}
-              className="w-full border-[3px] border-primary bg-accent py-3.5 font-display text-base tracking-wider text-accent-foreground shadow-brutal transition-transform hover:-translate-y-[1px] active:translate-y-[2px] active:shadow-brutal-sm animate-slide-up"
-              style={{ animationDelay: "0.4s" }}
-            >
-              CONTINUE &#8594;
-            </button>
-          </div>
+      {error && !isTransitioning && (
+        <div className="fixed top-6 left-1/2 -translate-x-1/2 z-50 w-full max-w-lg px-6">
+          <ErrorBanner message={error} onRetry={() => router.replace("/resume")} />
         </div>
       )}
 
-      <div className="relative z-10 flex flex-1 flex-col px-5 py-6 max-w-2xl mx-auto w-full">
-        {/* Beat / Round indicator */}
-        <div className="mb-3 flex items-center justify-center">
-          <span className="font-display text-xs tracking-[0.3em] text-muted-foreground uppercase">
-            Decision {state.choices.length + 1} &middot; Round {beat.round}/3
-          </span>
+      {/* Header Bar */}
+      <header className="relative z-20 w-full px-6 py-4 flex justify-between items-center border-b-8 border-slate-900 bg-white">
+        <div className="font-headline font-black text-2xl uppercase tracking-tighter">HatchQuest</div>
+        <div className="flex gap-4">
+          <div className="px-4 py-2 bg-pill-blue text-white border-4 border-slate-900 rounded-full font-headline font-black text-xs uppercase shadow-[4px_4px_0px_#0f172a]">
+            Layer {layer}
+          </div>
+          <div className="px-4 py-2 bg-[#FFC107] border-4 border-slate-900 rounded-full font-headline font-black text-xs uppercase shadow-[4px_4px_0px_#0f172a]">
+            Turn {turns}
+          </div>
         </div>
+      </header>
 
-        {/* Resource HUD */}
-        <div className="mt-2 mb-4 flex border-[3px] border-primary bg-card shadow-brutal-sm">
-          {[
-            { label: "Capital", value: `GHS ${state.resources.capital.toLocaleString()}` },
-            { label: "Rep", value: `${state.resources.reputation}` },
-            { label: "Network", value: `${state.resources.network}` },
-            { label: "Momentum", value: `x${state.resources.momentumMultiplier.toFixed(1)}` },
-          ].map((stat, i) => (
-            <div
-              key={stat.label}
-              className={`flex flex-1 flex-col items-center justify-center text-center py-2.5 ${
-                i < 3 ? "border-r-[2px] border-primary" : ""
-              }`}
-            >
-              <span className="font-display text-[8px] tracking-[0.2em] text-muted-foreground uppercase mb-1">
-                {stat.label}
-              </span>
-              <span className="font-display text-[10px] text-accent font-bold">{stat.value}</span>
+      <main className="relative z-10 w-full h-[calc(100vh-80px)] max-w-[1800px] mx-auto p-4 lg:p-8 grid grid-cols-1 lg:grid-cols-[340px_1fr_340px] gap-8 overflow-hidden">
+        
+        {/* ── Left Pane (HUD) ── */}
+        <aside className="hidden lg:flex flex-col gap-8 h-full overflow-y-auto pr-2 pb-10 custom-scrollbar">
+          <div className="bg-white rounded-[2rem] p-6 shadow-[12px_12px_0px_#0f172a] border-[6px] border-slate-900">
+            <h2 className="font-headline font-black text-slate-900 text-2xl uppercase tracking-tighter mb-6 border-b-8 border-slate-900 pb-2">Status</h2>
+            <HUD
+              clientState={clientState || { capital: 0, reputation: 0, networkStrength: 0, layer: 0, turnsElapsed: 0 } as ClientWorldState}
+              layer={layer}
+            />
+          </div>
+          <div className="bg-white rounded-[2rem] p-6 shadow-[12px_12px_0px_#0f172a] border-[6px] border-slate-900 flex-1 flex flex-col">
+            <h2 className="font-headline font-black text-slate-900 text-2xl uppercase tracking-tighter mb-4 border-b-8 border-slate-900 pb-2">Inventory</h2>
+            <div className="flex-1 flex items-center justify-center bg-[#F5F2EB] rounded-2xl border-4 border-slate-900 border-dashed">
+               <p className="font-headline font-black text-slate-400 uppercase tracking-widest text-sm">Empty</p>
             </div>
-          ))}
-        </div>
+          </div>
+        </aside>
 
-        {/* Narrative */}
-        <div className="mb-6 flex-1 flex flex-col justify-center">
-          <h3 className="mb-3 font-display text-xl text-primary">{beat.title}</h3>
-          <p className="font-body text-base leading-relaxed text-foreground/90">{beat.storyText}</p>
-        </div>
+        {/* ── Center Pane (Narrative & Choices) ── */}
+        <section className="flex flex-col h-full overflow-y-auto pb-32 pt-2 lg:pt-0 hide-scrollbar">
+          {currentNode && (
+            <div className="max-w-3xl w-full mx-auto flex flex-col gap-10 pb-10">
+              
+              {/* Mobile Only Stats */}
+              <div className="lg:hidden mt-4">
+                 <HUD
+                  clientState={clientState || { capital: 0, reputation: 0, networkStrength: 0, layer: 0, turnsElapsed: 0 } as ClientWorldState}
+                  layer={layer}
+                />
+              </div>
 
-        {/* Choices */}
-        <div className="space-y-3 pb-4">
-          {beat.choices.map((choice, i) => {
-            const label = String.fromCharCode(65 + i);
-            return (
-              <button
-                key={choice.id}
-                onClick={() => handleChoice(i)}
-                disabled={isTransitioning || showFeedback || choiceDisabled}
-                className="flex w-full items-start gap-3 border-[3px] border-primary bg-card px-4 py-3.5 text-left shadow-brutal-sm transition-all active:translate-y-[2px] active:shadow-none hover:border-accent group disabled:opacity-50"
-              >
-                <span className="flex h-8 w-8 flex-shrink-0 items-center justify-center border-[2px] border-primary bg-accent font-display text-sm text-accent-foreground group-hover:bg-primary group-hover:text-primary-foreground transition-colors">
-                  {label}
-                </span>
-                <span className="font-body text-sm leading-snug text-foreground/90 pt-1">
-                  {choice.label}
-                </span>
-              </button>
-            );
-          })}
-        </div>
-      </div>
+              {/* Narrative Bubble */}
+              <div className="bg-white border-[6px] border-slate-900 p-8 md:p-12 rounded-[2rem] shadow-[16px_16px_0px_#0f172a] relative">
+                {/* Decorative Pin */}
+                <div className="absolute -top-4 -right-4 w-10 h-10 bg-hot-pink border-4 border-slate-900 rounded-full shadow-[4px_4px_0px_#0f172a] z-10" />
+                <p className="relative z-10 font-body font-bold text-lg md:text-xl text-slate-900 leading-relaxed whitespace-pre-line">
+                  {currentNode.narrative}
+                </p>
+              </div>
+
+              {/* Choices */}
+              <div className="flex flex-col gap-6 mt-4 z-10">
+                {currentNode.choices.map((choice, i: number) => {
+                  const letterLabel = String.fromCharCode(65 + i);
+                  
+                  const colors = [
+                    "bg-pill-blue text-white",
+                    "bg-hot-pink text-white",
+                    "bg-lime text-slate-900",
+                  ];
+                  const buttonColor = colors[i % colors.length];
+
+                  return (
+                    <button
+                      key={choice.index}
+                      onClick={() => handleChoice(choice.index)}
+                      disabled={isTransitioning || choiceDisabled}
+                      className={`group relative flex items-center w-full rounded-[2rem] border-[6px] border-slate-900 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed hover:-translate-y-2 hover:shadow-[12px_12px_0px_#0f172a] active:translate-y-1 active:shadow-[2px_2px_0px_#0f172a] shadow-[8px_8px_0px_#0f172a] overflow-hidden ${buttonColor}`}
+                    >
+                      <div className="absolute inset-0 w-1/2 h-full bg-white/20 skew-x-12 -translate-x-full group-hover:animate-shine" />
+
+                      <span className={`flex-shrink-0 w-16 h-16 md:w-20 md:h-20 border-r-[6px] border-slate-900 flex items-center justify-center text-4xl font-headline font-black bg-white/20`}>
+                        {letterLabel}
+                      </span>
+                      <span className="flex-1 flex flex-col items-start px-6 py-6 text-left">
+                        <span className="font-headline font-black text-xl md:text-2xl leading-tight uppercase tracking-tight">{choice.text}</span>
+                      </span>
+                      <span className="material-symbols-outlined text-4xl md:text-5xl pr-6 font-black group-hover:translate-x-2 transition-transform">east</span>
+                    </button>
+                  );
+                })}
+              </div>
+
+
+            </div>
+          )}
+        </section>
+
+        {/* ── Right Pane (World only — EO Profile is results-only) ── */}
+        <aside className="hidden lg:flex flex-col gap-8 h-full overflow-y-auto pl-2 pb-10 custom-scrollbar">
+          <div className="bg-white rounded-[2rem] p-6 shadow-[12px_12px_0px_#0f172a] border-[6px] border-slate-900">
+            <WorldHUD clientState={clientState!} />
+          </div>
+        </aside>
+
+      </main>
     </div>
   );
-};
-
-export default Gameplay;
+}

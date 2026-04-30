@@ -1,26 +1,25 @@
 import type { Metadata } from "next";
-import { Press_Start_2P } from "next/font/google";
-import { Outfit } from "next/font/google";
-import { Geist_Mono } from "next/font/google";
+import { Fredoka, Nunito } from "next/font/google";
 import { Providers } from "./providers";
-import { Sidebar } from "@/components/Sidebar";
+import OfflineBanner from "@/components/OfflineBanner";
 import "./globals.css";
 
-const pressStart2P = Press_Start_2P({
-  variable: "--font-press-start",
-  weight: "400",
+/* Fredoka — playful headlines, buttons */
+const fredoka = Fredoka({
+  variable: "--font-fredoka",
   subsets: ["latin"],
+  weight: ["400", "500", "600", "700"],
 });
 
-const outfit = Outfit({
-  variable: "--font-outfit",
+/* Nunito — clean, rounded body text */
+const nunito = Nunito({
+  variable: "--font-nunito",
   subsets: ["latin"],
+  weight: ["400", "500", "600", "700", "800"],
+  style: ["normal", "italic"],
 });
 
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
-});
+export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
   title: "HatchQuest",
@@ -33,9 +32,19 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className={`dark ${pressStart2P.variable} ${outfit.variable} ${geistMono.variable}`}>
+    <html lang="en" className={`${fredoka.variable} ${nunito.variable}`}>
+      <head>
+        {/* Preconnect hints must come before the stylesheet to take effect */}
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+        {/* Material Symbols Outlined — used for icons throughout the Stitch design */}
+        <link
+          rel="stylesheet"
+          href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=block"
+        />
+      </head>
       <body>
-        <Sidebar />
+        <OfflineBanner />
         <Providers>{children}</Providers>
       </body>
     </html>

@@ -1,17 +1,17 @@
-import type { BusinessSector, WorldState } from "@hatchquest/shared";
+import type { WorldState } from "@hatchquest/shared";
 import { createPRNG } from "./prng.js";
 
 interface CreateWorldStateParams {
   seed: number;
-  sector: BusinessSector;
 }
 
 // Generates the initial world state for a new game session.
-// Environment variables and monthly burn are procedurally derived from the seed.
+// Sector is no longer set here — it is derived from Layer 0 classification
+// and stored in playerContext after the classify step.
 export function createInitialWorldState(
   params: CreateWorldStateParams
 ): WorldState {
-  const { seed, sector } = params;
+  const { seed } = params;
   const rng = createPRNG(seed);
 
   // Helper: random integer in [min, max] inclusive
@@ -32,8 +32,16 @@ export function createInitialWorldState(
     revenue: 0,
     debt: 0,
 
-    // Business
-    sector,
+    // Identity — populated during Layer 0 classify
+    sector: "other",
+    businessDescription: "",
+    choiceHistory: [],
+    recentPatterns: [],
+    storyMemory: null,
+    currentNodeContent: null,
+
+    // Business — playerContext set to null until Layer 0 classify runs
+    playerContext: null,
     employeeCount: 0,
     businessFormality: "unregistered",
     hasBackupPower: false,
@@ -59,5 +67,14 @@ export function createInitialWorldState(
       proactiveness: 5,
       competitiveAggressiveness: 5,
     },
+
+    // World event flags
+    capitalAccessOpen: false,
+    underAudit: false,
+    vcWindowOpen: false,
+    hiringDifficulty: 0,
+
+    // World event history
+    worldEventHistory: [],
   };
 }

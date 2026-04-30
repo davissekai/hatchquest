@@ -1,4 +1,4 @@
-import type { EODimension, WorldState } from "@hatchquest/shared";
+import type { EODimension, RecentChoice, WorldState } from "@hatchquest/shared";
 
 // Defines how a single choice modifies the world state.
 export interface ChoiceEffect {
@@ -20,6 +20,50 @@ export interface ChoiceEffect {
 // Clamps a number to [min, max].
 function clamp(value: number, min: number, max: number): number {
   return Math.max(min, Math.min(max, value));
+}
+
+// Max length of choiceHistory kept on WorldState. 5 covers half the 10-turn arc,
+// giving the narrator enough story context for vivid continuity callbacks.
+const MAX_CHOICE_HISTORY = 5;
+// Max length of recentPatterns kept on WorldState.
+const MAX_RECENT_PATTERNS = 2;
+
+/**
+ * Builds a short human-readable summary of a choice's effect deltas.
+ * Shown back to the Narrator AI as a continuity callback on the next turn,
+ * so the grammar is natural ("-2k capital, +6 rep") rather than structured JSON.
+ */
+export function buildEffectSummary(effect: ChoiceEffect): string {
+  const parts: string[] = [];
+  const fmtK = (n: number): string => {
+    if (Math.abs(n) >= 1000) {
+      const k = n / 1000;
+      return `${k > 0 ? "+" : ""}${k % 1 === 0 ? k.toFixed(0) : k.toFixed(1)}k`;
+    }
+    return `${n > 0 ? "+" : ""}${n}`;
+  };
+  if (effect.capital !== 0) parts.push(`${fmtK(effect.capital)} capital`);
+  if (effect.revenue !== 0) parts.push(`${fmtK(effect.revenue)} revenue`);
+  if (effect.debt !== 0) parts.push(`${fmtK(effect.debt)} debt`);
+  if (effect.reputation !== 0) {
+    parts.push(`${effect.reputation > 0 ? "+" : ""}${effect.reputation} rep`);
+  }
+  if (effect.networkStrength !== 0) {
+    parts.push(
+      `${effect.networkStrength > 0 ? "+" : ""}${effect.networkStrength} network`
+    );
+  }
+  return parts.length > 0 ? parts.join(", ") : "no material change";
+}
+
+/**
+ * Metadata about the choice the player just made — used to update
+ * choiceHistory and recentPatterns on the world state.
+ */
+export interface ChoiceMeta {
+  nodeId: string;
+  choiceLabel: string;
+  narrativePattern?: string;
 }
 
 /**
@@ -65,4 +109,35 @@ export function applyChoice(
     currentNodeId: nextNodeId,
     turnsElapsed: state.turnsElapsed + 1,
   };
+}
+
+/**
+ * Records a played choice onto WorldState — prepends a RecentChoice to
+ * choiceHistory (trimmed to MAX_CHOICE_HISTORY) and the narrativePattern
+ * (if defined) to recentPatterns (trimmed to MAX_RECENT_PATTERNS).
+ * Never mutates the input; returns a new WorldState.
+ *
+ * Called after applyEffect so the effectSummary reflects what actually shifted.
+ */
+export function recordChoiceOnState(
+  state: WorldState,
+  effect: ChoiceEffect,
+  meta: ChoiceMeta
+): WorldState {
+  const entry: RecentChoice = {
+    nodeId: meta.nodeId,
+    choiceLabel: meta.choiceLabel,
+    effectSummary: buildEffectSummary(effect),
+  };
+  const choiceHistory = [entry, ...state.choiceHistory].slice(
+    0,
+    MAX_CHOICE_HISTORY
+  );
+  const recentPatterns = meta.narrativePattern
+    ? [meta.narrativePattern, ...state.recentPatterns].slice(
+        0,
+        MAX_RECENT_PATTERNS
+      )
+    : state.recentPatterns;
+  return { ...state, choiceHistory, recentPatterns };
 }

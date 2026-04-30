@@ -9,12 +9,17 @@ interface RetroTransitionProps {
 }
 
 const defaultMessages = [
-  "LOADING MARKET DATA...",
-  "CONNECTING TO ACCRA...",
-  "BUILDING YOUR EMPIRE...",
-  "CALCULATING ODDS...",
+  "Loading market data...",
+  "Connecting to Accra...",
+  "Building your empire...",
+  "Calculating the odds...",
 ];
 
+/**
+ * Full-screen loading transition.
+ * Re-imagined for the "Vibrant Rounded Graffiti" aesthetic.
+ * Shows cycling messages and a chunky, vibrant progress bar.
+ */
 const RetroTransition = ({
   messages = defaultMessages,
   duration = 2500,
@@ -23,23 +28,22 @@ const RetroTransition = ({
   const [progress, setProgress] = useState(0);
   const [msgIndex, setMsgIndex] = useState(0);
 
+  /* Progress bar — 10 steps over duration */
   useEffect(() => {
-    const steps = 10;
-    const stepTime = duration / steps;
+    const stepTime = duration / 10;
     let current = 0;
-
     const interval = setInterval(() => {
       current++;
       setProgress(current * 10);
-      if (current >= steps) {
+      if (current >= 10) {
         clearInterval(interval);
         setTimeout(onComplete, 200);
       }
     }, stepTime);
-
     return () => clearInterval(interval);
   }, [duration, onComplete]);
 
+  /* Cycle messages every 600 ms */
   useEffect(() => {
     const interval = setInterval(() => {
       setMsgIndex((i) => (i + 1) % messages.length);
@@ -48,32 +52,36 @@ const RetroTransition = ({
   }, [messages]);
 
   return (
-    <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-background">
-      <div className="scanlines pointer-events-none" />
+    <div className="fixed inset-0 z-[70] flex flex-col items-center justify-center bg-navy">
+      {/* Subtle kente texture at very low opacity */}
+      <div className="absolute inset-0 kente-pattern opacity-10 pointer-events-none" />
 
-      <div className="relative z-10 flex flex-col items-center gap-8 px-6">
-        <span className="font-display text-5xl text-accent retro-blink">&#9654;</span>
+      <div className="relative z-10 flex flex-col items-center gap-10 px-8 max-w-sm w-full">
+        {/* Animated icon */}
+        <div className="w-24 h-24 rounded-full bg-hot-pink flex items-center justify-center shadow-[0_12px_40px_rgba(255,42,133,0.4)] border-4 border-white animate-pulse">
+          <span className="material-symbols-outlined text-white text-5xl">
+            rocket_launch
+          </span>
+        </div>
 
-        <p className="font-display text-xs sm:text-sm tracking-[0.2em] text-primary text-center min-h-[2em]">
+        {/* Cycling message */}
+        <p className="font-headline font-extrabold text-xl text-white italic text-center min-h-[3em] drop-shadow-md tracking-tight">
           {messages[msgIndex]}
         </p>
 
-        <div className="w-64 sm:w-80 border-[3px] border-primary bg-card p-1 shadow-brutal-sm">
-          <div className="flex gap-[2px] h-5">
-            {Array.from({ length: 10 }).map((_, i) => (
-              <div
-                key={i}
-                className={`flex-1 transition-colors duration-100 ${
-                  i < progress / 10 ? "bg-accent" : "bg-muted"
-                }`}
-              />
-            ))}
+        <div className="w-full space-y-4">
+          {/* Progress bar */}
+          <div className="w-full rounded-full bg-white/10 overflow-hidden h-6 border-4 border-white/20 p-1">
+            <div
+              className="h-full bg-lime rounded-full transition-all duration-200 ease-out shadow-[0_0_15px_rgba(57,255,20,0.5)]"
+              style={{ width: `${progress}%` }}
+            />
           </div>
-        </div>
 
-        <span className="font-display text-[10px] tracking-[0.3em] text-muted-foreground uppercase">
-          {progress}%
-        </span>
+          <p className="font-headline font-black text-center text-sm text-lime tracking-widest uppercase">
+            System status: {progress}%
+          </p>
+        </div>
       </div>
     </div>
   );
